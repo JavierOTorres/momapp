@@ -4,14 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#15101c">
+<meta name="theme-color" content="#0f1512">
 <title>Sanctuary</title>
 <style>
   :root{
-    --bg:#15101c; --panel:#1e1729; --panel-2:#261d33; --ink:#0c0812;
-    --line:#0c0812; --text:#f2e6d8; --dim:#9a8aa8;
-    --ember:#ff9d3d; --ember-2:#ff5f3d; --gold:#ffd06b;
-    --good:#7bd88f; --cold:#7fa8d0; --disabled:#3a3046;
+    /* Human stone is cool. The fire is the only warm thing. */
+    --bg:#0f1512; --panel:#1b2124; --panel-2:#232b2e; --ink:#0a0e0b;
+    --line:#0a0e0b; --text:#d8d2c4; --dim:#7d8a85;
+    --ember:#ffab3d; --ember-2:#f2682c; --gold:#ffe9b8;
+    --good:#4c5a38; --cold:#4d545a; --disabled:#2b3136;
+    --moss:#35402c; --stone:#2b3136; --keeper:#d9c48a;
+    --cursed:#7a4a6e; --rare:#c9a227;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none}
@@ -37,13 +40,13 @@
   #soulWrap{display:flex;align-items:baseline;gap:5px;min-width:0;flex-wrap:wrap}
   #souls{font-size:25px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
   #matWrap{font-size:9px;color:var(--dim);letter-spacing:.04em}
-  #matWrap span{color:#9bd0c4;font-size:12px}
+  #matWrap span{color:#4c5a38;font-size:12px}
   #soulLabel{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
   #rate{font-size:8px;color:var(--dim);text-align:right;line-height:1.3;white-space:nowrap}
   #rate b{display:block;font-size:13px;color:var(--text)}
   #flameWrap{flex:0 0 auto;margin-left:6px;text-align:center}
   #flameBar{
-    width:52px;height:9px;border:3px solid var(--line);border-radius:6px;background:#241a30;overflow:hidden;
+    width:52px;height:9px;border:3px solid var(--line);border-radius:6px;background:#232c20;overflow:hidden;
   }
   #flameBar i{display:block;height:100%;width:100%;background:var(--ember);transition:width .3s linear}
   #flameNum{display:block;font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
@@ -52,7 +55,7 @@
     border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
   }
   #sheet{
-    position:fixed;inset:0;z-index:22;background:#15101c;
+    position:fixed;inset:0;z-index:22;background:#0f1512;
     display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
   #sheet[hidden]{display:none}
@@ -66,7 +69,7 @@
   #sheetList button em{color:var(--dim);font-style:italic}
   #sheetList button:disabled{opacity:.7}
   #book{
-    position:fixed;inset:0;z-index:20;background:#15101c;
+    position:fixed;inset:0;z-index:20;background:#0f1512;
     display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
   #book[hidden]{display:none}
@@ -84,7 +87,7 @@
   }
   #pop span{display:flex;align-items:center;gap:5px}
   #pop i{width:8px;height:8px;border-radius:9px;display:block;border:2px solid var(--ink)}
-  .dFire{background:var(--ember)} .dAway{background:var(--cold)} .dHollow{background:#6a6270}
+  .dFire{background:var(--ember)} .dAway{background:var(--cold)} .dHollow{background:#454b48}
 
   /* ---------- sanctuary ---------- */
   #stage{flex:1 1 auto;position:relative;min-height:0;background:var(--bg)}
@@ -188,7 +191,7 @@
   }
   #tip{
     flex:0 0 auto;display:flex;align-items:center;gap:10px;
-    padding:9px 12px;background:#2e2440;border-bottom:3px solid var(--line);
+    padding:9px 12px;background:#232b2e;border-bottom:3px solid var(--line);
     font-size:12px;font-weight:700;color:var(--gold);
   }
   #tip[hidden]{display:none}
@@ -386,10 +389,19 @@ const S = {
 };
 
 const ARCHIVE = [
+  { name:"This place", open:()=>true, body:
+    "People built it. The steps are too tall, the doors are too wide, and the basin the fire sits "
+    + "in would take four of me to fill. They are not here now. Nobody I have asked knows where "
+    + "they went, and the ones who go down looking come back with their things instead of them." },
   { name:"Souls", open:()=>true, body:
     "What they pay with. I have never asked where it comes from and they have never offered. "
     + "It buys skills, vendors, the bell, and whatever the smith and the herbalist want for their "
     + "work. It does not buy anyone back." },
+  { name:"Who comes", open:()=>true, body:
+    "Cats keep more of themselves back and hand over less. Dogs take one more death than the rest "
+    + "before the grey. Frogs go down too fast and do not last. Crows find things and cannot work "
+    + "a latch. Rabbits are quick there and back and never much deeper. Goats get doors open that "
+    + "nothing else will, and are slow about everything else." },
   { name:"The fire", open:()=>true, body:
     "It does not need me. I tend it anyway. Stoking it by hand pulls a soul out of the embers, "
     + "ten of them at a time, and one comes back every two seconds. Early on that is most of the "
@@ -457,9 +469,10 @@ const ARCHIVE = [
     + "carrying something. It arrives filthy. The tray by the fire holds six and I have watched "
     + "a full tray turn a find into nothing." },
   { name:"Cleaning a find", open:()=>S.seen.artifact, body:
-    "It comes up filthy and it stays theirs. Wiping it clean takes a minute of my thumb and after "
-    + "that there is nothing left to wonder about: what it is, how good it is, and whether there is "
-    + "a mark on it are all plain. If the slot it belongs in is empty it goes straight on them." },
+    "It comes up filthy and it stays theirs. Cleaning it takes a minute of my thumb and depends on "
+    + "what it came out of: ash wipes, rust wants scraping one way, waterlogged wants pressing, "
+    + "roots want cutting along, ice wants warming in patches before it takes hold again. After "
+    + "that I can see what shape it is and how well it was made. What it was for is still a guess." },
   { name:"One of the two", open:()=>S.seen.ident, body:
     "If they already carry something in that slot, I choose, and the one I do not choose goes in "
     + "the fire. Nothing is kept in a drawer here. A second of a thing they already own never even "
@@ -514,7 +527,7 @@ const poolCap   = () => T.POOL + S.lv.circle + (has("wider") ? 2 : 0);
 const has       = k => S.meta.unlocks.indexOf(k) >= 0;
 const flameLife = () => Math.max(0, Math.min(1, S.flame / T.FLAME_MAX));
 function awayScale(a){                                     // supplies make the road shorter
-  let f = 1;
+  let f = 1 + (a && a.sp ? (spOf(a).away || 0) : 0);        // and some of them are just quicker
   const q = vlv("quart");
   if (q) f -= (q === 1 ? 0.15 : 0.25) * vEff("quart");
   if (a && a.packed) f -= 0.05;
@@ -539,14 +552,17 @@ function tickFlame(dt){
   S.flame = Math.max(0, Math.min(S.flameMax, S.flame - rate * dt));
   if (S.flame <= 0 && !S.ending) endRun(false);
 }
-const hollowAt  = () => built("herb") ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
-const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay) * mods(a).payMul));
+const hollowAt  = a => (built("herb") ? T.HOLLOW_AT_HERB : T.HOLLOW_AT)
+                     + (a && a.sp ? (spOf(a).deaths || 0) : 0);
+const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay)
+                        * mods(a).payMul * (1 + (a && a.sp ? (spOf(a).pay || 0) : 0))));
 const runDepth  = a => a.route != null ? Math.min(a.depth, locFloor(a.route) + 1)
                      : a.shallow ? Math.max(0, a.depth - 1) : a.depth;
+const spSurv    = a => a && a.sp ? (spOf(a).survival || 0) : 0;
 const survival  = (d, deaths, a) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
                     T.SURV_BASE + (built("smith") ? T.SURV_SMITH * vEff("smith") : 0) + (built("herb") ? T.SURV_HERB * vEff("herb") : 0)
                     - d * T.DEPTH_PEN - deaths * (a ? deathPenFor(a) : T.DEATH_PEN)
-                    + mods(a).surv));
+                    + mods(a).surv + spSurv(a)));
 const hollows   = () => S.pool.filter(a => a.state === "hollow");
 const living    = () => S.pool.filter(a => a.state !== "hollow");
 const avgRate   = () => {                 // never divide by a window too short to mean anything
@@ -571,12 +587,41 @@ function resize(){
 window.addEventListener("resize", resize);
 if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
 
-/* thick-outline shape helpers (flat vector look) */
+/* One palette, one set of line weights. Outer contour 3, interior 1.5, detail 1. */
+const C = {
+  shadow:"#171b1e", stone:"#2b3136", stoneLit:"#3d444a", relief:"#4d545a", wet:"#3a4448",
+  void:"#0f1512", mossDark:"#232c20", moss:"#35402c", mossLit:"#4c5a38",
+  root:"#2c2a21", water:"#1e2724",
+  fireCore:"#ffe9b8", fireBody:"#ffab3d", fireTongue:"#f2682c",
+  deadBody:"#6e6a7a", deadCore:"#a9a3b5",
+  line:"#0a0e0b", hollow:"#454b48", socket:"#1a1f1c",
+  keeper:"#d9c48a", cursed:"#7a4a6e", rare:"#c9a227"
+};
+const LW = { outer:3, inner:1.5, detail:1 };
+
 function shape(path, fill, lw){
   ctx.beginPath(); path();
   if (fill){ ctx.fillStyle = fill; ctx.fill(); }
-  ctx.lineWidth = lw || 4; ctx.strokeStyle = "#0c0812";
-  ctx.lineJoin = "round"; ctx.stroke();
+  ctx.lineWidth = lw === 0 ? 0 : (lw || LW.outer);
+  if (ctx.lineWidth){ ctx.strokeStyle = C.line; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke(); }
+}
+
+const mix = (a, b, t) => {                      // blend two hexes: firelight, and things dying
+  const pa = parseInt(a.slice(1),16), pb = parseInt(b.slice(1),16);
+  const r = Math.round(((pa>>16&255)*(1-t) + (pb>>16&255)*t));
+  const g = Math.round(((pa>>8&255)*(1-t) + (pb>>8&255)*t));
+  const bl = Math.round(((pa&255)*(1-t) + (pb&255)*t));
+  return "#" + [r,g,bl].map(v=>v.toString(16).padStart(2,"0")).join("");
+};
+
+/* 10. Grounding: nothing floats. */
+function contact(x, y, w, alpha){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, w);
+  g.addColorStop(0, "rgba(10,14,11," + (alpha || 0.45) + ")");
+  g.addColorStop(1, "rgba(10,14,11,0)");
+  ctx.fillStyle = g;
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.36); ctx.beginPath();
+  ctx.arc(0, 0, w, 0, 6.2832); ctx.fill(); ctx.restore();
 }
 function circle(x, y, r, fill, lw){ shape(()=>ctx.arc(x, y, r, 0, 6.2832), fill, lw); }
 function rrect(x, y, w, h, rad, fill, lw){
@@ -600,9 +645,29 @@ function desat(hex){                       // a hollow keeps its hue, drained of
 
 /* ============================ the pool ============================ */
 
+/* 4. Six species. Identity is silhouette; the colours are all warm-neutral so
+   the animals read against grey stone and green moss without competing with the fire. */
+const SPECIES = [
+  { key:"cat",    name:"cat",    body:"#b58a63", mark:"#c9a179", survival:+0.05, pay:-0.15,
+    note:"Careful. Comes back more often, and with less." },
+  { key:"dog",    name:"dog",    body:"#96775e", mark:"#a98a70", deaths:+1,
+    note:"Holds on. One more death before the grey." },
+  { key:"frog",   name:"frog",   body:"#7d8a5c", mark:"#8f9c6c", depth:+1, survival:-0.05,
+    note:"Reckless. Goes deeper faster and lasts less time doing it." },
+  { key:"crow",   name:"crow",   body:"#4e4a52", mark:"#5f5b64", drop:+0.08, gate:-1.5,
+    note:"Sharp-eyed. Finds more, opens less." },
+  { key:"rabbit", name:"rabbit", body:"#b0a290", mark:"#c2b4a2", away:-0.18, depthOdd:true,
+    note:"Quick. Short trips, and not much deeper for them." },
+  { key:"goat",   name:"goat",   body:"#a2947c", mark:"#b4a68e", gate:+2.5, away:+0.15,
+    note:"Stubborn. Better at doors, slower at everything." }
+];
+const SPMAP = {}; SPECIES.forEach(sp => SPMAP[sp.key] = sp);
+const spOf = a => SPMAP[a.sp] || SPECIES[0];
+const BUILDS = [{ h:1, w:1 }, { h:1.12, w:0.92 }, { h:0.9, w:1.12 }];
+
 const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d57"],
-                ["#c9a45c","#8a6a34"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"],
-                ["#5fbec4","#2f7d82"], ["#e0904a","#9c5a22"], ["#b96fc4","#7a3f85"],
+                ["#c9a227","#5c4a1c"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"],
+                ["#5fbec4","#2f7d82"], ["#d9c48a","#9c5a22"], ["#b96fc4","#7a3f85"],
                 ["#a8c95c","#6c8a30"], ["#8894b0","#525b74"], ["#c45f5f","#832f2f"] ];
 const slotUsed = new Array(T.RING_MAX).fill(null);
 const FIRE_TAP_R = 78;                    // nobody may sit inside this
@@ -629,7 +694,9 @@ function edgeSpawn(a){
 }
 
 function recruit(){
+  const sp = SPECIES[(Math.random() * SPECIES.length) | 0];
   const a = { id:S.nextId++, depth:0, deaths:0, shallow:false, slot:-1,
+              sp:sp.key, build:(Math.random() * BUILDS.length) | 0, rate:0.8 + Math.random() * 0.5,
               tone:TONES[(S.nextId - 1) % TONES.length], state:"walkin", t:0,
               x:0, y:0, dir:1, exit:0, bob:Math.random() * 6, queue:0 };
   edgeSpawn(a); S.pool.push(a); return a;
@@ -639,7 +706,7 @@ function earn(n, x, y, doubled){
   S.souls += n; S.runEarned += n;
   S.earnLog.push({ t:S.elapsed, n });
   if (S.offline) return;
-  S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffd06b" : "#f2e6d8" });
+  S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffe9b8" : "#d8d2c4" });
 }
 
 function sitDown(a){
@@ -647,7 +714,7 @@ function sitDown(a){
   const p = slotPos(a.slot); a.x = p.x; a.y = p.y;
   if (a.recalled){                      // the bell buys their life, not their purse
     a.recalled = false;
-    S.floats.push({ x:a.x, y:a.y - 26, t:0, txt:"no fee", col:"#7fa8d0" });
+    S.floats.push({ x:a.x, y:a.y - 26, t:0, txt:"no fee", col:"#4d545a" });
   } else {
     const doubled = Math.random() < echoChance();
     earn(payFor(a) * (doubled ? 2 : 1), a.x, a.y - 26, doubled);
@@ -666,7 +733,8 @@ function resolveExpedition(a){
       if (wouldBe > deepestAllowed() && S.unlocked < LOC.length - 1){
         if (!attemptGate(a, S.unlocked + 1)){ edgeSpawn(a); a.state = "walkin"; return; }
       }
-      a.depth = Math.min(wouldBe, deepestAllowed());
+      const leap = spOf(a).depth || 0;                      // the reckless take two at a time
+      a.depth = Math.min(wouldBe + (leap && Math.random() < 0.35 ? 1 : 0), deepestAllowed());
       if (a.depth > (a.peak || 0)) a.peak = a.depth;
     }
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
@@ -682,7 +750,7 @@ function resolveExpedition(a){
   } else {
     a.deaths++; S.seen.death = true;
     if (a.deaths === 1) a.pending = oneOf(LINES.firstDeath);
-    const hollowing = a.deaths >= hollowAt();
+    const hollowing = a.deaths >= hollowAt(a);
     if (!hollowing) loseGear(a, d, false);   // dropped at the depth that took them
     // a hollowing death keeps hold of it: goHollow puts it on the shelf instead
     a.depth = Math.floor(a.depth / 2);    // a setback, not a reset — the scar stays
@@ -701,16 +769,16 @@ function goHollow(a){                     // the thing the whole system exists t
   releaseSlot(a);
   if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
   else { a.x = fx; a.y = fy + 78; }
-  S.meta.dead.push({ name:a.name || null, depth:a.depth, deaths:a.deaths, tone:a.tone[0],
+  S.meta.dead.push({ name:a.name || null, depth:a.depth, deaths:a.deaths, sp:a.sp,
                      carried: A_SLOTS.map(k => a.gear && a.gear[k] ? artTitle(a.gear[k]) : null).filter(Boolean),
                      cycle: S.meta.cycles + 1 });
-  if (S.offline) S.offline.hollowed.push({ name:a.name || null, depth:a.depth, tone:a.tone[0] });
+  if (S.offline) S.offline.hollowed.push({ name:a.name || null, depth:a.depth, sp:a.sp });
   const first = !S.everHollowed; S.everHollowed = true;
   say(a, oneOf(first ? LINES.firstHollow : LINES.hollow));
   S.notice = { txt:"Someone has gone hollow.", t:0 };
   for (let k = 0; k < 22; k++)
     S.sparks.push({ x:a.x + (Math.random()-0.5)*18, y:a.y - 14, vx:(Math.random()-0.5)*44,
-                    vy:-30-Math.random()*40, t:0, life:1.1 + Math.random()*0.7, col:"#8e86a0" });
+                    vy:-30-Math.random()*40, t:0, life:1.1 + Math.random()*0.7, col:"#6e6a7a" });
   if (S.sel === a.id) showCounsel(a);
 }
 
@@ -830,9 +898,10 @@ function dropFor(a){
   if (Math.random() < T.MAT_DROP_BASE + a.depth * T.MAT_DROP_PER_DEPTH){
     const n = 1 + ((Math.random() * (1 + a.depth/3)) | 0);
     S.mat += n; S.seen.material = true;
-    S.floats.push({ x:a.x, y:a.y - 30, t:0, txt:"+" + n + " scrap", col:"#9bd0c4" });
+    S.floats.push({ x:a.x, y:a.y - 30, t:0, txt:"+" + n + " scrap", col:"#4c5a38" });
   }
-  const chance = Math.min(T.DROP_CAP, T.DROP_BASE + a.depth * T.DROP_PER_DEPTH);
+  const chance = Math.min(T.DROP_CAP, T.DROP_BASE + a.depth * T.DROP_PER_DEPTH
+                          + (a.sp ? (spOf(a).drop || 0) : 0));
   if (Math.random() >= chance) return;
   const art = makeArtifact(a.depth);
   if (markedBonus(a)){
@@ -925,54 +994,57 @@ function say(a, txt){
   if (S.says.length > 4) S.says.shift();
 }
 
+/* Human relics, described by someone who never saw one used. Guesses, not lore. */
 const ART_LINES = {
   weapon: {
-    common: [ "Notched, and sharpened past its best shape.",
-              "The grip was rewrapped by someone in a hurry.",
-              "Cheap steel. It had still been used." ],
-    fine:   [ "Balanced by a hand that knew the work.",
-              "Someone kept it oiled to the end.",
-              "A maker's mark, filed half away." ],
-    rare:   [ "It does not dull. That was noticed early.",
-              "Older than the sanctuary, and less patient.",
-              "The edge is quiet where the rest of it is not." ]
+    common: [ "A handle, and an edge, and no way to hold both at once.",
+              "Too long for anyone here. They carry it across the back.",
+              "Sharpened by someone, at some point, badly." ],
+    fine:   [ "Balanced for a hand with one more joint than ours.",
+              "Somebody kept this oiled right up until they stopped.",
+              "A maker's mark, filed half off. Hiding from who?" ],
+    rare:   [ "It does not dull. Nobody can say why, and nobody asks twice.",
+              "Older than the steps outside, and in better repair than they are.",
+              "The edge is quiet in a way the rest of it is not." ]
   },
   armour: {
-    common: [ "Dented inward, twice, in the same place.",
-              "Straps replaced with something that was not leather.",
-              "It had already failed once." ],
-    fine:   [ "Fitted. Someone measured for this.",
-              "Scored across the back, which says enough.",
-              "Repaired well, and often." ],
-    rare:   [ "Nothing has managed to mark it yet.",
-              "Cold to hold, and colder to wear.",
-              "It remembers a better owner." ]
+    common: [ "Bent inward, twice, in the same place. Something did that twice.",
+              "The straps were replaced with something that was never leather.",
+              "It failed once already. That is most of what is known about it." ],
+    fine:   [ "Fitted. Someone was measured for this, and stood still while it was done.",
+              "Scored across the back, which says which way they were going.",
+              "Mended well, and often, and then not again." ],
+    rare:   [ "Nothing has managed to mark it yet, and things have tried.",
+              "Cold to hold. Colder to wear. Warm on the inside, which is worse.",
+              "It fits nobody here and settles onto them anyway." ]
   },
   trinket: {
-    common: [ "Worn smooth by a thumb, over years.",
-              "Not worth anything. Carried anyway.",
-              "A knot of wire and someone's hair." ],
-    fine:   [ "Kept in a pocket, not on a hand.",
-              "It was a gift, going by the inscription.",
-              "Small, and expensive, and never sold." ]
-    , rare: [ "The dark parts of it move when watched.",
-              "Whoever set these stones did not finish.",
-              "It hums against the teeth." ]
+    common: [ "Worn smooth on one side by a thumb, over years.",
+              "Worth nothing. Carried a long way regardless.",
+              "Wire and hair, wound tight. Someone's, once." ],
+    fine:   [ "Kept in a pocket rather than worn. That means something.",
+              "There is an inscription. Nobody here reads.",
+              "Small, and finely made, and never once sold." ],
+    rare:   [ "The dark parts of it move when it is not looked at directly.",
+              "Whoever set these stones stopped partway through.",
+              "It hums against the teeth. Only some of them notice." ]
   }
 };
-const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn.",
-                      "The last owner is still paying.", "It takes the difference back." ];
+
+const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn, which is the tell.",
+                      "Whoever had it last is still paying for it.",
+                      "It gives more than it should and takes it back somewhere else." ];
 
 /* ==================== the trade and the ground ==================== */
 
 const VENDORS = [
-  { key:"smith", name:"The Blacksmith", glyph:"🔨", tint:"#5a3f2c", verb:"hammer", seats:2,
+  { key:"smith", name:"The Blacksmith", glyph:"🔨", tint:"#332f24", verb:"hammer", seats:2,
     cost:[0,200,800,2500], mat:[0,0,12,40],
     blurb:["Pays for repairs: +2 souls a rest, +12% survival.",
            "Reforges common into fine, on the wearer.",
            "Reforges fine into rare. The last thing he learns.",
            "Reforges common to fine and fine to rare, on the wearer."] },
-  { key:"herb", name:"The Herbalist", glyph:"🌿", tint:"#3f5a3e", verb:"stir", seats:1,
+  { key:"herb", name:"The Herbalist", glyph:"🌿", tint:"#232c20", verb:"stir", seats:1,
     cost:[0,500,1100,3000], mat:[0,0,14,44],
     blurb:["+8% survival, and a fourth death before anyone hollows.",
            "Lifts a curse, though the piece comes back a grade poorer.",
@@ -996,7 +1068,7 @@ const VENDORS = [
            "The grey pull at the flame half as hard while this stands.",
            "One rite a fire costs nothing.",
            "Double ash, half the pull from the grey, and one free rite a fire."] },
-  { key:"tink", name:"The Tinker", glyph:"⚙", tint:"#5c5468", verb:"break", seats:1,
+  { key:"tink", name:"The Tinker", glyph:"⚙", tint:"#3d444a", verb:"break", seats:1,
     cost:[0,700,1500,3000], mat:[0,0,12,38],
     blurb:["Deals in scrap. Gear can be broken down, off the shelf or off a back.",
            "Scrap buys souls, badly. Souls buy scrap, worse.",
@@ -1038,42 +1110,43 @@ const adjActive = (a, b) => built(a) && built(b) && adjacent(a, b);
 /* ==================== the road ==================== */
 
 const LOC = [
-  { name:"The Cinder Steps", code:"CS", tint:"#c9a45c", gate:"The Turnstile",
-    events:["{n} found the steps swept. Somebody sweeps them.",
-            "Something followed {n} down and lost interest.",
-            "{n} passed a boot with the foot still in it."],
-    gateLine:"Taken off the thing at the turnstile." },
-  { name:"The Old Road", code:"OR", tint:"#8a8494", gate:"The Weighing Stone",
-    events:["{n} walked the road all day and it did not turn.",
-            "Milestones down here count up, not down. {n} stopped reading them.",
-            "{n} heard carts. There are no carts."],
+  { name:"The Cistern Steps", code:"CS", tint:"#4d545a", gate:"The Turnstile",
+    events:["{n} found the steps swept. Something sweeps them.",
+            "The steps are built for legs twice {n}'s length.",
+            "{n} passed a boot, still laced, with nothing in it."],
+    gateLine:"Worked loose from the turnstile." },
+  { name:"The Flooded Library", code:"FL", tint:"#3a4448", gate:"The Weighing Stone",
+    events:["{n} says the shelves go down as far as they go along.",
+            "Everything written down here has come off in the water. {n} brought back a page of nothing.",
+            "{n} heard pages turning. Nobody has hands down there."],
     gateLine:"Prised out of the weighing stone." },
-  { name:"The Drowned Vault", code:"DV", tint:"#5fbec4", gate:"The Sluice",
-    events:["{n} came up for air twice and only needed to once.",
-            "The water in the vault is warm. {n} did not say more than that.",
-            "{n} found the ledgers. All the entries are the same name."],
+  { name:"The Broken Aqueduct", code:"BA", tint:"#5fbec4", gate:"The Sluice",
+    events:["{n} walked the channel dry-shod. It was not built dry.",
+            "The water still runs somewhere under it. {n} could hear it and not find it.",
+            "{n} found the ledgers cut into the wall. Every entry is the same mark."],
     gateLine:"Pulled dripping out of the sluice." },
-  { name:"The Rookery", code:"RK", tint:"#b96fc4", gate:"The Roost",
-    events:["Something was counting {n}'s steps back at them.",
-            "{n} kept their light low. It helped, or it did not.",
-            "The nests here are made of belts and straps. {n} left them alone."],
-    gateLine:"Cut down from the roost." },
-  { name:"The Long Dark", code:"LD", tint:"#6f8fd6", gate:"The Held Breath",
-    events:["{n} walked without a wall for three hours.",
-            "There was no floor sound. {n} kept walking anyway.",
-            "{n} says the dark has a grain to it, like wood."],
+  { name:"The Quarry", code:"QY", tint:"#7d8a85", gate:"The Hoist",
+    events:["Something was counting {n}'s steps back at them, off the walls.",
+            "The cuts in the stone are square and clean and older than the forest.",
+            "{n} left the tools where they lay. They are all too big to lift."],
+    gateLine:"Cut down from the hoist." },
+  { name:"The Ossuary Road", code:"OR", tint:"#6e6a7a", gate:"The Held Breath",
+    events:["{n} walked between the shelves for three hours without a turn.",
+            "They stacked their own dead here, in rows, by size. {n} counted and stopped counting.",
+            "{n} says the dark down there has a grain to it, like sawn wood."],
     gateLine:"Carried out of the held breath." },
-  { name:"The Salt Cathedral", code:"SC", tint:"#e8dcc0", gate:"The Chancel",
-    events:["{n} found the pews full and every one of them empty.",
-            "The salt takes the sound out of everything. {n} liked it.",
-            "Something in the cathedral knew {n} by name."],
-    gateLine:"Taken from the chancel floor." },
-  { name:"Where It Ends", code:"WE", tint:"#c45f5f", gate:"The Last Door",
-    events:["{n} would not say what was down there.",
+  { name:"The Signal Tower", code:"ST", tint:"#d8d2c4", gate:"The Chancel",
+    events:["{n} found the lamp housing intact and cold.",
+            "Something up there was still pointed at the horizon, waiting.",
+            "The tower knew {n} was coming. The stairs were lit."],
+    gateLine:"Taken from under the lamp." },
+  { name:"Where They Went", code:"WW", tint:"#c45f5f", gate:"The Last Door",
+    events:["{n} would not say what was through it.",
             "{n} came back up counting, and would not stop.",
-            "There is a door. {n} says it is not locked."],
+            "There is a door, and {n} says it was never locked."],
     gateLine:"Brought back through the last door." }
 ];
+
 const CLEAN = ["wipe", "scrape", "press", "cut", "thaw", "creep", "creep"];
 const CLEAN_HINT = {
   wipe:  "Drag across it. The ash comes off.",
@@ -1094,7 +1167,8 @@ const bestGateScore = () => living().reduce((m, a) => Math.max(m, gateScore(a)),
 
 function gateScore(a){                                       // gear, depth and scars, not a coin flip
   const m = mods(a);
-  return a.depth + m.surv * 22 + (-m.scar) * 30 + m.pay * 3 - a.deaths * 1.4;
+  return a.depth + m.surv * 22 + (-m.scar) * 30 + m.pay * 3 - a.deaths * 1.4
+       + (a.sp ? (spOf(a).gate || 0) : 0);
 }
 
 function logEvent(loc, txt){
@@ -1123,7 +1197,7 @@ function attemptGate(a, next){
   loseGear(a, a.depth, false);
   a.depth = Math.floor(a.depth / 2);
   if (!S.offline) say(a, oneOf(["The gate did not open.", "Thrown back, and lighter for it."]));
-  if (a.deaths >= hollowAt()){ goHollow(a); return false; }
+  if (a.deaths >= hollowAt(a)){ goHollow(a); return false; }
   return false;
 }
 
@@ -1152,7 +1226,7 @@ function markerPos(a, i){
 function ringBell(a){
   const c = bellCost();
   if (S.souls < c){
-    S.floats.push({ x:fx, y:fy - 40, t:0, txt:"need " + fmt(c), col:"#9a8aa8" });
+    S.floats.push({ x:fx, y:fy - 40, t:0, txt:"need " + fmt(c), col:"#7d8a85" });
     return false;
   }
   S.souls -= c; S.bells++;
@@ -1162,7 +1236,7 @@ function ringBell(a){
   S.notice = { txt:"Recalled. Alive, and no richer.", t:0 };
   for (let k = 0; k < 12; k++)
     S.sparks.push({ x:a.x, y:a.y - 12, vx:(Math.random()-0.5)*36, vy:-26-Math.random()*30,
-                    t:0, life:0.9, col:"#7fa8d0" });
+                    t:0, life:0.9, col:"#4d545a" });
   refresh(); return true;
 }
 
@@ -1172,18 +1246,120 @@ function sparks(x, y, life){
 
 /* ============================ drawing ============================ */
 
-function drawGround(){
-  shape(()=>ctx.ellipse(fx, fy + 24, Math.min(W*0.46, 178), 74, 0, 0, 6.2832), "#241a30", 5);
-  shape(()=>ctx.ellipse(fx, fy + 18, Math.min(W*0.30, 116), 46, 0, 0, 6.2832), "#2c2038", 4);
+/* 6. The sanctuary is a ruined temple floor, not open ground.
+   Columns stand at the edge of the light; as the fire dies the building
+   disappears around the player. */
+
+const COLUMNS = [];
+for (let i = 0; i < 9; i++){
+  const a = -Math.PI / 2 + (i / 9) * Math.PI * 2 + 0.22;
+  COLUMNS.push({ a, fallen: i === 2 || i === 6, h: 46 + (i % 3) * 16, w: 13 + (i % 2) * 3 });
+}
+const ROOTS = [];
+for (let i = 0; i < 14; i++)
+  ROOTS.push({ a: (i / 14) * Math.PI * 2 + 0.3, len: 26 + (i % 4) * 12, k: 0.6 + (i % 5) * 0.2 });
+
+function drawGround(time){
+  const R = lightR(), life = flameLife();
+  const seen = t => Math.max(0, Math.min(1, (R * 1.5 - t) / 60));   // fades out past the light
+
+  ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, H);
+
+  // moss and standing water beyond the flagstones
+  shape(()=>ctx.ellipse(fx, fy + 30, Math.min(W * 0.46, 184), 76, 0, 0, 6.2832), "#141a15", 0);
+  shape(()=>ctx.ellipse(fx, fy + 28, Math.min(W * 0.40, 158), 62, 0, 0, 6.2832), C.mossDark, 0);
+  shape(()=>ctx.ellipse(fx - 54, fy + 62, 46, 13, 0.2, 0, 6.2832), C.water, 0);
+
+  // roots coming up through the joints, thickest at the outer edge
+  ctx.lineCap = "round";
+  for (const r of ROOTS){
+    const x0 = fx + Math.cos(r.a) * (R * 0.9), y0 = fy + Math.sin(r.a) * (R * 0.42) + 16;
+    const x1 = x0 + Math.cos(r.a) * r.len, y1 = y0 + Math.sin(r.a) * r.len * 0.45;
+    ctx.strokeStyle = C.root; ctx.lineWidth = LW.inner + 1.5;
+    ctx.beginPath(); ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo((x0 + x1) / 2 + r.k * 10, (y0 + y1) / 2 - 6, x1, y1);
+    ctx.globalAlpha = 0.5 + 0.5 * seen(R); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  // the dais: a circular cut-stone step, worn, half taken by moss
+  shape(()=>ctx.ellipse(fx, fy + 22, R * 1.12, R * 0.52, 0, 0, 6.2832), C.stone, LW.inner);
+  shape(()=>ctx.ellipse(fx, fy + 16, R * 0.86, R * 0.40, 0, 0, 6.2832), C.stoneLit, LW.inner);
+  ctx.save();                                        // flagstone joints
+  ctx.beginPath(); ctx.ellipse(fx, fy + 16, R * 0.86, R * 0.40, 0, 0, 6.2832); ctx.clip();
+  ctx.strokeStyle = C.shadow; ctx.lineWidth = LW.detail; ctx.globalAlpha = 0.55;
+  for (let i = -3; i <= 3; i++){
+    ctx.beginPath(); ctx.moveTo(fx + i * 34, fy - 40); ctx.lineTo(fx + i * 34 + 14, fy + 70); ctx.stroke();
+  }
+  for (let i = 0; i <= 3; i++){
+    ctx.beginPath(); ctx.moveTo(fx - R, fy - 10 + i * 22); ctx.lineTo(fx + R, fy - 16 + i * 22); ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.restore();
+  shape(()=>ctx.ellipse(fx - R * 0.55, fy + 30, R * 0.30, R * 0.13, 0.3, 0, 6.2832), C.moss, 0);
+  shape(()=>ctx.ellipse(fx + R * 0.62, fy + 8, R * 0.22, R * 0.10, -0.2, 0, 6.2832), C.moss, 0);
+
+  // worn relief, too far gone to read
+  ctx.globalAlpha = 0.5; ctx.strokeStyle = C.relief; ctx.lineWidth = LW.detail;
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI / 2 + (i / 5) * Math.PI * 2 + 0.9;
+    const x = fx + Math.cos(a) * R * 0.72, y = fy + Math.sin(a) * R * 0.34 + 18;
+    ctx.beginPath(); ctx.arc(x, y - 5, 5, 0.3, 3.4); ctx.moveTo(x - 4, y + 1);
+    ctx.lineTo(x - 3, y + 9); ctx.moveTo(x + 4, y + 1); ctx.lineTo(x + 3, y + 9); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // the basin the fire sits in: human, cracked, too big for what it holds
+  shape(()=>ctx.ellipse(fx, fy + 16, 62, 26, 0, 0, 6.2832), C.stoneLit, LW.outer);
+  shape(()=>ctx.ellipse(fx, fy + 10, 50, 20, 0, 0, 6.2832), C.shadow, LW.inner);
+  ctx.strokeStyle = C.shadow; ctx.lineWidth = LW.detail;
+  ctx.beginPath(); ctx.moveTo(fx + 26, fy + 24); ctx.lineTo(fx + 40, fy + 14);
+  ctx.lineTo(fx + 52, fy + 20); ctx.stroke();
 }
 
-const mix = (a, b, t) => {                       // two hexes, one dying fire
-  const pa = parseInt(a.slice(1),16), pb = parseInt(b.slice(1),16);
-  const r = Math.round(((pa>>16&255)*(1-t) + (pb>>16&255)*t));
-  const g = Math.round(((pa>>8&255)*(1-t) + (pb>>8&255)*t));
-  const bl = Math.round(((pa&255)*(1-t) + (pb&255)*t));
-  return "#" + [r,g,bl].map(v=>v.toString(16).padStart(2,"0")).join("");
-};
+function drawColumns(time){                          // stand at the edge of the light
+  const R = lightR();
+  for (const c of COLUMNS){
+    const dist = R * 1.34;
+    const x = fx + Math.cos(c.a) * dist, y = fy + Math.sin(c.a) * dist * 0.30 + 30;
+    if (x < -40 || x > W + 40) continue;
+    const vis = Math.max(0, Math.min(1, (R - 58) / 90));
+    if (vis <= 0.02) continue;
+    ctx.globalAlpha = 0.35 + 0.65 * vis;
+    contact(x, y + 2, c.w * 1.3, 0.4);
+    if (c.fallen){
+      shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(1.2);
+        ctx.rect(-c.h * 0.5, -c.w * 0.5, c.h, c.w); ctx.restore(); }, C.stone, LW.inner);
+    } else {
+      shape(()=>ctx.rect(x - c.w / 2, y - c.h, c.w, c.h), C.stone, LW.inner);
+      shape(()=>ctx.rect(x - c.w * 0.72, y - c.h - 7, c.w * 1.44, 8), C.stoneLit, LW.inner);
+      ctx.strokeStyle = C.shadow; ctx.lineWidth = LW.detail;
+      for (let f = 1; f < 3; f++){
+        ctx.beginPath(); ctx.moveTo(x - c.w / 2 + f * c.w / 3, y - c.h + 5);
+        ctx.lineTo(x - c.w / 2 + f * c.w / 3, y - 3); ctx.stroke();
+      }
+      shape(()=>ctx.ellipse(x, y - c.h * 0.35, c.w * 0.55, c.h * 0.16, 0.4, 0, 6.2832), C.moss, 0);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* 9. The firelight itself: a warm rim on the side facing the fire,
+   cool shadow away from it, both scaling with how alive the flame is. */
+function rimLight(x, y, w, h){
+  const life = flameLife();
+  if (life <= 0.05) return;
+  const dx = x - fx, dy = (y - fy) * 0.6, d = Math.max(1, Math.hypot(dx, dy));
+  const near = Math.max(0, Math.min(1, 1 - (d - 40) / (lightR() * 1.3)));
+  if (near <= 0.02) return;
+  const side = dx > 0 ? -1 : 1;                     // the side facing the fire
+  ctx.save();
+  ctx.globalAlpha = 0.10 + 0.28 * near * life;
+  ctx.strokeStyle = C.fireBody; ctx.lineWidth = 1 + 1.4 * near;
+  ctx.beginPath();
+  ctx.ellipse(x, y - h * 0.40, w * 0.26, h * 0.40, 0,
+              side > 0 ? -1.5 : 1.5, side > 0 ? 1.5 : 4.5);
+  ctx.stroke();
+  ctx.restore();
+}
 
 function drawFire(time){
   const life = flameLife();                      // 0 dead, 1 roaring
@@ -1193,12 +1369,12 @@ function drawFire(time){
   const pulse = 1 + Math.sin(time * 3.4 * speed) * 0.06 * life + flare;
   const R = lightR() * pulse;
 
-  const hot  = mix("#ff5f3d", "#4a5668", 1 - life);
-  const mid  = mix("#ff9d3d", "#66748a", 1 - life);
-  const tip  = mix("#ffd06b", "#8b96a8", 1 - life);
+  const hot  = mix("#f2682c", "#4a5668", 1 - life);
+  const mid  = mix("#ffab3d", "#66748a", 1 - life);
+  const tip  = mix("#ffe9b8", "#8b96a8", 1 - life);
 
   const g = ctx.createRadialGradient(fx, fy - 12, 4, fx, fy - 12, R);
-  g.addColorStop(0, "rgba(255,157,61," + (0.34 * (0.25 + 0.75*life)).toFixed(3) + ")");
+  g.addColorStop(0, "rgba(255,152,56," + (0.20 * (0.25 + 0.75*life)).toFixed(3) + ")");
   g.addColorStop(1, "rgba(255,157,61,0)");
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy - 12, R, 0, 6.2832); ctx.fill();
 
@@ -1206,7 +1382,7 @@ function drawFire(time){
   ctx.save(); ctx.translate(fx, fy + 8);
   for (let i = 0; i < logs; i++){
     ctx.rotate(i === 0 ? -0.42 : 0.84 / Math.max(1, logs - 1));
-    rrect(0, i * 2, 56 * (1 + S.lv.flame * 0.045), 13, 6, i % 2 ? "#5a3f2c" : "#4a3324", 4);
+    rrect(0, i * 2, 56 * (1 + S.lv.flame * 0.045), 13, 6, i % 2 ? "#332f24" : "#2c2a21", 4);
   }
   ctx.restore();
 
@@ -1224,72 +1400,221 @@ function drawFire(time){
     teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.30, h1 * 0.36, tip, 3);
 }
 
-/* one hooded figure: trapezoid cloak, hood, pale face */
-function figure(x, y, h, w, cloak, hood, dir, face){
-  shape(()=>ctx.ellipse(x, y + 5, w*0.6, 4.5, 0, 0, 6.2832), "rgba(0,0,0,0.32)", 0.001);
-  shape(()=>{ ctx.moveTo(x - w*0.40, y - h); ctx.lineTo(x + w*0.40, y - h);
-              ctx.lineTo(x + w*0.52, y + 1); ctx.quadraticCurveTo(x, y + 7, x - w*0.52, y + 1);
-              ctx.closePath(); }, cloak, 4);
-  circle(x, y - h - 2, w*0.50, hood, 4);
-  circle(x + dir*w*0.16, y - h - 1, w*0.30, face || "#e8cfae", 3);
+/* 4 + 7 + 8. Species read as silhouettes. A hollow keeps its silhouette exactly
+   and loses everything else: colour, eyes, and all movement. */
+
+function ear(x, y, w, h, tilt, fill){
+  shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
+    ctx.moveTo(0, 0); ctx.lineTo(w * 0.62, -h); ctx.lineTo(w, 4); ctx.closePath();
+    ctx.restore(); }, fill, LW.inner);
 }
+
+function hooded(x, y, h, w, cloak, hood, dir, eyes){
+  contact(x, y + 4, w * 0.66, 0.42);
+  shape(()=>{ ctx.moveTo(x - w * 0.40, y - h); ctx.lineTo(x + w * 0.40, y - h);
+              ctx.lineTo(x + w * 0.54, y + 1); ctx.quadraticCurveTo(x, y + 7, x - w * 0.54, y + 1);
+              ctx.closePath(); }, cloak, LW.outer);
+  circle(x, y - h - 2, w * 0.50, hood, LW.outer);
+  circle(x + dir * w * 0.14, y - h - 1, w * 0.30, mix(hood, C.line, 0.45), LW.detail);
+  if (eyes) drawEyes(x + dir * w * 0.10, y - h - 1, w * 0.30, "normal", dir);
+  rimLight(x, y, w * 2, h * 1.5);
+}
+
+function drawEyes(x, y, r, state, dir){
+  if (state === "hollow"){                          // sockets, darker than the body
+    circle(x - r * 0.42, y, r * 0.30, C.socket, 0);
+    circle(x + r * 0.42, y, r * 0.30, C.socket, 0);
+    return;
+  }
+  const ex = r * 0.40, ey = r * 0.06, rr = r * 0.30;
+  ctx.fillStyle = C.line;
+  for (const sx of [-1, 1]){
+    ctx.beginPath();
+    ctx.ellipse(x + sx * ex + dir * r * 0.06, y + ey, rr * 0.82, rr, 0, 0, 6.2832);
+    ctx.fill();
+  }
+  if (state === "weary"){                           // lids over the top third, at two deaths
+    ctx.fillStyle = arguments[5] || C.hollow;
+    for (const sx of [-1, 1]){
+      ctx.beginPath();
+      ctx.ellipse(x + sx * ex + dir * r * 0.06, y + ey - rr * 0.72, rr * 0.95, rr * 0.62, 0, 0, 6.2832);
+      ctx.fill();
+    }
+  }
+}
+
+/* The body: worn travellers, not cult followers. Packs, patched cloaks, bandages. */
+function drawAnimal(a, x, y, opts){
+  const o = opts || {};
+  const sp = spOf(a), b = BUILDS[a.build || 0];
+  const hollow = a.state === "hollow";
+  const body = hollow ? C.hollow : sp.body;
+  const mark = hollow ? mix(C.hollow, C.socket, 0.25) : sp.mark;
+  const seated = !!o.seated;
+  const tall = sp.key === "cat" || sp.key === "rabbit" ? 1.14 : sp.key === "frog" ? 0.78 : 1;
+  const H = (seated ? 21 : 25) * b.h * tall, Wd = 19 * b.w * (sp.key === "frog" ? 1.2 : 1);
+  const dir = o.dir || 1;
+  const slump = hollow ? 4 : 0;                     // shoulders forward, head down
+  const m = mods(a), gear = a.gear || {};
+
+  contact(x, y + 4, Wd * 0.66, hollow ? 0.5 : 0.42);
+
+  if (gear.armour) {                                // armour puts bulk on the shoulders
+    shape(()=>{ ctx.ellipse(x, y - H * 0.72 + slump, Wd * 0.74, H * 0.30, 0, 0, 6.2832); },
+          mix(body, C.relief, 0.5), LW.inner);
+  }
+
+  /* cloak / torso, shaped per species */
+  if (sp.key === "frog"){
+    shape(()=>{ ctx.moveTo(x - Wd * 0.72, y + 2);
+      ctx.quadraticCurveTo(x - Wd * 0.86, y - H * 0.9 + slump, x, y - H * 0.92 + slump);
+      ctx.quadraticCurveTo(x + Wd * 0.86, y - H * 0.9 + slump, x + Wd * 0.72, y + 2);
+      ctx.quadraticCurveTo(x, y + 8, x - Wd * 0.72, y + 2); ctx.closePath(); }, body, LW.outer);
+  } else if (sp.key === "crow"){
+    shape(()=>{ ctx.moveTo(x - Wd * 0.40, y - H + slump); ctx.lineTo(x + Wd * 0.40, y - H + slump);
+      ctx.lineTo(x + Wd * 0.56, y + 1); ctx.quadraticCurveTo(x, y + 7, x - Wd * 0.56, y + 1);
+      ctx.closePath(); }, body, LW.outer);
+    for (const sx of [-1, 1])                       // folded wings at the sides
+      shape(()=>{ ctx.moveTo(x + sx * Wd * 0.42, y - H * 0.86 + slump);
+        ctx.quadraticCurveTo(x + sx * Wd * 0.92, y - H * 0.4, x + sx * Wd * 0.44, y - 1);
+        ctx.closePath(); }, mark, LW.inner);
+  } else if (sp.key === "goat"){                    // broad, and leaning into it
+    shape(()=>{ ctx.moveTo(x - Wd * 0.62 + dir * 3, y - H * 1.06 + slump);
+      ctx.lineTo(x + Wd * 0.62 + dir * 3, y - H * 1.06 + slump);
+      ctx.lineTo(x + Wd * 0.86, y + 2); ctx.quadraticCurveTo(x, y + 9, x - Wd * 0.86, y + 2);
+      ctx.closePath(); }, body, LW.outer);
+  } else {
+    const taper = sp.key === "cat" || sp.key === "rabbit" ? 0.34
+                : sp.key === "dog" ? 0.70 : 0.56;
+    shape(()=>{ ctx.moveTo(x - Wd * taper, y - H + slump); ctx.lineTo(x + Wd * taper, y - H + slump);
+      ctx.lineTo(x + Wd * 0.66, y + 1); ctx.quadraticCurveTo(x, y + 7, x - Wd * 0.66, y + 1);
+      ctx.closePath(); }, body, LW.outer);
+  }
+
+  // a patched cloak and a pack: they are travellers
+  if (!seated && !hollow)
+    shape(()=>{ ctx.moveTo(x - dir * Wd * 0.52, y - H * 0.72);
+      ctx.lineTo(x - dir * Wd * 0.92, y - H * 0.34); ctx.lineTo(x - dir * Wd * 0.48, y - H * 0.18);
+      ctx.closePath(); }, mix(body, C.shadow, 0.45), LW.inner);
+  if (a.deaths > 0 && !hollow)                       // bandaging, one wrap per scar
+    for (let i = 0; i < Math.min(3, a.deaths); i++){
+      ctx.strokeStyle = "#8d8878"; ctx.lineWidth = LW.inner;
+      ctx.beginPath(); ctx.moveTo(x - Wd * 0.5, y - H * (0.3 + i * 0.16));
+      ctx.lineTo(x + Wd * 0.5, y - H * (0.36 + i * 0.16)); ctx.stroke();
+    }
+
+  /* head, and what sits on it */
+  const hy = y - H - (sp.key === "frog" ? 5 : 9) + slump * 1.2;
+  const hr = (sp.key === "frog" ? 12 : sp.key === "goat" ? 11.5 : 10) * b.w;
+  if (sp.key === "cat"){
+    ear(x - hr * 0.86, hy - hr * 0.5, hr * 0.62, hr * 0.95, -0.25, body);
+    ear(x + hr * 0.24, hy - hr * 0.5, hr * 0.62, hr * 0.95, 0.25, body);
+  } else if (sp.key === "rabbit"){
+    ear(x - hr * 0.62, hy - hr * 0.7, hr * 0.44, hr * 1.9, -0.16, body);
+    ear(x + hr * 0.18, hy - hr * 0.7, hr * 0.44, hr * 1.9, 0.16, body);
+  } else if (sp.key === "goat"){
+    for (const sx of [-1, 1]){                       // ears out sideways, horns back over them
+      shape(()=>ctx.ellipse(x + sx * hr * 1.02, hy + hr * 0.12, hr * 0.38, hr * 0.20, sx * 0.3, 0, 6.2832),
+            mark, LW.detail);
+      shape(()=>{ ctx.moveTo(x + sx * hr * 0.42, hy - hr * 0.78);
+        ctx.quadraticCurveTo(x + sx * hr * 1.5, hy - hr * 1.5, x + sx * hr * 1.72, hy - hr * 0.42);
+        ctx.quadraticCurveTo(x + sx * hr * 1.2, hy - hr * 1.0, x + sx * hr * 0.66, hy - hr * 0.6);
+        ctx.closePath(); }, "#6b6152", LW.inner);
+    }
+  }
+  circle(x, hy, hr, body, LW.outer);
+  if (sp.key === "dog"){                             // drop ears and a blunt muzzle
+    for (const sx of [-1, 1])
+      shape(()=>ctx.ellipse(x + sx * hr * 0.92, hy + hr * 0.16, hr * 0.34, hr * 0.62, sx * 0.2, 0, 6.2832),
+            mark, LW.inner);
+    shape(()=>ctx.ellipse(x + dir * hr * 0.5, hy + hr * 0.42, hr * 0.52, hr * 0.34, 0, 0, 6.2832),
+          mark, LW.inner);
+  } else if (sp.key === "crow"){
+    shape(()=>{ ctx.moveTo(x + dir * hr * 0.5, hy + hr * 0.05);
+      ctx.lineTo(x + dir * hr * 1.5, hy + hr * 0.3); ctx.lineTo(x + dir * hr * 0.5, hy + hr * 0.5);
+      ctx.closePath(); }, hollow ? mark : "#6b6152", LW.inner);
+  } else if (sp.key === "frog"){
+    shape(()=>ctx.ellipse(x, hy + hr * 0.5, hr * 0.9, hr * 0.5, 0, 0, 6.2832), mark, LW.detail);
+  }
+  drawEyes(x, hy - (sp.key === "frog" ? hr * 0.34 : hr * 0.06), hr,
+           hollow ? "hollow" : a.deaths >= 2 ? "weary" : "normal", dir, body);
+
+  if (sp.key === "cat" && !hollow)                   // a tail, curling, the last thing to still move
+    { ctx.strokeStyle = body; ctx.lineWidth = LW.inner + 1;
+      ctx.beginPath(); ctx.moveTo(x - dir * Wd * 0.6, y - 2);
+      ctx.quadraticCurveTo(x - dir * Wd * 1.3, y - 6 + (o.wag || 0), x - dir * Wd * 1.1, y - 16 + (o.wag || 0));
+      ctx.stroke(); }
+
+  /* 8. Gear, human-made and too big for the body wearing it */
+  if (gear.weapon){
+    const g = gear.weapon, len = g.rarity === "rare" ? 30 : g.rarity === "fine" ? 25 : 20;
+    ctx.save(); ctx.translate(x + dir * Wd * 0.78, y - H * 0.5); ctx.rotate(dir * 0.28);
+    shape(()=>ctx.rect(-2.5, -len, 5, len), g.cursed ? C.cursed : C.relief, LW.inner);
+    shape(()=>ctx.rect(-6, -len * 0.14, 12, 4), C.root, LW.detail);
+    ctx.restore();
+  }
+  if (gear.trinket){
+    const g = gear.trinket;
+    const col = g.cursed ? C.cursed : g.rarity === "rare" ? C.rare : g.rarity === "fine" ? "#9a8f6a" : "#6f6a5c";
+    const gl = ctx.createRadialGradient(x, y - H * 0.55, 0, x, y - H * 0.55, 9);
+    gl.addColorStop(0, col); gl.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = 0.85; ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(x, y - H * 0.55, 9, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+    circle(x, y - H * 0.55, 2.6, col, LW.detail);
+  }
+  if (!hollow) rimLight(x, y, Wd * 2, H * 1.5);
+}
+
+function drawAdventurer(a, time){
+  if (a.state === "hollow"){ drawAnimal(a, a.x, a.y, { seated:true, dir:1 }); }
+  else {
+    const rest = a.state === "rest";
+    const bob = rest ? Math.sin(time * 1.6 * (a.rate || 1)) * 1.2
+                     : Math.sin(a.bob) * 2.2;        // 11. nothing synchronised
+    drawAnimal(a, a.x, a.y + bob, { seated:rest, dir:a.dir || 1,
+                                    wag:Math.sin(time * 1.1 * (a.rate || 1) + a.id) * 3 });
+  }
+  const sp = spOf(a), lift = sp.key === "rabbit" ? 16 : sp.key === "cat" || sp.key === "goat" ? 9 : 0;
+  const top = a.y - (a.state === "rest" ? 48 : 54) - lift;   // clear of ears and horns
+  if (a.depth > 0){
+    rrect(a.x, top, 26, 14, 6, C.line, LW.detail);
+    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = LOC[locOf(a.depth)].tint;
+    ctx.fillText(LOC[locOf(a.depth)].code, a.x, top + 3);
+  }
+  if (a.find || a.choice){
+    circle(a.x - 17, top + 1, 7.5, C.rare, LW.inner);
+    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = C.line; ctx.fillText(a.choice ? "!" : "✦", a.x - 17, top + 4);
+  }
+  if (a.shallow){
+    circle(a.x + 17, top + 1, 6.5, C.relief, LW.inner);
+    ctx.font = "800 8px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = C.line; ctx.fillText("↓", a.x + 17, top + 3);
+  }
+  drawPips(a.x, a.y + 14, a.deaths, hollowAt(a), a.state === "hollow");
+}
+
 
 function drawPips(x, y, deaths, cap, hollow){
   const gap = 9, x0 = x - (cap - 1) * gap / 2;
   for (let i = 0; i < cap; i++)
-    circle(x0 + i*gap, y, 3.4, i < deaths ? (hollow ? "#6a6270" : "#ff5f3d") : "#2a2136", 2.5);
-}
-
-function drawAdventurer(a, time){
-  if (a.state === "hollow"){
-    const x = a.x, y = a.y;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(0.13); ctx.translate(-x, -y);
-    figure(x, y, 13, 21, desat(a.tone[0]), desat(a.tone[1]), 1, "#544d5e");
-    ctx.restore();
-    drawPips(x, y + 14, a.deaths, Math.max(a.deaths, hollowAt()), true);
-    return;
-  }
-  const rest = a.state === "rest", bob = rest ? 0 : Math.sin(a.bob) * 1.8;
-  const y = a.y + bob;
-  if (rest){                                        // the fire's warmth on a living guest
-    const g = ctx.createRadialGradient(a.x, y - 14, 2, a.x, y - 14, 26);
-    g.addColorStop(0, "rgba(255,157,61,0.20)"); g.addColorStop(1, "rgba(255,157,61,0)");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, y - 14, 26, 0, 6.2832); ctx.fill();
-  }
-  figure(a.x, y, rest ? 17 : 22, 22, a.tone[0], a.tone[1], a.dir || 1);
-  const top = y - (rest ? 17 : 22) - 15;
-  if (a.depth > 0){
-    rrect(a.x, top, 26, 15, 7, "#0c0812", 2);
-    ctx.font = "800 10px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = LOC[locOf(a.depth)].tint;
-    ctx.fillText(LOC[locOf(a.depth)].code, a.x, top + 4);
-  }
-  if (a.find || a.choice){
-    circle(a.x - 17, top + 1, 8, "#c9a45c", 3);
-    ctx.font = "800 10px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#0c0812"; ctx.fillText(a.choice ? "!" : "✦", a.x - 17, top + 4);
-  }
-  if (a.shallow){
-    circle(a.x + 17, top + 1, 7, "#7fa8d0", 3);
-    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#0c0812"; ctx.fillText("↓", a.x + 17, top + 4);
-  }
-  drawPips(a.x, y + 14, a.deaths, hollowAt(), false);   // how close they are, at a glance
+    circle(x0 + i*gap, y, 3.4, i < deaths ? (hollow ? "#454b48" : "#f2682c") : "#2a2136", 2.5);
 }
 
 function drawBlacksmith(time, px, py){
   const x = px != null ? px : Math.min(fx + RING_R * 0.86, W - 58);
   const y = py != null ? py : fy + 26, swing = Math.sin(time*5.2);
-  rrect(x + 34, y - 4, 26, 9, 4, "#3a2c4a", 4);
+  rrect(x + 34, y - 4, 26, 9, 4, "#2b3136", 4);
   shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
-              ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#5c5468", 4);
+              ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#3d444a", 4);
   shape(()=>{ ctx.moveTo(x+22, y-18); ctx.lineTo(x+46, y-18); ctx.lineTo(x+46, y-26);
-              ctx.lineTo(x+26, y-26); ctx.lineTo(x+16, y-22); ctx.closePath(); }, "#77708a", 4);
-  figure(x, y, 30, 30, "#8a5a3c", "#5a3f2c", 1);
-  rrect(x + 1, y - 12, 20, 22, 6, "#6b4a30", 3);
+              ctx.lineTo(x+26, y-26); ctx.lineTo(x+16, y-22); ctx.closePath(); }, "#4d545a", 4);
+  hooded(x, y, 30, 30, "#332f24", "#3a3529", 1, true);
+  rrect(x + 1, y - 12, 20, 22, 6, "#2c2a21", 3);
   ctx.save(); ctx.translate(x + 16, y - 24); ctx.rotate(-0.35 + swing*0.6);
-  rrect(0, -11, 7, 24, 3, "#5a3f2c", 3);
-  rrect(0, -22, 16, 11, 4, "#6b6478", 3);
+  rrect(0, -11, 7, 24, 3, "#332f24", 3);
+  rrect(0, -22, 16, 11, 4, "#4d545a", 3);
   ctx.restore();
   if (swing > 0.95) sparks(x + 34, y - 26, 0.4);
 }
@@ -1297,14 +1622,14 @@ function drawBlacksmith(time, px, py){
 function drawHerbalist(time, px, py){
   const x = px != null ? px : Math.max(fx - RING_R * 0.86, 48);
   const y = py != null ? py : fy + 8, grind = Math.sin(time*3.1);
-  rrect(x - 25, y - 2, 22, 9, 4, "#3a2c4a", 4);              // bench, tucked outside the ring
+  rrect(x - 25, y - 2, 22, 9, 4, "#2b3136", 4);              // bench, tucked outside the ring
   shape(()=>{ ctx.moveTo(x-33, y-8); ctx.lineTo(x-17, y-8); ctx.lineTo(x-20, y-18);
-              ctx.lineTo(x-30, y-18); ctx.closePath(); }, "#6f8a72", 4);      // mortar
+              ctx.lineTo(x-30, y-18); ctx.closePath(); }, "#35402c", 4);      // mortar
   ctx.save(); ctx.translate(x - 25, y - 18); ctx.rotate(-0.4 + grind*0.25);
-  rrect(0, -7, 5, 17, 3, "#8a7a5c", 3); ctx.restore();       // pestle
-  figure(x, y, 26, 26, "#5f7d5a", "#3f5a3e", -1);
-  rrect(x - 1, y - 10, 17, 19, 6, "#4d6749", 3);             // apron
-  circle(x + 10, y - 27, 5.5, "#9bd08a", 3);                 // sprig at the hood
+  rrect(0, -7, 5, 17, 3, "#3a4448", 3); ctx.restore();       // pestle
+  hooded(x, y, 26, 26, "#35402c", "#232c20", -1, true);
+  rrect(x - 1, y - 10, 17, 19, 6, "#232c20", 3);             // apron
+  circle(x + 10, y - 27, 5.5, "#4c5a38", 3);                 // sprig at the hood
   if (grind > 0.97) S.sparks.push({ x:x-25, y:y-22, vx:(Math.random()-0.5)*20, vy:-18, t:0, life:0.5 });
 }
 
@@ -1313,10 +1638,10 @@ function drawStrip(time){
   rrect(g.x, (g.top + g.bottom)/2 - 16, 46, h + 56, 22, "rgba(20,15,28,0.82)", 3);
 
   ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-  ctx.fillStyle = "#9a8aa8"; ctx.fillText("THE ROAD", g.x, g.top - 26);
+  ctx.fillStyle = "#7d8a85"; ctx.fillText("THE ROAD", g.x, g.top - 26);
   const c = bellCost(), can = S.souls >= c;
   ctx.font = "800 11px ui-rounded, system-ui, sans-serif";
-  ctx.fillStyle = can ? "#ffd06b" : "#5a4f6b";
+  ctx.fillStyle = can ? "#ffe9b8" : "#4d545a";
   ctx.fillText("🔔 " + fmt(c), g.x, g.top - 11);
 
   shape(()=>{ ctx.moveTo(g.x + 4, g.top); ctx.lineTo(g.x + 4, g.bottom); }, null, 3);
@@ -1325,27 +1650,27 @@ function drawStrip(time){
     const open = i <= S.unlocked;
     shape(()=>{ ctx.moveTo(g.x - 2, y); ctx.lineTo(g.x + 10, y); }, null, open ? 2.5 : 1.5);
     ctx.font = "800 7px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "right";
-    ctx.fillStyle = open ? LOC[i].tint : "#3a3046";
+    ctx.fillStyle = open ? LOC[i].tint : "#2b3136";
     ctx.fillText(LOC[i].code, g.x - 6, y + 2);
   }
   if (!list.length){
-    ctx.font = "700 9px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#5a4f6b";
+    ctx.font = "700 9px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#4d545a";
     ctx.fillText("empty", g.x, (g.top + g.bottom)/2);
   }
   list.forEach((a, i) => {
     const p = markerPos(a, i);
-    circle(p.x, p.y, 9, a.tone[0], 3);
+    circle(p.x, p.y, 9, spOf(a).body, LW.inner);
     ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#0c0812"; ctx.fillText(String(a.depth), p.x, p.y + 3);
+    ctx.fillStyle = "#0a0e0b"; ctx.fillText(String(a.depth), p.x, p.y + 3);
     if (a.deaths > 0){                                // scars travel with them
       for (let k = 0; k < a.deaths; k++)
-        circle(p.x - 12, p.y - 6 + k*6, 2.2, "#ff5f3d", 1.8);
+        circle(p.x - 12, p.y - 6 + k*6, 2.2, "#f2682c", 1.8);
     }
     if (a.flash){
       const al = a.flash.t < 0.2 ? a.flash.t/0.2 : Math.min(1, (2 - a.flash.t)/0.6);
       ctx.globalAlpha = al;
-      circle(p.x + 17, p.y, 8, "#2e2440", 2.5);
-      ctx.font = "800 11px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#ffd06b";
+      circle(p.x + 17, p.y, 8, "#232b2e", 2.5);
+      ctx.font = "800 11px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#ffe9b8";
       ctx.fillText(a.flash.icon, p.x + 17, p.y + 4);
       ctx.globalAlpha = 1;
     }
@@ -1373,19 +1698,20 @@ function drawKeeper(time){
   const walking = Math.hypot(K.tx - K.x, K.ty - K.y) > 2;
   const sway = walking ? Math.sin(time * 9) * 1.6 : Math.sin(time * 1.4) * 0.8;
   const y = K.y + sway;
-  shape(()=>ctx.ellipse(K.x, K.y + 6, 17, 5, 0, 0, 6.2832), "rgba(0,0,0,0.34)", 0.001);
-  shape(()=>{ ctx.moveTo(K.x - 12, y - 40); ctx.lineTo(K.x + 12, y - 40);
-              ctx.lineTo(K.x + 17, y + 2); ctx.quadraticCurveTo(K.x, y + 9, K.x - 17, y + 2);
-              ctx.closePath(); }, "#2b2136", 4);                      // taller, plainer robe
-  rrect(K.x, y - 22, 30, 7, 3, "#e0904a", 3);                          // the one warm colour
-  circle(K.x, y - 44, 13, "#241a30", 4);                               // deep hood
-  circle(K.x + K.dir * 3, y - 43, 6, "#3a2c4a", 3);                    // no face to speak of
+  contact(K.x, K.y + 5, 20, 0.5);
+  shape(()=>{ ctx.moveTo(K.x - 12, y - 44); ctx.lineTo(K.x + 12, y - 44);
+              ctx.lineTo(K.x + 18, y + 2); ctx.quadraticCurveTo(K.x, y + 10, K.x - 18, y + 2);
+              ctx.closePath(); }, "#1e2427", LW.outer);                // taller than anyone here
+  rrect(K.x, y - 24, 30, 6, 3, C.keeper, LW.inner);                    // the one warm colour
+  circle(K.x, y - 48, 13.5, "#171d1f", LW.outer);                      // deep hood
+  circle(K.x + K.dir * 3, y - 47, 6.5, "#0d1113", LW.detail);          // nothing inside it
+  rimLight(K.x, K.y, 38, 60);
   const tend = K.mode === "tend" && !walking;                          // leans in to feed the fire
   ctx.save();
   ctx.translate(K.x + K.dir * 13, y - 26);
   ctx.rotate(K.dir * (tend ? 0.5 + Math.sin(time * 2.2) * 0.22 : 0.15 + Math.sin(time * 0.9) * 0.06));
-  rrect(0, 0, 6, 34, 3, "#5a3f2c", 3);
-  circle(0, -19, 4.5, "#e0904a", 3);
+  rrect(0, 0, 6, 34, 3, "#332f24", 3);
+  circle(0, -19, 4.5, "#d9c48a", 3);
   ctx.restore();
 }
 
@@ -1396,18 +1722,18 @@ function drawReliquary(time){
   if (!S.relic.length && !S.seen.relic) return;
   const x0 = fx + 78, y = fy + 76;
   ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "left";
-  ctx.fillStyle = "#5a4f6b"; ctx.fillText("LEFT BEHIND", x0, y - 20);
-  rrect(x0 + 46, y + 12, 108, 7, 3, "#3a2c4a", 3);            // the shelf itself
+  ctx.fillStyle = "#4d545a"; ctx.fillText("LEFT BEHIND", x0, y - 20);
+  rrect(x0 + 46, y + 12, 108, 7, 3, "#2b3136", 3);            // the shelf itself
   S.relic.forEach((r, i) => {
     const p = relicPos(i), g = r.art;
-    const mat = { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[g.rarity];
+    const mat = { common:"#4d545a", fine:"#c9a227", rare:"#4c5a38" }[g.rarity];
     const bob = Math.sin(time * 1.6 + i) * 1;
     if (g.slot === "weapon") rrect(p.x, p.y + bob, 7, 26, 3, mat, 2.5);
     else if (g.slot === "armour")
       shape(()=>{ ctx.moveTo(p.x-9, p.y-12+bob); ctx.lineTo(p.x+9, p.y-12+bob);
                   ctx.lineTo(p.x, p.y+12+bob); ctx.closePath(); }, mat, 2.5);
     else circle(p.x, p.y + bob, 9, mat, 2.5);
-    if (g.cursed){ ctx.fillStyle = "#c4506a"; ctx.font = "800 9px ui-rounded, system-ui, sans-serif";
+    if (g.cursed){ ctx.fillStyle = "#7a4a6e"; ctx.font = "800 9px ui-rounded, system-ui, sans-serif";
                    ctx.textAlign = "center"; ctx.fillText("✦", p.x, p.y - 16 + bob); }
   });
   ctx.textAlign = "center";
@@ -1422,7 +1748,7 @@ function drawPlots(time){
       shape(()=>ctx.ellipse(p.x, p.y, 22, 11, 0, 0, 6.2832), "rgba(30,22,42,0.5)", 2);
       ctx.setLineDash([]);
       ctx.font = "800 8px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillStyle = lit ? "#5a4f6b" : "#3a3046";
+      ctx.fillStyle = lit ? "#4d545a" : "#2b3136";
       ctx.fillText(lit ? "PLOT" : "OUTER", p.x, p.y + 3);
       continue;
     }
@@ -1431,20 +1757,20 @@ function drawPlots(time){
     if (key === "smith") drawBlacksmith(time, p.x, p.y);
     else if (key === "herb") drawHerbalist(time, p.x, p.y);
     else {
-      figure(p.x, p.y, 26, 26, v.tint, mix(v.tint, "#0c0812", 0.45), p.x > fx ? -1 : 1);
-      rrect(p.x, p.y - 10, 17, 19, 6, mix(v.tint, "#0c0812", 0.25), 3);
+      hooded(p.x, p.y, 26, 26, v.tint, mix(v.tint, "#0a0e0b", 0.45), p.x > fx ? -1 : 1, true);
+      rrect(p.x, p.y - 10, 17, 19, 6, mix(v.tint, "#0a0e0b", 0.25), 3);
       ctx.font = "12px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
       ctx.fillText(v.glyph, p.x, p.y - 30);
     }
     if (!lit){                                        // outside the light and slower for it
       ctx.globalAlpha = 0.5;
       ctx.font = "800 7px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillStyle = "#9a8aa8"; ctx.fillText("OUTER", p.x, p.y + 20);
+      ctx.fillStyle = "#7d8a85"; ctx.fillText("OUTER", p.x, p.y + 20);
       ctx.globalAlpha = 1;
     }
     for (const [a, b] of ADJACENCIES) if (adjActive(a, b) && (a === key || b === key)){
       const other = plotPos(plotOf(a === key ? b : a));
-      ctx.globalAlpha = 0.35; ctx.strokeStyle = "#ffd06b"; ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.35; ctx.strokeStyle = "#ffe9b8"; ctx.lineWidth = 2;
       ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(other.x, other.y); ctx.stroke();
       ctx.setLineDash([]); ctx.globalAlpha = 1;
@@ -1455,10 +1781,10 @@ function drawPlots(time){
 function drawEmbers(){
   const n = T.MAX_EMBERS, gap = 15, x0 = fx + 16 - (n-1)*gap/2, y = fy + 94;
   for (let i = 0; i < n; i++)
-    circle(x0 + i*gap, y, 4.5, i < Math.floor(S.embers) ? "#ff9d3d" : "#33263f", 3);
+    circle(x0 + i*gap, y, 4.5, i < Math.floor(S.embers) ? "#ffab3d" : "#232c20", 3);
   if (S.taps < 8){
     ctx.font = "700 11px ui-rounded, system-ui, sans-serif";
-    ctx.fillStyle = "#9a8aa8"; ctx.textAlign = "center";
+    ctx.fillStyle = "#7d8a85"; ctx.textAlign = "center";
     ctx.fillText("TAP THE FIRE", fx + 16, y + 22);
   }
 }
@@ -1468,7 +1794,7 @@ function drawFx(dt){
     const p = S.sparks[i]; p.t += dt;
     if (p.t > p.life){ S.sparks.splice(i,1); continue; }
     p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 14*dt;
-    ctx.globalAlpha = 1 - p.t/p.life; ctx.fillStyle = p.col || "#ffd06b";
+    ctx.globalAlpha = 1 - p.t/p.life; ctx.fillStyle = p.col || "#ffe9b8";
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -1483,7 +1809,7 @@ function drawFx(dt){
     const w = ctx.measureText(q.txt).width + 16;
     const bx = Math.max(w/2 + 4, Math.min(W - w/2 - 4, q.x));   // never off the edge
     rrect(bx, q.y, w, 20, 9, "rgba(20,15,28,0.9)", 2);
-    ctx.fillStyle = "#c9bfd6"; ctx.fillText(q.txt, bx, q.y + 4);
+    ctx.fillStyle = "#a9a3b5"; ctx.fillText(q.txt, bx, q.y + 4);
     ctx.globalAlpha = 1;
   }
   for (let i = S.floats.length - 1; i >= 0; i--){
@@ -1491,11 +1817,31 @@ function drawFx(dt){
     if (f.t > 1.2){ S.floats.splice(i,1); continue; }
     ctx.globalAlpha = 1 - f.t/1.2;
     ctx.font = "800 16px ui-rounded, system-ui, sans-serif";
-    ctx.lineWidth = 4; ctx.strokeStyle = "#0c0812";
+    ctx.lineWidth = 4; ctx.strokeStyle = "#0a0e0b";
     ctx.strokeText(f.txt, f.x, f.y - f.t*38);
     ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - f.t*38);
     ctx.globalAlpha = 1;
   }
+}
+
+/* 12. A little grain over the whole thing, to unify the flats. */
+let grainTile = null, grainT = 0, grainOff = 0;
+function drawGrain(){
+  if (!grainTile){
+    grainTile = document.createElement("canvas"); grainTile.width = grainTile.height = 72;
+    const g = grainTile.getContext("2d"), img = g.createImageData(72, 72);
+    for (let i = 0; i < img.data.length; i += 4){
+      const v = (Math.random() * 255) | 0;
+      img.data[i] = img.data[i+1] = img.data[i+2] = v;
+      img.data[i+3] = Math.random() < 0.5 ? 16 : 0;
+    }
+    g.putImageData(img, 0, 0);
+  }
+  grainT += 1;
+  if (grainT > 24){ grainT = 0; grainOff = (grainOff + 17) % 72; }
+  const pat = ctx.createPattern(grainTile, "repeat");
+  ctx.save(); ctx.globalAlpha = 0.5; ctx.translate(-grainOff, grainOff * 0.5);
+  ctx.fillStyle = pat; ctx.fillRect(0, 0, W + 72, H + 72); ctx.restore();
 }
 
 /* ============================ loop ============================ */
@@ -1532,7 +1878,8 @@ function frame(now){
     if (Math.random() < 0.12 + 0.88 * flameLife()) sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
 
   ctx.clearRect(0, 0, W, H);
-  drawGround();
+  drawGround(time);
+  drawColumns(time);
   const onStage = S.pool.filter(a => a.state !== "away");
   onStage.sort((a,b) => a.y - b.y);
   const behind = onStage.filter(a => a.y <= fy), front = onStage.filter(a => a.y > fy);
@@ -1554,8 +1901,8 @@ function frame(now){
       const n = S.notice;
       ctx.globalAlpha = n.t < 0.3 ? n.t / 0.3 : Math.min(1, (4.5 - n.t) / 1.2);
       ctx.font = "800 15px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.lineWidth = 5; ctx.strokeStyle = "#0c0812";
-      ctx.strokeText(n.txt, fx, 30); ctx.fillStyle = "#c9bfd6"; ctx.fillText(n.txt, fx, 30);
+      ctx.lineWidth = 5; ctx.strokeStyle = "#0a0e0b";
+      ctx.strokeText(n.txt, fx, 30); ctx.fillStyle = "#a9a3b5"; ctx.fillText(n.txt, fx, 30);
       ctx.globalAlpha = 1;
     }
   }
@@ -1586,6 +1933,7 @@ function frame(now){
     }
   }
 
+  drawGrain();
   drawGesture(dt);
 
   uiT += dt;
@@ -1626,7 +1974,7 @@ cv.addEventListener("pointerdown", e => {
   const dx = (x - fx) / 56, dy = (y - (fy - 6)) / 50;
   if (dx*dx + dy*dy > 1){ closeCounsel(); return; }
   S.taps++;
-  if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" }); return; }
+  if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#7d8a85" }); return; }
   keeperGoTo(fx - 52, fy + 26, "tend");
   S.embers--; earn(1, fx + (Math.random()-0.5)*20, fy - 46, false); flare = 0.5;
   for (let k = 0; k < 5; k++) sparks(fx + (Math.random()-0.5)*16, fy - 22, 0.6);
@@ -1650,9 +1998,9 @@ function showCounsel(a){
   if (!a){ closeCounsel(); return; }
   S.sel = a.id; counsel.hidden = false;
   const hollow = a.state === "hollow";
-  cTone.style.background = hollow ? desat(a.tone[0]) : a.tone[0];
-  cTitle.textContent = hollow ? "Hollowed" : "Adventurer";
-  cSub.textContent = hollow ? "Nothing left to spend" : "Rests at your fire";
+  cTone.style.background = hollow ? C.hollow : spOf(a).body;
+  cTitle.textContent = (a.name ? a.name + ", " : "") + (hollow ? "hollowed" : "a " + spOf(a).name);
+  cSub.textContent = hollow ? "Nothing left to spend" : spOf(a).note;
   const stale = counsel.querySelector(".cActs"); if (stale) stale.remove();
   cGear.hidden = hollow;
   if (hollow) cGear.innerHTML = "";
@@ -1687,11 +2035,11 @@ function showCounsel(a){
     cAct.style.display = "";
     const d = runDepth(a), odds = Math.round(survival(d, a.deaths, a) * 100);
     const mult = (1 + d * T.DEPTH_PAY).toFixed(1).replace(/\.0$/, "");
-    const left = hollowAt() - a.deaths;
+    const left = hollowAt(a) - a.deaths;
     cOdds.innerHTML =
       (a.name ? "<b>" + a.name + "</b>. " : "") + LOC[locOf(d)].name + ", depth " + d +
       ". Pays <b>" + mult + "x</b>, or " + plural(payFor(a), "soul") + ".<br>" +
-      "Deaths " + a.deaths + " of " + hollowAt() + ". " +
+      "Deaths " + a.deaths + " of " + hollowAt(a) + ". " +
       (left === 1 ? "One more and they hollow." : left === 2 ? "Two more and they hollow." : "Unscarred.") + "<br>" +
       "Survival <b>" + odds + "%</b>.";
     cAct.textContent = a.shallow ? "Sent shallow" : "Send shallow";
@@ -1757,7 +2105,7 @@ function startCraft(a, slot, kind, grade, cost){
   const key = kind === "forge" ? "smith" : "herb";
   startGesture(VMAP[key].verb, q => {
     g.craft = { kind, grade, left: T.CRAFT_SECONDS * vSlow(key) * (q >= 0.7 ? 0.6 : 1) };
-    if (q >= 0.7) S.floats.push({ x:fx, y:fy - 40, t:0, txt:"good work", col:"#ffd06b" });
+    if (q >= 0.7) S.floats.push({ x:fx, y:fy - 40, t:0, txt:"good work", col:"#ffe9b8" });
     showCounsel(a);
   });
   const pi = plotOf(kind === "forge" ? "smith" : "herb");
@@ -1909,7 +2257,7 @@ function letThemGo(a){
       o.deaths--; say(o, "Something lifted off them.");
     }
   }
-  S.floats.push({ x:fx, y:fy - 50, t:0, txt:"+" + ash + " ash", col:"#c9bfd6" });
+  S.floats.push({ x:fx, y:fy - 50, t:0, txt:"+" + ash + " ash", col:"#a9a3b5" });
   render(); saveGame(); return true;
 }
 
@@ -1973,10 +2321,10 @@ function drawArt(){
   const a = open_; if (!a) return;
   actx.clearRect(0, 0, AW, AH);
   const mat = a.origin != null ? LOC[a.origin].tint
-            : { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[a.rarity];
-  const dark = { common:"#5e5868", fine:"#8a6a34", rare:"#5f8f86" }[a.rarity];
+            : { common:"#4d545a", fine:"#c9a227", rare:"#4c5a38" }[a.rarity];
+  const dark = { common:"#3d444a", fine:"#5c4a1c", rare:"#3a4448" }[a.rarity];
   const cx = AW/2, cy = AH/2;
-  actx.lineWidth = 4; actx.strokeStyle = "#0c0812"; actx.lineJoin = "round";
+  actx.lineWidth = 4; actx.strokeStyle = "#0a0e0b"; actx.lineJoin = "round";
   const box = (x, y, w, h, r, fill) => {
     actx.beginPath();
     actx.moveTo(x-w/2+r, y-h/2);
@@ -2006,7 +2354,7 @@ function drawArt(){
   }
   const g = SITES.glyph;                            // glyph is the curse tell
   actx.save(); actx.translate(AW*g[0], AH*g[1]);
-  actx.lineWidth = 3.4; actx.strokeStyle = a.cursed ? "#c4506a" : "#e8dcc0";
+  actx.lineWidth = 3.4; actx.strokeStyle = a.cursed ? "#7a4a6e" : "#d8d2c4";
   actx.beginPath();
   if (a.cursed){ actx.moveTo(-9,-9); actx.lineTo(4,-2); actx.lineTo(-4,3); actx.lineTo(9,10); }
   else { actx.arc(0, 0, 9, 0.5, 5.4); }
@@ -2294,38 +2642,38 @@ function drawGesture(dt){
     gctx2.arcTo(x+w/2,y-h/2,x+w/2,y+h/2,r); gctx2.arcTo(x+w/2,y+h/2,x-w/2,y+h/2,r);
     gctx2.arcTo(x-w/2,y+h/2,x-w/2,y-h/2,r); gctx2.arcTo(x-w/2,y-h/2,x+w/2,y-h/2,r);
     gctx2.closePath(); gctx2.fillStyle = fill; gctx2.fill();
-    gctx2.lineWidth = 3; gctx2.strokeStyle = line || "#0c0812"; gctx2.stroke();
+    gctx2.lineWidth = 3; gctx2.strokeStyle = line || "#0a0e0b"; gctx2.stroke();
   };
   if (G.kind === "hammer"){
     const bright = Math.abs(Math.sin(G.t * 2.4));
-    box(GW/2, GH/2, 120, 34, 8, mix("#5c5468", "#ff9d3d", bright), bright > 0.82 ? "#ffd06b" : "#0c0812");
-    gctx2.fillStyle = "#9a8aa8"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    box(GW/2, GH/2, 120, 34, 8, mix("#3d444a", "#ffab3d", bright), bright > 0.82 ? "#ffe9b8" : "#0a0e0b");
+    gctx2.fillStyle = "#7d8a85"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
     gctx2.textAlign = "center"; gctx2.fillText(G.phase + " / " + G.spec.rounds, GW/2, GH - 20);
   } else if (G.kind === "stir"){
-    gctx2.strokeStyle = "#3a2c4a"; gctx2.lineWidth = 16;
+    gctx2.strokeStyle = "#2b3136"; gctx2.lineWidth = 16;
     gctx2.beginPath(); gctx2.arc(GW/2, GH/2, 52, 0, 6.2832); gctx2.stroke();
     gctx2.strokeStyle = "#7fbf8a"; gctx2.lineWidth = 12;
     gctx2.beginPath();
     gctx2.arc(GW/2, GH/2, 52, -1.57, -1.57 + Math.min(6.2832, Math.abs(G.ang) / G.spec.rounds));
     gctx2.stroke();
   } else if (G.kind === "pack"){
-    box(GW/2, GH - 42, 150, 56, 10, "#3a2c4a");
-    G.items.forEach((v, i) => { if (v >= 0) box(30 + i*40, 40, 34, 34, 8, "#c9a45c"); });
+    box(GW/2, GH - 42, 150, 56, 10, "#2b3136");
+    G.items.forEach((v, i) => { if (v >= 0) box(30 + i*40, 40, 34, 34, 8, "#c9a227"); });
   } else if (G.kind === "route"){
     for (let i = 0; i < G.spec.rounds; i++){
       const y = GH * (0.2 + 0.3 * i);
-      box(GW/2, y, 150, 18, 8, i < G.phase ? "#6f8fd6" : "#2c2038");
+      box(GW/2, y, 150, 18, 8, i < G.phase ? "#6f8fd6" : "#2b3136");
     }
   } else if (G.kind === "vigil"){
-    box(GW/2, GH/2, 150, 40, 10, "#2c2038");
+    box(GW/2, GH/2, 150, 40, 10, "#2b3136");
     box(GW/2 - 75 + Math.min(150, 150 * G.held / 4) / 2, GH/2,
-        Math.max(2, Math.min(150, 150 * G.held / 4)), 40, 10, "#6a6270");
-    gctx2.fillStyle = "#c9bfd6"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+        Math.max(2, Math.min(150, 150 * G.held / 4)), 40, 10, "#454b48");
+    gctx2.fillStyle = "#a9a3b5"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
     gctx2.textAlign = "center"; gctx2.fillText("hold", GW/2, GH/2 + 4);
   } else if (G.kind === "break"){
-    box(GW/4, GH/2, 90, 70, 10, G.side > 0 ? "#c9a45c" : "#2c2038");
-    box(3*GW/4, GH/2, 90, 70, 10, G.side < 0 ? "#c9a45c" : "#2c2038");
-    gctx2.fillStyle = "#9a8aa8"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    box(GW/4, GH/2, 90, 70, 10, G.side > 0 ? "#c9a227" : "#2b3136");
+    box(3*GW/4, GH/2, 90, 70, 10, G.side < 0 ? "#c9a227" : "#2b3136");
+    gctx2.fillStyle = "#7d8a85"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
     gctx2.textAlign = "center"; gctx2.fillText(G.hits + " / " + G.spec.rounds, GW/2, GH - 12);
   }
 }
@@ -2508,7 +2856,7 @@ function serialize(){
     everHollowed:S.everHollowed, elapsed:S.elapsed,
     pool: S.pool.map(a => ({
       id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
-      slot:a.slot, tone:a.tone, peak:a.peak || 0, route:a.route == null ? null : a.route,
+      slot:a.slot, tone:a.tone, sp:a.sp, build:a.build || 0, rate:a.rate || 1, peak:a.peak || 0, route:a.route == null ? null : a.route,
       packed:!!a.packed,
       gear: a.gear ? { weapon:stripArt(a.gear.weapon), armour:stripArt(a.gear.armour),
                        trinket:stripArt(a.gear.trinket) } : null,
@@ -2564,6 +2912,10 @@ function restore(save){
   S.pool = (save.pool || []).map(p => {
     const a = Object.assign({ x:0, y:0, dir:1, exit:0, bob:0, events:null, flash:null,
                               pending:null, find:null, choice:null, gear:null }, p);
+    if (!a.sp){                                     // saves from before the animals arrived
+      a.sp = SPECIES[(Math.random() * SPECIES.length) | 0].key;
+      a.build = (Math.random() * BUILDS.length) | 0; a.rate = 0.8 + Math.random() * 0.5;
+    }
     a.find = rehydrate(p.find); a.choice = rehydrate(p.choice);
     if (p.gear){ a.gear = {}; for (const k of A_SLOTS) if (p.gear[k]) a.gear[k] = rehydrate(p.gear[k]); }
     edgeSpawn(a);
@@ -2666,7 +3018,8 @@ function openDead(){
   const d = S.meta.dead;
   openSheet("The ones I lost", d.length ? d.length + " of them, across " + Math.max(1, S.meta.cycles + 1)
     + " fires." : "Nobody yet.", d.length ? d.slice().reverse().map(x => ({
-      html:"<b>" + (x.name || "One of the unnamed") + "</b><br><em>Depth " + x.depth + ", "
+      html:"<b>" + (x.name || "One of the unnamed") + "</b> <em>" + (x.sp || "") + "</em>"
+           + "<br><em>Depth " + x.depth + ", "
            + plural(x.deaths, "death") + (x.carried.length ? ", carrying " + x.carried.join(" and ") : "")
            + ". Fire " + x.cycle + ".</em>", onClick:null }))
     : [{ html:"Nobody has hollowed yet. It will not stay that way.", onClick:null }]);
@@ -2691,7 +3044,7 @@ function render(){
   listEl.innerHTML = ""; rows = [];
   if (S.tab === "skills"){
     NODES.forEach(n => card({
-      glyph:n.glyph, tint:"#3a2c4a", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
+      glyph:n.glyph, tint:"#2b3136", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
       desc:n.desc,
       label:()=> n.max && S.lv[n.key] >= n.max ? "Full" : fmt(cost(n)),
       enabled:()=> (!n.max || S.lv[n.key] < n.max) && S.souls >= cost(n),
@@ -2775,7 +3128,7 @@ function refresh(){
   soulsEl.textContent = fmt(S.souls);
   const life = flameLife();
   flameFill.style.width = Math.round(life * 100) + "%";
-  flameFill.style.background = life > 0.55 ? "#ff9d3d" : life > 0.25 ? "#d0796a" : "#7a8a9a";
+  flameFill.style.background = life > 0.55 ? "#ffab3d" : life > 0.25 ? "#d0796a" : "#7a8a9a";
   flameNum.textContent = Math.round(S.flame);
   matWrap.hidden = !S.seen.material;
   matEl.textContent = fmt(S.mat);
@@ -2820,7 +3173,8 @@ function showReturn(rep){
     rows.push({ html:"<b>" + (rep.hollowed.length === 1 ? "One did not come back."
       : rep.hollowed.length + " did not come back.") + "</b>", onClick:null });
     for (const h of rep.hollowed.filter(h => h.name))
-      rows.push({ html:"<em>" + h.name + ", who got as far as depth " + h.depth +
+      rows.push({ html:"<em>" + h.name + ", the " + (h.sp || "one of them")
+        + ", who got as far as depth " + h.depth +
         ". Sitting by the fire now, and not paying.</em>", onClick:null });
     const nameless = rep.hollowed.filter(h => !h.name);
     if (nameless.length){

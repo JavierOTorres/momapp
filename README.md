@@ -1,4 +1,4 @@
-# Sanctuary — v4.1
+# Sanctuary — v4.1 (art pass)
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -10,6 +10,24 @@ Open `index.html` in a browser. One file, no build step, no dependencies, no
 network. Design target is a 390x844 portrait viewport (mobile first); it stays
 a static single file so it can be wrapped with Capacitor later. It saves to
 localStorage every five seconds and on page hide.
+
+## What it looks like
+
+A ruined human temple, swallowed by forest, kept by animals. The people who
+built it are gone and nobody knows why. The fire burns in a cracked stone basin
+at the centre of a dais built for larger bodies; broken columns stand at the
+edge of the light and fall into the dark as the flame dies, so the building
+disappears around you over a run.
+
+Six species — cat, dog, frog, crow, rabbit, goat — each a distinct silhouette
+at 40 pixels and each with its own way of dying. Identity is shape, not colour:
+every animal is warm-neutral against cool stone and dark moss, and the fire is
+the only bright thing on screen. A hollow keeps its silhouette exactly and
+loses everything else: colour drains to one grey, the eyes become empty
+sockets, and every other thing in the scene keeps moving while it does not.
+
+The artifacts are human relics, which is why they come up filthy and why
+nobody can say what they were for. The item descriptions are guesses.
 
 ## The loop
 
