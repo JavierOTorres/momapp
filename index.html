@@ -41,6 +41,12 @@
   #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
   #rate{font-size:11px;color:var(--dim);text-align:right;line-height:1.5}
   #rate b{display:block;font-size:16px;color:var(--text)}
+  #flameWrap{flex:0 0 auto;margin-left:10px;text-align:center}
+  #flameBar{
+    width:52px;height:9px;border:3px solid var(--line);border-radius:6px;background:#241a30;overflow:hidden;
+  }
+  #flameBar i{display:block;height:100%;width:100%;background:var(--ember);transition:width .3s linear}
+  #flameNum{display:block;font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
   #bookBtn{
     flex:0 0 auto;margin-left:12px;width:38px;height:38px;border-radius:11px;
     border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
@@ -224,6 +230,7 @@
     <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div>
       <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
     <div id="rate"><b>0.0</b>avg / sec, last 60s</div>
+    <div id="flameWrap"><div id="flameBar"><i></i></div><span id="flameNum">100</span></div>
     <button id="bookBtn" title="The keeper's notes">📕</button>
   </div>
   <div id="pop">
@@ -326,6 +333,8 @@ const T = {
   BELL_BASE:40, BELL_GROWTH:1.55,
   DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.20,
   MAT_DROP_BASE:0.10, MAT_DROP_PER_DEPTH:0.02, RELIC_CAP:3, CRAFT_SECONDS:15,
+  FLAME_MAX:100, BASE_DECAY:0.037, HEARTH:0.005, FAR_FEED:0.35, HOLLOW_DECAY:0.010,
+  RING_MIN:5, RING_BASE:8, RING_MAX:16, NAME_AT_DEPTH:3,
   SMITH_LV:[0, 200, 800, 2500], SMITH_MAT:[0, 0, 12, 40],
   HERB_LV:[0, 500, 1100, 3000], HERB_MAT:[0, 0, 14, 44],
   FORGE_COST:{ fine:[150, 6], rare:[600, 20] },
@@ -335,12 +344,13 @@ const T = {
 const SMITH_SLOTS = [1,2], HERB_SLOT = 6;
 
 const S = {
-  souls:0, lv:{flame:0, word:0, echo:0}, smith:false, herb:false, rekindles:0,
+  souls:0, lv:{flame:0, word:0, echo:0, circle:0}, rekindles:0,
   embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
   seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false, material:false, relic:false },
   mat:0, relic:[], lost:[], nextArt:1, smithLv:0, herbLv:0,
-  offline:null, ending:false, flameOn:false, everHollowed:false,
+  offline:null, ending:false, flameOn:true, everHollowed:false,
+  flame:100, flameMax:100, runStart:0, peakDepth:0, runEarned:0,
   meta:{ ash:0, unlocks:[], dead:[], cycles:0 },
   earnLog:[], floats:[], sparks:[], says:[]
 };
@@ -423,10 +433,14 @@ const ARCHIVE = [
 
 const NODES = [
   { key:"flame", name:"Kindled Flame", glyph:"🔥", base:10, growth:1.5,
-    desc:()=> "+1 soul per rest.  A depth 0 rest now pays " + perRest() + "." },
+    desc:()=> "+1 soul per rest, and the fire itself grows. A depth 0 rest pays " + perRest()
+              + ", and the light seats " + ringCap() + "." },
   { key:"word", name:"Word of Sanctuary", glyph:"🔔", base:25, growth:1.7,
     desc:()=> "Recruits arrive 10% faster, one every " + interval().toFixed(2) +
-              "s, while the pool is below " + T.POOL + "." },
+              "s, while the circle is below " + poolCap() + "." },
+  { key:"circle", name:"Widen the Circle", glyph:"🔆", base:300, growth:1.9, max:8,
+    desc:()=> "One more may take up with us, to a limit of " + (T.POOL + 8) + ". "
+              + "Room for " + poolCap() + " now, and " + usableSeats() + " seats at the fire." },
   { key:"echo", name:"Soul Echo", glyph:"💀", base:50, growth:2.0,
     desc:()=> "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
 ];
@@ -438,7 +452,24 @@ const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
 const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindles));
 const bellCost  = () => Math.floor(T.BELL_BASE * Math.pow(T.BELL_GROWTH, S.bells));
 const away      = () => S.pool.filter(a => a.state === "away");
-const poolCap   = () => T.POOL;                     // grows in pass two
+const poolCap   = () => T.POOL + S.lv.circle + (has("wider") ? 2 : 0);
+const has       = k => S.meta.unlocks.indexOf(k) >= 0;
+const flameLife = () => Math.max(0, Math.min(1, S.flame / T.FLAME_MAX));
+const lightR    = () => (104 + S.lv.flame * 9) * (0.5 + 0.5 * flameLife());
+const ringCap   = () => Math.max(T.RING_MIN, Math.round(
+                    Math.min(T.RING_MAX, T.RING_BASE + Math.floor(S.lv.flame / 2)) * (0.45 + 0.55 * flameLife())));
+const vendorSeats = () => (S.smithLv ? 2 : 0) + (S.herbLv ? 1 : 0);
+const usableSeats = () => Math.max(1, ringCap() - vendorSeats());
+
+function tickFlame(dt){
+  const alive = living().length, dead = hollows().length;
+  const seats = Math.max(0, usableSeats() - dead);
+  const atFire = Math.min(alive, seats);
+  const feed = atFire + T.FAR_FEED * Math.max(0, alive - atFire);
+  const rate = T.BASE_DECAY - feed * T.HEARTH + dead * T.HOLLOW_DECAY;
+  S.flame = Math.max(0, Math.min(S.flameMax, S.flame - rate * dt));
+  if (S.flame <= 0 && !S.ending) endRun(false);
+}
 const hollowAt  = () => S.herbLv ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
 const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay) * mods(a).payMul));
 const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
@@ -503,18 +534,19 @@ const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d5
                 ["#c9a45c","#8a6a34"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"],
                 ["#5fbec4","#2f7d82"], ["#e0904a","#9c5a22"], ["#b96fc4","#7a3f85"],
                 ["#a8c95c","#6c8a30"], ["#8894b0","#525b74"], ["#c45f5f","#832f2f"] ];
-const slotUsed = new Array(T.SLOTS).fill(null);
+const slotUsed = new Array(T.RING_MAX).fill(null);
 const FIRE_TAP_R = 78;                    // nobody may sit inside this
-let RING_R = 108;                         // seats live outside the fire's own space
+let RING_R = 108;                         // recomputed each frame: the seats sit at the light's edge
 
 function slotPos(i){
-  const a = -Math.PI/2 + (i / T.SLOTS) * Math.PI * 2 + 0.4;
+  const n = Math.max(1, ringCap());
+  const a = -Math.PI/2 + (i / n) * Math.PI * 2 + 0.4;
   return { x: fx + Math.cos(a) * RING_R, y: fy + Math.sin(a) * (RING_R * 0.46) + 6 };
 }
-const reserved = i => (S.smithLv && SMITH_SLOTS.indexOf(i) >= 0) || (S.herbLv && i === HERB_SLOT);
 function claimSlot(a){
-  for (let i = 0; i < T.SLOTS; i++){
-    if (reserved(i) || slotUsed[i]) continue;
+  const n = usableSeats();
+  for (let i = 0; i < n; i++){
+    if (slotUsed[i]) continue;
     slotUsed[i] = a; a.slot = i; return true;
   }
   return false;
@@ -534,7 +566,7 @@ function recruit(){
 }
 
 function earn(n, x, y, doubled){
-  S.souls += n;
+  S.souls += n; S.runEarned += n;
   S.earnLog.push({ t:S.elapsed, n });
   if (S.offline) return;
   S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffd06b" : "#f2e6d8" });
@@ -561,6 +593,11 @@ function resolveExpedition(a){
   if (survived){
     if (a.depth === d) a.depth = d + 1;   // sent shallow: banked, not deepened
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
+    if (a.depth >= T.NAME_AT_DEPTH && !a.name){
+      giveName(a);
+      if (!S.offline) say(a, "They started calling this one " + a.name + ".");
+    }
+    if (a.depth > S.peakDepth) S.peakDepth = a.depth;
     dropFor(a);
     recoverGear(a, d);
     if (Math.random() < 0.25) a.pending = oneOf(d >= 5 ? LINES.deepRet : LINES.ret);
@@ -601,6 +638,10 @@ function goHollow(a){                     // the thing the whole system exists t
 
 function updatePool(dt){
   const speed = 62;
+  const seats = usableSeats();             // a shrinking ring puts the outermost back on their feet
+  for (const a of S.pool){
+    if (a.slot >= seats){ releaseSlot(a); if (a.state === "rest"){ a.state = "walkin"; } }
+  }
   let spill = 0;                           // a hollow squats the next slot that frees
   for (const h of S.pool){
     if (h.state !== "hollow") continue;
@@ -826,6 +867,20 @@ const ART_LINES = {
 const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn.",
                       "The last owner is still paying.", "It takes the difference back." ];
 
+const NAMES = ("Aldric Bryn Calla Doon Ester Fenn Garrow Hesk Ilva Joss Kettle Lorn Mave Nyle "
+  + "Orrin Pell Quill Rooke Sabel Tolm Ulf Vesper Wick Yarrow Ash Brenna Corvin Dell Ewen Fray "
+  + "Gost Hallow Iris Jarr Kelda Lem Moss Ninn Osric Prue Rell Sedge Thane Vane Wren Ysolde").split(" ");
+let nameCursor = (Math.random() * NAMES.length) | 0;
+function giveName(a){
+  if (a.name) return;
+  const taken = S.pool.map(o => o.name).filter(Boolean);
+  for (let i = 0; i < NAMES.length; i++){
+    const n = NAMES[(nameCursor + i) % NAMES.length];
+    if (taken.indexOf(n) < 0){ a.name = n; nameCursor = (nameCursor + i + 1) % NAMES.length; return; }
+  }
+  a.name = NAMES[(Math.random()*NAMES.length)|0];
+}
+
 const EVENTS = ["!", "✦", "~"];           // ambush, discovery, narrow escape
 
 function stripGeom(){ return { x:26, top:58, bottom: H - 76 }; }
@@ -862,21 +917,51 @@ function drawGround(){
   shape(()=>ctx.ellipse(fx, fy + 18, Math.min(W*0.30, 116), 46, 0, 0, 6.2832), "#2c2038", 4);
 }
 
-function drawFire(time){
-  const pulse = 1 + Math.sin(time*3.4)*0.06 + flare;
-  const g = ctx.createRadialGradient(fx, fy - 12, 4, fx, fy - 12, 126*pulse);
-  g.addColorStop(0, "rgba(255,157,61,0.34)"); g.addColorStop(1, "rgba(255,157,61,0)");
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy - 12, 126*pulse, 0, 6.2832); ctx.fill();
+const mix = (a, b, t) => {                       // two hexes, one dying fire
+  const pa = parseInt(a.slice(1),16), pb = parseInt(b.slice(1),16);
+  const r = Math.round(((pa>>16&255)*(1-t) + (pb>>16&255)*t));
+  const g = Math.round(((pa>>8&255)*(1-t) + (pb>>8&255)*t));
+  const bl = Math.round(((pa&255)*(1-t) + (pb&255)*t));
+  return "#" + [r,g,bl].map(v=>v.toString(16).padStart(2,"0")).join("");
+};
 
+function drawFire(time){
+  const life = flameLife();                      // 0 dead, 1 roaring
+  const grow = 1 + S.lv.flame * 0.11;            // Kindled Flame builds the fire itself
+  const size = grow * (0.42 + 0.58 * life);      // dying pulls it back toward its base
+  const speed = 0.35 + 0.65 * life;
+  const pulse = 1 + Math.sin(time * 3.4 * speed) * 0.06 * life + flare;
+  const R = lightR() * pulse;
+
+  const hot  = mix("#ff5f3d", "#4a5668", 1 - life);
+  const mid  = mix("#ff9d3d", "#66748a", 1 - life);
+  const tip  = mix("#ffd06b", "#8b96a8", 1 - life);
+
+  const g = ctx.createRadialGradient(fx, fy - 12, 4, fx, fy - 12, R);
+  g.addColorStop(0, "rgba(255,157,61," + (0.34 * (0.25 + 0.75*life)).toFixed(3) + ")");
+  g.addColorStop(1, "rgba(255,157,61,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy - 12, R, 0, 6.2832); ctx.fill();
+
+  const logs = 2 + Math.floor(S.lv.flame / 4);   // the structure grows, not just the flame
   ctx.save(); ctx.translate(fx, fy + 8);
-  ctx.rotate(-0.42); rrect(0, 0, 56, 13, 6, "#4a3324", 4);
-  ctx.rotate(0.84);  rrect(0, 0, 56, 13, 6, "#5a3f2c", 4);
+  for (let i = 0; i < logs; i++){
+    ctx.rotate(i === 0 ? -0.42 : 0.84 / Math.max(1, logs - 1));
+    rrect(0, i * 2, 56 * (1 + S.lv.flame * 0.045), 13, 6, i % 2 ? "#5a3f2c" : "#4a3324", 4);
+  }
   ctx.restore();
 
-  const w1 = 26*pulse, h1 = 62*pulse + Math.sin(time*5.1)*4;
-  teardrop(fx + Math.sin(time*2.2)*2, fy - 2, w1, h1, "#ff5f3d", 5);
-  teardrop(fx + Math.sin(time*3.7)*3, fy - 4, w1*0.62, h1*0.66, "#ff9d3d", 4);
-  teardrop(fx + Math.sin(time*4.9)*2, fy - 5, w1*0.30, h1*0.36, "#ffd06b", 3);
+  const tongues = S.flame <= 0 ? 0
+                : Math.max(1, Math.min(5, 1 + Math.round(S.lv.flame / 3) + (life > 0.5 ? 1 : 0)));
+  const w1 = 26 * size, h1 = 62 * size + Math.sin(time * 5.1 * speed) * 4 * life;
+  for (let i = 0; i < tongues; i++){
+    const off = i === 0 ? 0 : (i % 2 ? 1 : -1) * (9 + i * 4) * size;
+    const sc = i === 0 ? 1 : 0.52 - i * 0.05;
+    teardrop(fx + off + Math.sin(time * (2.2 + i) * speed) * 2, fy - 2,
+             w1 * sc, h1 * sc * (0.8 + 0.2*life), hot, 5);
+  }
+  teardrop(fx + Math.sin(time * 3.7 * speed) * 3, fy - 4, w1 * 0.62, h1 * 0.66, mid, 4);
+  if (life > 0.12)
+    teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.30, h1 * 0.36, tip, 3);
 }
 
 /* one hooded figure: trapezoid cloak, hood, pale face */
@@ -932,7 +1017,7 @@ function drawAdventurer(a, time){
 }
 
 function drawBlacksmith(time){
-  const p = slotPos(1), x = Math.min(p.x + 4, W - 58), y = p.y + 22, swing = Math.sin(time*5.2);
+  const x = Math.min(fx + RING_R * 0.86, W - 58), y = fy + 26, swing = Math.sin(time*5.2);
   rrect(x + 34, y - 4, 26, 9, 4, "#3a2c4a", 4);
   shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
               ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#5c5468", 4);
@@ -948,7 +1033,7 @@ function drawBlacksmith(time){
 }
 
 function drawHerbalist(time){
-  const p = slotPos(HERB_SLOT), x = Math.max(p.x - 12, 48), y = p.y - 2, grind = Math.sin(time*3.1);
+  const x = Math.max(fx - RING_R * 0.86, 48), y = fy + 8, grind = Math.sin(time*3.1);
   rrect(x - 25, y - 2, 22, 9, 4, "#3a2c4a", 4);              // bench, tucked outside the ring
   shape(()=>{ ctx.moveTo(x-33, y-8); ctx.lineTo(x-17, y-8); ctx.lineTo(x-20, y-18);
               ctx.lineTo(x-30, y-18); ctx.closePath(); }, "#6f8a72", 4);      // mortar
@@ -1129,13 +1214,16 @@ function frame(now){
   S.emberT += dt;
   while (S.emberT >= T.EMBER_REGEN){ S.emberT -= T.EMBER_REGEN; S.embers = Math.min(T.MAX_EMBERS, S.embers + 1); }
 
+  RING_R = Math.max(FIRE_TAP_R + 16, lightR() * 0.92);
+  if (S.flameOn && !S.ending) tickFlame(dt);
   updatePool(dt);
   updateKeeper(dt);
   tickCraft(dt);
   while (S.earnLog.length && S.earnLog[0].t < S.elapsed - 60) S.earnLog.shift();
   flare = Math.max(0, flare - dt * 1.6);
   sparkT += dt;
-  if (sparkT > 0.16){ sparkT = 0; sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
+  if (sparkT > 0.16){ sparkT = 0;
+    if (Math.random() < 0.12 + 0.88 * flameLife()) sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
 
   ctx.clearRect(0, 0, W, H);
   drawGround();
@@ -1527,6 +1615,93 @@ artToFire.addEventListener("click", () => {
   showCounsel(a);
 });
 
+/* ==================== the cycle ==================== */
+
+const UNLOCKS = [
+  { key:"forge",  name:"Standing Forge", cost:80,
+    body:"The smith never leaves. He is at his anvil when the next fire is lit." },
+  { key:"grove",  name:"Standing Grove", cost:120,
+    body:"The herbalist keeps her bench through the dark between fires." },
+  { key:"road",   name:"The Old Road", cost:100,
+    body:"The way down as far as the second place stays open. Nobody has to find it again." },
+  { key:"dead",   name:"Stubborn Dead", cost:150,
+    body:"They hold on longer. Four deaths before the grey takes them, not three." },
+  { key:"wider",  name:"Wider Fire", cost:180,
+    body:"Two more can sit from the beginning. The circle starts larger." },
+  { key:"deep",   name:"Deep Ash", cost:220,
+    body:"The new fire is lit off the old one's bed. It starts at 120, not 100." },
+  { key:"names",  name:"Kept Names", cost:300,
+    body:"One of the dead can be called back by name at the start of a fire, carrying one thing "
+       + "they died with. They will not remember you." }
+];
+
+function ashFor(){
+  return Math.max(1, Math.floor(S.peakDepth * 3 + S.runEarned / 400 + living().length * 2));
+}
+
+function endRun(voluntary){
+  if (S.ending) return;
+  S.ending = true;
+  S.endInfo = { ash: ashFor(), depth: S.peakDepth, earned: S.runEarned,
+                kept: living().length, hollowed: hollows().length,
+                minutes: Math.max(1, Math.round(S.elapsed / 60)), voluntary };
+  S.flame = 0;
+  closeCounsel(); closeArtifact(); closeSheet(); bookEl.hidden = true;
+  setTimeout(showEnd, voluntary ? 900 : 2600);     // let the light go out first
+}
+
+function showEnd(){
+  const e = S.endInfo;
+  S.meta.ash += e.ash; S.meta.cycles++;
+  openSheet("The fire is out", "Cycle " + S.meta.cycles + " ended.", [
+    { html:"<em>" + (e.voluntary ? "I let it go out while I still could."
+        : "It went out, the way they do.") + "</em>", onClick:null },
+    { html:"The fire held for <span>" + e.minutes + " minutes</span>.", onClick:null },
+    { html:"Deepest anyone got: <span>depth " + e.depth + "</span>.", onClick:null },
+    { html:"<span>" + fmt(e.earned) + " souls</span> passed through my hands.", onClick:null },
+    { html: e.kept + " still standing when the light went. " + e.hollowed + " grey.", onClick:null },
+    { html:"<b>" + e.ash + " ash</b><br><em>What is left of a fire is what you build the next one with.</em>",
+      onClick:null },
+    { html:"<b>Rake the ashes</b>", onClick: () => { closeSheet(); openAshes(); } },
+    { html:"Kindle another fire", onClick: () => { closeSheet(); newCycle(); } }
+  ]);
+  saveGame();
+}
+
+function openAshes(){
+  const rows = UNLOCKS.map(u => {
+    const owned = has(u.key), afford = S.meta.ash >= u.cost;
+    return { html:"<b>" + u.name + (owned ? " — kept" : "") + "</b><br><em>" + u.body + "</em>" +
+                  (owned ? "" : "<br><span>" + u.cost + " ash</span>"),
+      onClick: owned || !afford ? null : () => {
+        S.meta.ash -= u.cost; S.meta.unlocks.push(u.key); saveGame(); openAshes();
+      } };
+  });
+  rows.push(S.ending
+    ? { html:"<b>Kindle another fire</b>", onClick: () => { closeSheet(); newCycle(); } }
+    : { html:"Back to the fire", onClick: closeSheet });   // never end a live run by accident
+  openSheet("Ashes", fmt(S.meta.ash) + " ash. These carry between fires.", rows);
+}
+
+function newCycle(){
+  S.souls = 0; S.mat = 0; S.lv = { flame:0, word:0, echo:0, circle:0 };
+  S.smithLv = has("forge") ? 1 : 0; S.herbLv = has("grove") ? 1 : 0;
+  S.rekindles = 0; S.bells = 0; S.embers = T.MAX_EMBERS; S.emberT = 0;
+  S.pool = []; S.relic = []; S.lost = []; S.arriveT = 0;
+  S.flameMax = has("deep") ? 120 : T.FLAME_MAX; S.flame = S.flameMax;
+  S.peakDepth = 0; S.runEarned = 0; S.elapsed = 0; S.earnLog = [];
+  S.floats = []; S.sparks = []; S.says = []; S.notice = null;
+  S.sel = null; S.ending = false; S.endInfo = null;
+  for (let i = 0; i < slotUsed.length; i++) slotUsed[i] = null;
+  if (has("names") && S.meta.dead.length){        // one of them is called back
+    const d = S.meta.dead[(Math.random() * S.meta.dead.length) | 0];
+    const a = recruit(); a.name = d.name || null;
+    if (!a.name) giveName(a);
+    S.notice = { txt:(a.name || "Someone") + " came back. Not the same one, but the name is.", t:0 };
+  }
+  render(); saveGame();
+}
+
 /* ==================== sheets ==================== */
 
 const sheetEl = document.getElementById("sheet");
@@ -1588,10 +1763,11 @@ function serialize(){
     souls:S.souls, mat:S.mat, lv:S.lv, smithLv:S.smithLv, herbLv:S.herbLv,
     rekindles:S.rekindles, bells:S.bells, embers:S.embers, taps:S.taps,
     seen:S.seen, tipSeen:S.tipSeen, nextId:S.nextId, nextArt:S.nextArt,
+    flame:S.flame, flameMax:S.flameMax, peakDepth:S.peakDepth, runEarned:S.runEarned,
     everHollowed:S.everHollowed, elapsed:S.elapsed,
     pool: S.pool.map(a => ({
-      id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t,
-      slot:a.slot, tone:a.tone, name:a.name || null,
+      id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
+      slot:a.slot, tone:a.tone,
       gear: a.gear ? { weapon:stripArt(a.gear.weapon), armour:stripArt(a.gear.armour),
                        trinket:stripArt(a.gear.trinket) } : null,
       find: stripArt(a.find), choice: stripArt(a.choice), recalled:a.recalled || false
@@ -1627,6 +1803,9 @@ function restore(save){
   S.embers = save.embers != null ? save.embers : T.MAX_EMBERS;
   S.taps = save.taps || 0; S.tipSeen = !!save.tipSeen;
   S.everHollowed = !!save.everHollowed; S.elapsed = save.elapsed || 0;
+  S.flameMax = save.flameMax || T.FLAME_MAX;
+  S.flame = save.flame != null ? save.flame : S.flameMax;
+  S.peakDepth = save.peakDepth || 0; S.runEarned = save.runEarned || 0;
   S.seen = Object.assign(S.seen, save.seen || {});
   S.nextId = save.nextId || 1; S.nextArt = save.nextArt || 1;
   S.meta = Object.assign(S.meta, save.meta || {});
@@ -1657,7 +1836,8 @@ function runOffline(seconds){
     while (S.arriveT >= iv){ S.arriveT -= iv; if (living().length < poolCap()) recruit(); }
     updatePool(step);
     tickCraft(step);
-    if (S.flameOn) tickFlame(step);
+    if (S.flameOn && !S.ending) tickFlame(step);
+    if (S.ending){ report.flameDied = true; break; }
   }
   report.souls = S.souls - before;
   report.scrap = S.mat - beforeMat;
@@ -1675,6 +1855,7 @@ const noteEl  = document.getElementById("note");
 const popEl   = { fire:document.getElementById("pFire"), away:document.getElementById("pAway"),
                   hollow:document.getElementById("pHollow") };
 const matWrap = document.getElementById("matWrap"), matEl = document.getElementById("mat");
+const flameFill = document.querySelector("#flameBar i"), flameNum = document.getElementById("flameNum");
 const fmt = n => Math.floor(n).toLocaleString("en-US");
 let rows = [];
 
@@ -1712,8 +1893,46 @@ function openBook(){
     el.querySelector("p").textContent = open ? e.body : "Nothing written here yet.";
     bookList.appendChild(el);
   }
+  const extras = [
+    { name:"The ones I lost", body:"Every one who hollowed, in every fire I have kept. Tap to read them.",
+      go:openDead },
+    { name:"Ashes", body:"What a dead fire leaves. " + fmt(S.meta.ash) + " of it on the shelf. Tap to spend.",
+      go:openAshes },
+    { name:"Let it go out", body:"End this fire on purpose and keep what it was worth.", go:openBook2 }
+  ];
+  for (const e of extras){
+    const el = document.createElement("div");
+    el.className = "entry"; el.style.cursor = "pointer";
+    el.innerHTML = "<h4></h4><p></p>";
+    el.querySelector("h4").textContent = e.name;
+    el.querySelector("p").textContent = e.body;
+    el.onclick = e.go;
+    bookList.appendChild(el);
+  }
   bookEl.hidden = false;
 }
+function openDead(){
+  const d = S.meta.dead;
+  openSheet("The ones I lost", d.length ? d.length + " of them, across " + Math.max(1, S.meta.cycles + 1)
+    + " fires." : "Nobody yet.", d.length ? d.slice().reverse().map(x => ({
+      html:"<b>" + (x.name || "One of the unnamed") + "</b><br><em>Depth " + x.depth + ", "
+           + plural(x.deaths, "death") + (x.carried.length ? ", carrying " + x.carried.join(" and ") : "")
+           + ". Fire " + x.cycle + ".</em>", onClick:null }))
+    : [{ html:"Nobody has hollowed yet. It will not stay that way.", onClick:null }]);
+}
+
+let armed = false;
+function openBook2(){
+  bookEl.hidden = true;
+  openSheet("Let it go out", "The fire is at " + Math.round(S.flame) + ".", [
+    { html:"<em>Ending it now keeps what the run was worth. Waiting keeps nothing but the waiting.</em>",
+      onClick:null },
+    { html:"<b>" + (armed ? "Yes. Let it go out." : "Let it go out") + "</b>",
+      onClick: () => { if (!armed){ armed = true; openBook2(); } else { armed = false; closeSheet(); endRun(true); } } },
+    { html:"Keep it burning", onClick: () => { armed = false; closeSheet(); } }
+  ]);
+}
+
 document.getElementById("bookBtn").addEventListener("click", openBook);
 document.getElementById("bookX").addEventListener("click", ()=>{ bookEl.hidden = true; });
 
@@ -1722,8 +1941,12 @@ function render(){
   if (S.tab === "skills"){
     NODES.forEach(n => card({
       glyph:n.glyph, tint:"#3a2c4a", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
-      desc:n.desc, label:()=>fmt(cost(n)), enabled:()=>S.souls >= cost(n),
-      onBuy(){ const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++; render(); }
+      desc:n.desc,
+      label:()=> n.max && S.lv[n.key] >= n.max ? "Full" : fmt(cost(n)),
+      enabled:()=> (!n.max || S.lv[n.key] < n.max) && S.souls >= cost(n),
+      done:()=> !!(n.max && S.lv[n.key] >= n.max),
+      onBuy(){ if (n.max && S.lv[n.key] >= n.max) return;
+               const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++; render(); }
     }));
     card({
       glyph:"✨", tint:"#4a3c2c", name:"Rite of Rekindling", level:S.rekindles, level2:()=>S.rekindles,
@@ -1789,6 +2012,10 @@ function evictReserved(){                 // a new vendor turns guests out of it
 
 function refresh(){
   soulsEl.textContent = fmt(S.souls);
+  const life = flameLife();
+  flameFill.style.width = Math.round(life * 100) + "%";
+  flameFill.style.background = life > 0.55 ? "#ff9d3d" : life > 0.25 ? "#d0796a" : "#7a8a9a";
+  flameNum.textContent = Math.round(S.flame);
   matWrap.hidden = !S.seen.material;
   matEl.textContent = fmt(S.mat);
   rateEl.textContent = avgRate().toFixed(1);
@@ -1842,8 +2069,13 @@ function showReturn(rep){
         ". I never learned which was which.</em>", onClick:null });
     }
   } else rows.push({ html:"<em>Everyone who went down came back up. That happens.</em>", onClick:null });
-  if (S.flameOn) rows.push({ html:"The flame is at <span>" + Math.round(S.flame) + "</span>.", onClick:null });
-  rows.push({ html:"<b>Take up the tongs</b>", onClick: () => { closeSheet(); saveGame(); } });
+  if (rep.flameDied)
+    rows.push({ html:"<b>The fire went out while you were gone.</b><br><em>Nobody was feeding it.</em>",
+                onClick:null });
+  else rows.push({ html:"The flame is at <span>" + Math.round(S.flame) + "</span> of " + S.flameMax + ".",
+                   onClick:null });
+  rows.push({ html:"<b>Take up the tongs</b>",
+    onClick: () => { closeSheet(); if (rep.flameDied) showEnd(); else saveGame(); } });
   openSheet("While you were gone", "Nothing waits for anybody here.", rows);
 }
 
