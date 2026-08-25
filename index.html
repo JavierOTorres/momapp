@@ -354,7 +354,7 @@
    player stalls past 30 without ever escaping it.                    */
 
 const T = {
-  POOL:12, SLOTS:8, AWAY:30, REST:20, WALK:62,
+  POOL:8, SLOTS:16, AWAY:30, REST:20, WALK:62,
   SURV_BASE:0.98, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05, DEATH_PEN:0.10,
   SURV_MIN:0.15, SURV_MAX:0.92,
   HOLLOW_AT:3, HOLLOW_AT_HERB:4,
@@ -363,8 +363,9 @@ const T = {
   BELL_BASE:40, BELL_GROWTH:1.55, LETGO_COST:40,
   DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.20,
   MAT_DROP_BASE:0.10, MAT_DROP_PER_DEPTH:0.02, RELIC_CAP:3, CRAFT_SECONDS:15,
-  FLAME_MAX:100, BASE_DECAY:0.037, HEARTH:0.005, FAR_FEED:0.35, HOLLOW_DECAY:0.010,
-  RING_MIN:5, RING_BASE:8, RING_MAX:16, NAME_AT_DEPTH:3,
+  FLAME_MAX:100, BASE_DECAY:0.037, HEARTH:0.0074, FAR_FEED:0.35,
+  HOLLOW_HIT:5, HOLLOW_HIT_PER_DEPTH:0.25, HOLLOW_WINDOW:30, HOLLOW_CAP:3,
+  RING_MIN:4, RING_BASE:5, RING_MAX:8, NAME_AT_DEPTH:3,
   SMITH_LV:[0, 200, 800, 2500], SMITH_MAT:[0, 0, 12, 40],
   HERB_LV:[0, 500, 1100, 3000], HERB_MAT:[0, 0, 14, 44],
   FORGE_COST:{ fine:[150, 6], rare:[600, 20] },
@@ -506,8 +507,8 @@ const NODES = [
   { key:"word", name:"Word of Sanctuary", glyph:"🔔", base:25, growth:1.7,
     desc:()=> "Recruits arrive 10% faster, one every " + interval().toFixed(2) +
               "s, while the circle is below " + poolCap() + "." },
-  { key:"circle", name:"Widen the Circle", glyph:"🔆", base:300, growth:1.9, max:8,
-    desc:()=> "One more may take up with us, to a limit of " + (T.POOL + 8) + ". "
+  { key:"circle", name:"Widen the Circle", glyph:"🔆", base:300, growth:1.9, max:4,
+    desc:()=> "One more may take up with us, to a limit of " + (T.POOL + 4 + (has("wider") ? 2 : 0)) + ". "
               + "Room for " + poolCap() + " now, and " + usableSeats() + " seats at the fire." },
   { key:"echo", name:"Soul Echo", glyph:"💀", base:50, growth:2.0,
     desc:()=> "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
@@ -541,14 +542,11 @@ const vendorSeats = () => VENDORS.reduce((n, v) => n + (built(v.key) && inLight(
 const usableSeats = () => Math.max(1, ringCap() - vendorSeats());
 
 function tickFlame(dt){
-  const alive = living().length;
-  /* The ossuary halves the pull rather than removing it: at zero the flame simply
-     stopped dying (136 minute runs in simulation), which is not a run any more. */
-  const dead = hollows().length * (vlv("ossu") >= 2 ? 0.5 : 1);
+  const alive = living().length, dead = hollows().length;
   const seats = Math.max(0, usableSeats() - dead);
   const atFire = Math.min(alive, seats);
   const feed = atFire + T.FAR_FEED * Math.max(0, alive - atFire);
-  const rate = T.BASE_DECAY - feed * T.HEARTH + dead * T.HOLLOW_DECAY;
+  const rate = T.BASE_DECAY - feed * T.HEARTH;   // the loss itself is a spike, not a drag
   S.flame = Math.max(0, Math.min(S.flameMax, S.flame - rate * dt));
   if (S.flame <= 0 && !S.ending) endRun(false);
 }
@@ -582,7 +580,7 @@ function resize(){
   W = r.width; H = r.height;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  fx = W / 2; fy = H * 0.54;
+  fx = W / 2; fy = H * 0.57;
 }
 window.addEventListener("resize", resize);
 if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
@@ -597,13 +595,13 @@ const C = {
   line:"#0a0e0b", hollow:"#454b48", socket:"#1a1f1c",
   keeper:"#d9c48a", cursed:"#7a4a6e", rare:"#c9a227"
 };
-const LW = { outer:3, inner:1.5, detail:1 };
+const LW = { outer:3, inner:3, detail:3 };   // uniform heavy outline; the style depends on it
 
 function shape(path, fill, lw){
   ctx.beginPath(); path();
   if (fill){ ctx.fillStyle = fill; ctx.fill(); }
   ctx.lineWidth = lw === 0 ? 0 : (lw || LW.outer);
-  if (ctx.lineWidth){ ctx.strokeStyle = C.line; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke(); }
+  if (ctx.lineWidth){ ctx.strokeStyle = OUTLINE; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke(); }
 }
 
 const mix = (a, b, t) => {                      // blend two hexes: firelight, and things dying
@@ -648,19 +646,27 @@ function desat(hex){                       // a hollow keeps its hue, drained of
 /* 4. Six species. Identity is silhouette; the colours are all warm-neutral so
    the animals read against grey stone and green moss without competing with the fire. */
 const SPECIES = [
-  { key:"cat",    name:"cat",    body:"#b58a63", mark:"#c9a179", survival:+0.05, pay:-0.15,
+  { key:"cat",    name:"cat",    body:"#8a6a4e", plate:"#c9a882", survival:+0.05, pay:-0.15,
     note:"Careful. Comes back more often, and with less." },
-  { key:"dog",    name:"dog",    body:"#96775e", mark:"#a98a70", deaths:+1,
+  { key:"dog",    name:"dog",    body:"#6f5645", plate:"#b09077", deaths:+1,
     note:"Holds on. One more death before the grey." },
-  { key:"frog",   name:"frog",   body:"#7d8a5c", mark:"#8f9c6c", depth:+1, survival:-0.05,
+  { key:"frog",   name:"frog",   body:"#5c6b45", plate:"#8fa06b", depth:+1, survival:-0.05,
     note:"Reckless. Goes deeper faster and lasts less time doing it." },
-  { key:"crow",   name:"crow",   body:"#4e4a52", mark:"#5f5b64", drop:+0.08, gate:-1.5,
+  { key:"crow",   name:"crow",   body:"#3b3740", plate:"#6b6572", drop:+0.08, gate:-1.5,
     note:"Sharp-eyed. Finds more, opens less." },
-  { key:"rabbit", name:"rabbit", body:"#b0a290", mark:"#c2b4a2", away:-0.18, depthOdd:true,
+  { key:"rabbit", name:"rabbit", body:"#8f8375", plate:"#c4b8a6", away:-0.18,
     note:"Quick. Short trips, and not much deeper for them." },
-  { key:"goat",   name:"goat",   body:"#a2947c", mark:"#b4a68e", gate:+2.5, away:+0.15,
+  { key:"goat",   name:"goat",   body:"#7d7364", plate:"#b5a894", gate:+2.5, away:+0.15,
     note:"Stubborn. Better at doors, slower at everything." }
 ];
+/* Garments carry the colour and tell two of the same species apart. */
+const GARMENTS = [
+  { key:"red",    hex:"#c03a2f" }, { key:"gold",   hex:"#e0a52c" },
+  { key:"violet", hex:"#6b4a9c" }, { key:"teal",   hex:"#2f8a8a" },
+  { key:"moss",   hex:"#5c8a3a" }, { key:"rust",   hex:"#c26a25" }
+];
+const OUTLINE = "#141014";
+
 const SPMAP = {}; SPECIES.forEach(sp => SPMAP[sp.key] = sp);
 const spOf = a => SPMAP[a.sp] || SPECIES[0];
 const BUILDS = [{ h:1, w:1 }, { h:1.12, w:0.92 }, { h:0.9, w:1.12 }];
@@ -693,10 +699,25 @@ function edgeSpawn(a){
   a.dir = left ? 1 : -1; a.exit = left ? W + 40 : -40;
 }
 
+const rand = arr => arr[(Math.random() * arr.length) | 0];
+
+function pickSpecies(){                    // two candidates, the rarer one wins: no wall of frogs
+  const count = k => S.pool.filter(a => a.sp === k).length;
+  const a = rand(SPECIES), b = rand(SPECIES);
+  return count(a.key) <= count(b.key) ? a : b;
+}
+function pickGarb(spKey){                  // garment is how you tell two of the same animal apart
+  const kin = S.pool.filter(a => a.sp === spKey).map(a => a.garb);
+  const used = g => S.pool.filter(a => a.garb === g.hex).length + (kin.includes(g.hex) ? 8 : 0);
+  const best = Math.min.apply(null, GARMENTS.map(used));
+  return rand(GARMENTS.filter(g => used(g) === best)).hex;   // the rarest colour in the circle
+}
+
 function recruit(){
-  const sp = SPECIES[(Math.random() * SPECIES.length) | 0];
+  const sp = pickSpecies();
   const a = { id:S.nextId++, depth:0, deaths:0, shallow:false, slot:-1,
               sp:sp.key, build:(Math.random() * BUILDS.length) | 0, rate:0.8 + Math.random() * 0.5,
+              garb:pickGarb(sp.key),
               tone:TONES[(S.nextId - 1) % TONES.length], state:"walkin", t:0,
               x:0, y:0, dir:1, exit:0, bob:Math.random() * 6, queue:0 };
   edgeSpawn(a); S.pool.push(a); return a;
@@ -759,8 +780,32 @@ function resolveExpedition(a){
   edgeSpawn(a); a.state = "walkin";
 }
 
+const hollowWindow = () => vlv("ossu") >= 2 ? 60 : T.HOLLOW_WINDOW;
+
+/* They stand up and walk out on their own if nobody decides for them. */
+function depart(a, quiet){
+  if (!a || a.state !== "hollow") return;
+  const ash = letGoAsh(a);
+  S.meta.ash += ash;
+  if (a.gear) for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (g) toReliquary(g, peakOf(a), a.deaths, a.name);
+  }
+  a.gear = null;
+  releaseSlot(a);
+  S.pool.splice(S.pool.indexOf(a), 1);
+  if (S.sel === a.id) closeCounsel();
+  if (!quiet && !S.offline){
+    S.notice = { txt:(a.name ? a.name + " walked out on their own." : "One of them walked out."), t:0 };
+    S.floats.push({ x:a.x, y:a.y - 46, t:0, txt:"+" + ash + " ash", col:"#a9a3b5" });
+  }
+}
+
 function goHollow(a){                     // the thing the whole system exists to produce
-  a.state = "hollow"; a.t = 0; S.seen.hollow = true;
+  a.state = "hollow"; a.t = 0; a.hollowT = 0; S.seen.hollow = true;
+  S.flame = Math.max(0, S.flame - (T.HOLLOW_HIT + peakOf(a) * T.HOLLOW_HIT_PER_DEPTH));
+  const others = hollows().filter(o => o !== a);
+  while (others.length >= T.HOLLOW_CAP) depart(others.shift(), true);   // never a wall of grey
   if (a.gear) for (const slot of A_SLOTS){     // what they carried outlives them
     const g = a.gear[slot];
     if (g) toReliquary(g, a.depth, a.deaths, a.name);
@@ -784,6 +829,12 @@ function goHollow(a){                     // the thing the whole system exists t
 
 function updatePool(dt){
   const speed = 62;
+  for (let i = S.pool.length - 1; i >= 0; i--){      // the window runs down whether you look or not
+    const h = S.pool[i];
+    if (h.state !== "hollow") continue;
+    h.hollowT = (h.hollowT || 0) + dt;
+    if (h.hollowT >= hollowWindow()) depart(h, false);
+  }
   const seats = usableSeats();             // a shrinking ring puts the outermost back on their feet
   for (const a of S.pool){
     if (a.slot >= seats){ releaseSlot(a); if (a.state === "rest"){ a.state = "walkin"; } }
@@ -988,9 +1039,12 @@ const LINES = {
 };
 const oneOf = arr => arr[(Math.random() * arr.length) | 0];
 
+const sayY = a => a.y - 76 - (spOf(a).key === "rabbit" ? 16 : spOf(a).key === "cat"
+                              || spOf(a).key === "goat" ? 9 : 0);
+
 function say(a, txt){
   if (S.offline) return;
-  S.says.push({ id:a.id, x:a.x, y:a.y - 44, txt, t:0 });
+  S.says.push({ id:a.id, x:a.x, y:sayY(a), txt, t:0 });
   if (S.says.length > 4) S.says.shift();
 }
 
@@ -1064,10 +1118,10 @@ const VENDORS = [
            "You route them, you see the gates, and one place a fire runs rich."] },
   { key:"ossu", name:"The Ossuary", glyph:"⚱", tint:"#4a4458", verb:"vigil", seats:1,
     cost:[0,900,1800,3600], mat:[0,0,14,42],
-    blurb:["Keeps the dead. Letting one go pays double ash.",
-           "The grey pull at the flame half as hard while this stands.",
+    blurb:["Keeps the dead. Letting one go, or letting one walk, pays double ash.",
+           "Twice as long to decide what to do with the ones who go.",
            "One rite a fire costs nothing.",
-           "Double ash, half the pull from the grey, and one free rite a fire."] },
+           "Double ash, a minute to decide, and one free rite a fire."] },
   { key:"tink", name:"The Tinker", glyph:"⚙", tint:"#3d444a", verb:"break", seats:1,
     cost:[0,700,1500,3000], mat:[0,0,12,38],
     blurb:["Deals in scrap. Gear can be broken down, off the shelf or off a back.",
@@ -1217,10 +1271,12 @@ function giveName(a){
 
 const EVENTS = ["!", "✦", "~"];           // ambush, discovery, narrow escape
 
-function stripGeom(){ return { x:26, top:58, bottom: H - 76 }; }
+function stripGeom(){ return { x:14, y:14, w:W - 28, h:26 }; }
 function markerPos(a, i){
-  const g = stripGeom(), p = Math.min(1, Math.max(0, 1 - a.t / T.AWAY));
-  return { x: g.x + 8 + (i % 2 ? 6 : -6), y: g.top + p * (g.bottom - g.top) };
+  const g = stripGeom(), n = Math.max(1, LOC.length);
+  const p = Math.min(1, Math.max(0, 1 - a.t / (T.AWAY * awayScale(a))));
+  const band = g.w / n, i0 = locOf(a.depth);
+  return { x: g.x + band * (i0 + 0.5) + (i % 2 ? 5 : -5), y: g.y + 7 + p * (g.h - 14) };
 }
 
 function ringBell(a){
@@ -1344,20 +1400,27 @@ function drawColumns(time){                          // stand at the edge of the
 
 /* 9. The firelight itself: a warm rim on the side facing the fire,
    cool shadow away from it, both scaling with how alive the flame is. */
-function rimLight(x, y, w, h){
+/* The firelight catches the edge of the head, on the side turned to it. It has to
+   hug the silhouette: an arc floating clear of the shape reads as a stray line. */
+function rimLight(cx, cy, w, h, r){
   const life = flameLife();
   if (life <= 0.05) return;
-  const dx = x - fx, dy = (y - fy) * 0.6, d = Math.max(1, Math.hypot(dx, dy));
+  const dx = cx - fx, dy = (cy - fy) * 0.6, d = Math.max(1, Math.hypot(dx, dy));
   const near = Math.max(0, Math.min(1, 1 - (d - 40) / (lightR() * 1.3)));
   if (near <= 0.02) return;
-  const side = dx > 0 ? -1 : 1;                     // the side facing the fire
+  const side = dx > 0 ? -1 : 1;                     // -1: the fire is to their left
+  const rad = r == null ? 12 : r, x0 = cx - w / 2, y0 = cy - h / 2;
   ctx.save();
-  ctx.globalAlpha = 0.10 + 0.28 * near * life;
-  ctx.strokeStyle = C.fireBody; ctx.lineWidth = 1 + 1.4 * near;
+  ctx.beginPath(); ctx.rect(side > 0 ? cx : cx - w, cy - h, w, h * 2); ctx.clip();
+  ctx.globalAlpha = 0.10 + 0.20 * near * life;
+  ctx.strokeStyle = C.fireCore; ctx.lineWidth = 1.2 + 0.8 * near; ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.ellipse(x, y - h * 0.40, w * 0.26, h * 0.40, 0,
-              side > 0 ? -1.5 : 1.5, side > 0 ? 1.5 : 4.5);
-  ctx.stroke();
+  ctx.moveTo(x0 + rad, y0);
+  ctx.arcTo(x0 + w, y0,     x0 + w, y0 + h, rad);
+  ctx.arcTo(x0 + w, y0 + h, x0,     y0 + h, rad);
+  ctx.arcTo(x0,     y0 + h, x0,     y0,     rad);
+  ctx.arcTo(x0,     y0,     x0 + w, y0,     rad);
+  ctx.closePath(); ctx.stroke();
   ctx.restore();
 }
 
@@ -1403,166 +1466,128 @@ function drawFire(time){
 /* 4 + 7 + 8. Species read as silhouettes. A hollow keeps its silhouette exactly
    and loses everything else: colour, eyes, and all movement. */
 
+/* A head with legs, not a robe with a head.
+   Head 30x32, body 12x22, legs 8x6 with 6px between them: 48px in total.
+   The head must always be wider than the body or it reverts to a cone. */
+const FIG = { head:{ w:32, h:30 }, body:{ w:22, h:12 }, leg:{ w:6, h:8, gap:6 }, total:48 };
+
 function ear(x, y, w, h, tilt, fill){
   shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
-    ctx.moveTo(0, 0); ctx.lineTo(w * 0.62, -h); ctx.lineTo(w, 4); ctx.closePath();
-    ctx.restore(); }, fill, LW.inner);
+    ctx.moveTo(-w * 0.5, 4); ctx.lineTo(0, -h); ctx.lineTo(w * 0.5, 4);
+    ctx.closePath(); ctx.restore(); }, fill, LW.outer);
 }
 
-function hooded(x, y, h, w, cloak, hood, dir, eyes){
-  contact(x, y + 4, w * 0.66, 0.42);
-  shape(()=>{ ctx.moveTo(x - w * 0.40, y - h); ctx.lineTo(x + w * 0.40, y - h);
-              ctx.lineTo(x + w * 0.54, y + 1); ctx.quadraticCurveTo(x, y + 7, x - w * 0.54, y + 1);
-              ctx.closePath(); }, cloak, LW.outer);
-  circle(x, y - h - 2, w * 0.50, hood, LW.outer);
-  circle(x + dir * w * 0.14, y - h - 1, w * 0.30, mix(hood, C.line, 0.45), LW.detail);
-  if (eyes) drawEyes(x + dir * w * 0.10, y - h - 1, w * 0.30, "normal", dir);
-  rimLight(x, y, w * 2, h * 1.5);
-}
-
-function drawEyes(x, y, r, state, dir){
-  if (state === "hollow"){                          // sockets, darker than the body
-    circle(x - r * 0.42, y, r * 0.30, C.socket, 0);
-    circle(x + r * 0.42, y, r * 0.30, C.socket, 0);
+function drawEyes(x, y, w, state){
+  const ex = w * 0.24, ry = 4.5, rx = 3.4;
+  if (state === "hollow"){                          // sockets, unfilled
+    for (const sx of [-1, 1]) shape(()=>ctx.ellipse(x + sx * ex, y, rx, ry, 0, 0, 6.2832), "#1a1f1c", LW.outer);
     return;
   }
-  const ex = r * 0.40, ey = r * 0.06, rr = r * 0.30;
-  ctx.fillStyle = C.line;
+  ctx.fillStyle = OUTLINE;
   for (const sx of [-1, 1]){
-    ctx.beginPath();
-    ctx.ellipse(x + sx * ex + dir * r * 0.06, y + ey, rr * 0.82, rr, 0, 0, 6.2832);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + sx * ex, y, rx, ry, 0, 0, 6.2832); ctx.fill();
   }
-  if (state === "weary"){                           // lids over the top third, at two deaths
-    ctx.fillStyle = arguments[5] || C.hollow;
+  if (state === "weary"){                           // lids over the top third
+    ctx.fillStyle = arguments[4] || "#c9a882";
     for (const sx of [-1, 1]){
-      ctx.beginPath();
-      ctx.ellipse(x + sx * ex + dir * r * 0.06, y + ey - rr * 0.72, rr * 0.95, rr * 0.62, 0, 0, 6.2832);
-      ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + sx * ex, y - ry * 0.72, rx * 1.15, ry * 0.7, 0, 0, 6.2832); ctx.fill();
     }
   }
 }
 
-/* The body: worn travellers, not cult followers. Packs, patched cloaks, bandages. */
+/* The face plate is inset in the head and does most of the character work. */
+function facePlate(x, y, hw, hh, sp, fill){
+  const w = hw * 0.70, h = hh * 0.65;
+  if (sp === "frog")
+    shape(()=>ctx.ellipse(x, y, w * 0.62, h * 0.44, 0, 0, 6.2832), fill, LW.outer);
+  else if (sp === "crow")
+    shape(()=>{ ctx.moveTo(x, y - h * 0.5); ctx.quadraticCurveTo(x + w * 0.34, y - h * 0.1, x, y + h * 0.5);
+      ctx.quadraticCurveTo(x - w * 0.34, y - h * 0.1, x, y - h * 0.5); ctx.closePath(); }, fill, LW.outer);
+  else if (sp === "goat")
+    shape(()=>{ ctx.moveTo(x - w * 0.42, y - h * 0.5); ctx.lineTo(x + w * 0.42, y - h * 0.5);
+      ctx.quadraticCurveTo(x + w * 0.34, y + h * 0.55, x, y + h * 0.55);
+      ctx.quadraticCurveTo(x - w * 0.34, y + h * 0.55, x - w * 0.42, y - h * 0.5);
+      ctx.closePath(); }, fill, LW.outer);
+  else if (sp === "rabbit")
+    shape(()=>ctx.ellipse(x, y, w * 0.44, h * 0.56, 0, 0, 6.2832), fill, LW.outer);
+  else
+    shape(()=>ctx.ellipse(x, y, w * 0.52, h * 0.50, 0, 0, 6.2832), fill, LW.outer);
+}
+
 function drawAnimal(a, x, y, opts){
   const o = opts || {};
   const sp = spOf(a), b = BUILDS[a.build || 0];
   const hollow = a.state === "hollow";
+  const garb = hollow ? mix(a.garb || sp.body, "#6a6a68", 0.78) : (a.garb || "#c03a2f");
   const body = hollow ? C.hollow : sp.body;
-  const mark = hollow ? mix(C.hollow, C.socket, 0.25) : sp.mark;
-  const seated = !!o.seated;
-  const tall = sp.key === "cat" || sp.key === "rabbit" ? 1.14 : sp.key === "frog" ? 0.78 : 1;
-  const H = (seated ? 21 : 25) * b.h * tall, Wd = 19 * b.w * (sp.key === "frog" ? 1.2 : 1);
+  const plate = hollow ? "#2a2830" : sp.plate;
   const dir = o.dir || 1;
-  const slump = hollow ? 4 : 0;                     // shoulders forward, head down
-  const m = mods(a), gear = a.gear || {};
+  const drop = hollow ? 5 : 0;                      // head forward, body lower, legs bent
+  const hw = FIG.head.w * b.w, hh = FIG.head.h * b.h;
+  const bw = FIG.body.w * b.w, bh = FIG.body.h;
+  const gear = a.gear || {};
 
-  contact(x, y + 4, Wd * 0.66, hollow ? 0.5 : 0.42);
+  contact(x, y + 2, hw * 0.52, hollow ? 0.5 : 0.42);
 
-  if (gear.armour) {                                // armour puts bulk on the shoulders
-    shape(()=>{ ctx.ellipse(x, y - H * 0.72 + slump, Wd * 0.74, H * 0.30, 0, 0, 6.2832); },
-          mix(body, C.relief, 0.5), LW.inner);
-  }
+  const legY = y - FIG.leg.h / 2 + drop * 0.3;      // 12. legs first, behind the body
+  for (const sx of [-1, 1])
+    shape(()=>{ ctx.rect(x + sx * (FIG.leg.gap / 2) - (sx > 0 ? 0 : FIG.leg.w), legY - FIG.leg.h / 2,
+                         FIG.leg.w, FIG.leg.h + (hollow ? -2 : 0)); }, mix(body, OUTLINE, 0.25), LW.outer);
 
-  /* cloak / torso, shaped per species */
-  if (sp.key === "frog"){
-    shape(()=>{ ctx.moveTo(x - Wd * 0.72, y + 2);
-      ctx.quadraticCurveTo(x - Wd * 0.86, y - H * 0.9 + slump, x, y - H * 0.92 + slump);
-      ctx.quadraticCurveTo(x + Wd * 0.86, y - H * 0.9 + slump, x + Wd * 0.72, y + 2);
-      ctx.quadraticCurveTo(x, y + 8, x - Wd * 0.72, y + 2); ctx.closePath(); }, body, LW.outer);
-  } else if (sp.key === "crow"){
-    shape(()=>{ ctx.moveTo(x - Wd * 0.40, y - H + slump); ctx.lineTo(x + Wd * 0.40, y - H + slump);
-      ctx.lineTo(x + Wd * 0.56, y + 1); ctx.quadraticCurveTo(x, y + 7, x - Wd * 0.56, y + 1);
-      ctx.closePath(); }, body, LW.outer);
-    for (const sx of [-1, 1])                       // folded wings at the sides
-      shape(()=>{ ctx.moveTo(x + sx * Wd * 0.42, y - H * 0.86 + slump);
-        ctx.quadraticCurveTo(x + sx * Wd * 0.92, y - H * 0.4, x + sx * Wd * 0.44, y - 1);
-        ctx.closePath(); }, mark, LW.inner);
-  } else if (sp.key === "goat"){                    // broad, and leaning into it
-    shape(()=>{ ctx.moveTo(x - Wd * 0.62 + dir * 3, y - H * 1.06 + slump);
-      ctx.lineTo(x + Wd * 0.62 + dir * 3, y - H * 1.06 + slump);
-      ctx.lineTo(x + Wd * 0.86, y + 2); ctx.quadraticCurveTo(x, y + 9, x - Wd * 0.86, y + 2);
-      ctx.closePath(); }, body, LW.outer);
-  } else {
-    const taper = sp.key === "cat" || sp.key === "rabbit" ? 0.34
-                : sp.key === "dog" ? 0.70 : 0.56;
-    shape(()=>{ ctx.moveTo(x - Wd * taper, y - H + slump); ctx.lineTo(x + Wd * taper, y - H + slump);
-      ctx.lineTo(x + Wd * 0.66, y + 1); ctx.quadraticCurveTo(x, y + 7, x - Wd * 0.66, y + 1);
-      ctx.closePath(); }, body, LW.outer);
-  }
+  const bodyY = y - FIG.leg.h - bh / 2 + drop * 0.5;
+  shape(()=>{ ctx.moveTo(x - bw / 2, bodyY - bh / 2); ctx.lineTo(x + bw / 2, bodyY - bh / 2);
+    ctx.lineTo(x + bw / 2 + 1, bodyY + bh / 2); ctx.lineTo(x - bw / 2 - 1, bodyY + bh / 2);
+    ctx.closePath(); }, garb, LW.outer);            // the garment is the body block
+  if (gear.armour)                                  // armour widens the shoulders
+    shape(()=>ctx.ellipse(x, bodyY - bh * 0.3, bw * 0.72, bh * 0.5, 0, 0, 6.2832),
+          mix(garb, C.relief, 0.55), LW.outer);
+  if (!hollow)                                      // a pack, a bedroll: travellers
+    shape(()=>ctx.ellipse(x - dir * (bw * 0.52), bodyY, 5.5, bh * 0.55, dir * 0.2, 0, 6.2832),
+          mix(garb, OUTLINE, 0.4), LW.outer);
 
-  // a patched cloak and a pack: they are travellers
-  if (!seated && !hollow)
-    shape(()=>{ ctx.moveTo(x - dir * Wd * 0.52, y - H * 0.72);
-      ctx.lineTo(x - dir * Wd * 0.92, y - H * 0.34); ctx.lineTo(x - dir * Wd * 0.48, y - H * 0.18);
-      ctx.closePath(); }, mix(body, C.shadow, 0.45), LW.inner);
-  if (a.deaths > 0 && !hollow)                       // bandaging, one wrap per scar
-    for (let i = 0; i < Math.min(3, a.deaths); i++){
-      ctx.strokeStyle = "#8d8878"; ctx.lineWidth = LW.inner;
-      ctx.beginPath(); ctx.moveTo(x - Wd * 0.5, y - H * (0.3 + i * 0.16));
-      ctx.lineTo(x + Wd * 0.5, y - H * (0.36 + i * 0.16)); ctx.stroke();
-    }
-
-  /* head, and what sits on it */
-  const hy = y - H - (sp.key === "frog" ? 5 : 9) + slump * 1.2;
-  const hr = (sp.key === "frog" ? 12 : sp.key === "goat" ? 11.5 : 10) * b.w;
+  const hy = y - FIG.leg.h - bh - hh / 2 + drop;
   if (sp.key === "cat"){
-    ear(x - hr * 0.86, hy - hr * 0.5, hr * 0.62, hr * 0.95, -0.25, body);
-    ear(x + hr * 0.24, hy - hr * 0.5, hr * 0.62, hr * 0.95, 0.25, body);
+    ear(x - hw * 0.30, hy - hh * 0.42, 12 * b.w, 13, -0.12, body);
+    ear(x + hw * 0.30, hy - hh * 0.42, 12 * b.w, 13, 0.12, body);
   } else if (sp.key === "rabbit"){
-    ear(x - hr * 0.62, hy - hr * 0.7, hr * 0.44, hr * 1.9, -0.16, body);
-    ear(x + hr * 0.18, hy - hr * 0.7, hr * 0.44, hr * 1.9, 0.16, body);
+    ear(x - hw * 0.24, hy - hh * 0.44, 9 * b.w, 24, -0.14, body);
+    ear(x + hw * 0.24, hy - hh * 0.44, 9 * b.w, 24, 0.14, body);
   } else if (sp.key === "goat"){
-    for (const sx of [-1, 1]){                       // ears out sideways, horns back over them
-      shape(()=>ctx.ellipse(x + sx * hr * 1.02, hy + hr * 0.12, hr * 0.38, hr * 0.20, sx * 0.3, 0, 6.2832),
-            mark, LW.detail);
-      shape(()=>{ ctx.moveTo(x + sx * hr * 0.42, hy - hr * 0.78);
-        ctx.quadraticCurveTo(x + sx * hr * 1.5, hy - hr * 1.5, x + sx * hr * 1.72, hy - hr * 0.42);
-        ctx.quadraticCurveTo(x + sx * hr * 1.2, hy - hr * 1.0, x + sx * hr * 0.66, hy - hr * 0.6);
-        ctx.closePath(); }, "#6b6152", LW.inner);
-    }
-  }
-  circle(x, hy, hr, body, LW.outer);
-  if (sp.key === "dog"){                             // drop ears and a blunt muzzle
     for (const sx of [-1, 1])
-      shape(()=>ctx.ellipse(x + sx * hr * 0.92, hy + hr * 0.16, hr * 0.34, hr * 0.62, sx * 0.2, 0, 6.2832),
-            mark, LW.inner);
-    shape(()=>ctx.ellipse(x + dir * hr * 0.5, hy + hr * 0.42, hr * 0.52, hr * 0.34, 0, 0, 6.2832),
-          mark, LW.inner);
-  } else if (sp.key === "crow"){
-    shape(()=>{ ctx.moveTo(x + dir * hr * 0.5, hy + hr * 0.05);
-      ctx.lineTo(x + dir * hr * 1.5, hy + hr * 0.3); ctx.lineTo(x + dir * hr * 0.5, hy + hr * 0.5);
-      ctx.closePath(); }, hollow ? mark : "#6b6152", LW.inner);
-  } else if (sp.key === "frog"){
-    shape(()=>ctx.ellipse(x, hy + hr * 0.5, hr * 0.9, hr * 0.5, 0, 0, 6.2832), mark, LW.detail);
+      shape(()=>{ ctx.moveTo(x + sx * hw * 0.34, hy - hh * 0.40);
+        ctx.quadraticCurveTo(x + sx * hw * 0.86, hy - hh * 0.86, x + sx * hw * 0.74, hy - hh * 0.12);
+        ctx.quadraticCurveTo(x + sx * hw * 0.62, hy - hh * 0.62, x + sx * hw * 0.30, hy - hh * 0.28);
+        ctx.closePath(); }, "#5c5346", LW.outer);
   }
-  drawEyes(x, hy - (sp.key === "frog" ? hr * 0.34 : hr * 0.06), hr,
-           hollow ? "hollow" : a.deaths >= 2 ? "weary" : "normal", dir, body);
+  rrect(x, hy, hw, hh, 12, body, LW.outer);         // the head, generously cornered
+  if (sp.key === "dog")
+    for (const sx of [-1, 1])
+      shape(()=>ctx.ellipse(x + sx * hw * 0.50, hy + hh * 0.10, 6.5 * b.w, 11, sx * 0.25, 0, 6.2832),
+            mix(body, OUTLINE, 0.18), LW.outer);
 
-  if (sp.key === "cat" && !hollow)                   // a tail, curling, the last thing to still move
-    { ctx.strokeStyle = body; ctx.lineWidth = LW.inner + 1;
-      ctx.beginPath(); ctx.moveTo(x - dir * Wd * 0.6, y - 2);
-      ctx.quadraticCurveTo(x - dir * Wd * 1.3, y - 6 + (o.wag || 0), x - dir * Wd * 1.1, y - 16 + (o.wag || 0));
-      ctx.stroke(); }
+  facePlate(x, hy + hh * 0.10, hw, hh, sp.key, plate);
+  if (sp.key === "crow")                            // the beak sits on the plate
+    shape(()=>{ ctx.moveTo(x - 4, hy + hh * 0.16); ctx.lineTo(x + 4, hy + hh * 0.16);
+      ctx.lineTo(x, hy + hh * 0.40); ctx.closePath(); }, "#6b6152", LW.outer);
+  drawEyes(x, hy + hh * (sp.key === "frog" ? 0.02 : 0.06), hw,
+           hollow ? "hollow" : a.deaths >= 2 ? "weary" : "normal", plate);
 
-  /* 8. Gear, human-made and too big for the body wearing it */
-  if (gear.weapon){
-    const g = gear.weapon, len = g.rarity === "rare" ? 30 : g.rarity === "fine" ? 25 : 20;
-    ctx.save(); ctx.translate(x + dir * Wd * 0.78, y - H * 0.5); ctx.rotate(dir * 0.28);
-    shape(()=>ctx.rect(-2.5, -len, 5, len), g.cursed ? C.cursed : C.relief, LW.inner);
-    shape(()=>ctx.rect(-6, -len * 0.14, 12, 4), C.root, LW.detail);
+  if (gear.weapon){                                 // scavenged, and too big for them
+    const g = gear.weapon, len = g.rarity === "rare" ? 34 : g.rarity === "fine" ? 28 : 22;
+    ctx.save(); ctx.translate(x + dir * (hw * 0.46), y - FIG.leg.h - bh * 0.4); ctx.rotate(dir * 0.22);
+    shape(()=>ctx.rect(-2.5, -len, 5, len), g.cursed ? C.cursed : C.relief, LW.outer);
     ctx.restore();
   }
   if (gear.trinket){
     const g = gear.trinket;
     const col = g.cursed ? C.cursed : g.rarity === "rare" ? C.rare : g.rarity === "fine" ? "#9a8f6a" : "#6f6a5c";
-    const gl = ctx.createRadialGradient(x, y - H * 0.55, 0, x, y - H * 0.55, 9);
+    const gl = ctx.createRadialGradient(x, bodyY, 0, x, bodyY, 10);
     gl.addColorStop(0, col); gl.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.globalAlpha = 0.85; ctx.fillStyle = gl;
-    ctx.beginPath(); ctx.arc(x, y - H * 0.55, 9, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
-    circle(x, y - H * 0.55, 2.6, col, LW.detail);
+    ctx.globalAlpha = 0.9; ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(x, bodyY, 10, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+    circle(x, bodyY, 2.4, col, LW.detail);
   }
-  if (!hollow) rimLight(x, y, Wd * 2, H * 1.5);
+  if (!hollow) rimLight(x, hy, hw, hh, 12);
 }
 
 function drawAdventurer(a, time){
@@ -1575,24 +1600,23 @@ function drawAdventurer(a, time){
                                     wag:Math.sin(time * 1.1 * (a.rate || 1) + a.id) * 3 });
   }
   const sp = spOf(a), lift = sp.key === "rabbit" ? 16 : sp.key === "cat" || sp.key === "goat" ? 9 : 0;
-  const top = a.y - (a.state === "rest" ? 48 : 54) - lift;   // clear of ears and horns
-  if (a.depth > 0){
-    rrect(a.x, top, 26, 14, 6, C.line, LW.detail);
-    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = LOC[locOf(a.depth)].tint;
-    ctx.fillText(LOC[locOf(a.depth)].code, a.x, top + 3);
+  const top = a.y - (a.state === "rest" ? 52 : 58) - lift;
+  /* The scene carries no text. Marks only, and only where a decision waits. */
+  if (a.find || a.choice) circle(a.x - 16, top, 5.5, C.rare, LW.outer);
+  if (a.shallow) circle(a.x + 16, top, 4.5, C.relief, LW.outer);
+  if (a.state === "hollow"){                        // the only countdown in the game
+    const left = 1 - Math.min(1, (a.hollowT || 0) / hollowWindow());
+    const cy = a.y + 5, rx = 28, ry = 10;           // on the ground, never across the figure
+    ctx.save();
+    ctx.strokeStyle = "rgba(20,16,20,0.55)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(a.x, cy, rx, ry, 0, 0, 6.2832); ctx.stroke();
+    ctx.strokeStyle = C.deadCore; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath(); ctx.ellipse(a.x, cy, rx, ry, 0, -1.5708, -1.5708 + left * 6.2832);
+    ctx.stroke();
+    ctx.restore();
   }
-  if (a.find || a.choice){
-    circle(a.x - 17, top + 1, 7.5, C.rare, LW.inner);
-    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = C.line; ctx.fillText(a.choice ? "!" : "✦", a.x - 17, top + 4);
-  }
-  if (a.shallow){
-    circle(a.x + 17, top + 1, 6.5, C.relief, LW.inner);
-    ctx.font = "800 8px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = C.line; ctx.fillText("↓", a.x + 17, top + 3);
-  }
-  drawPips(a.x, a.y + 14, a.deaths, hollowAt(a), a.state === "hollow");
+  drawPips(a.x, a.y + 16, a.deaths, hollowAt(a), a.state === "hollow");
 }
 
 
@@ -1633,56 +1657,60 @@ function drawHerbalist(time, px, py){
   if (grind > 0.97) S.sparks.push({ x:x-25, y:y-22, vx:(Math.random()-0.5)*20, vy:-18, t:0, life:0.5 });
 }
 
+/* The road, as a bar under the status line: how many are in each place,
+   and a marker per adventurer sinking as they go. */
 function drawStrip(time){
-  const g = stripGeom(), list = away(), h = g.bottom - g.top;
-  rrect(g.x, (g.top + g.bottom)/2 - 16, 46, h + 56, 22, "rgba(20,15,28,0.82)", 3);
-
-  ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-  ctx.fillStyle = "#7d8a85"; ctx.fillText("THE ROAD", g.x, g.top - 26);
-  const c = bellCost(), can = S.souls >= c;
-  ctx.font = "800 11px ui-rounded, system-ui, sans-serif";
-  ctx.fillStyle = can ? "#ffe9b8" : "#4d545a";
-  ctx.fillText("🔔 " + fmt(c), g.x, g.top - 11);
-
-  shape(()=>{ ctx.moveTo(g.x + 4, g.top); ctx.lineTo(g.x + 4, g.bottom); }, null, 3);
-  for (let i = 0; i < LOC.length; i++){              // one tick per place on the road
-    const y = g.top + (i / (LOC.length - 1)) * h;
-    const open = i <= S.unlocked;
-    shape(()=>{ ctx.moveTo(g.x - 2, y); ctx.lineTo(g.x + 10, y); }, null, open ? 2.5 : 1.5);
-    ctx.font = "800 7px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "right";
-    ctx.fillStyle = open ? LOC[i].tint : "#2b3136";
-    ctx.fillText(LOC[i].code, g.x - 6, y + 2);
+  const g = stripGeom(), list = away(), n = LOC.length, band = g.w / n;
+  const base = g.y + g.h - 5;
+  rrect(g.x + g.w / 2, g.y + g.h / 2, g.w + 10, g.h + 8, 11, "rgba(15,21,18,0.82)", 0);
+  ctx.save();
+  ctx.strokeStyle = "rgba(78,88,82,0.5)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.rect(g.x - 4, g.y - 3, g.w + 8, g.h + 6); ctx.stroke();
+  for (let i = 0; i < n; i++){
+    const x = g.x + band * (i + 0.5), open = i <= S.unlocked;
+    const inside = list.filter(a => locOf(a.depth) === i).length;
+    if (i){                                              // a notch between one place and the next
+      ctx.strokeStyle = "rgba(78,88,82,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(g.x + band * i, g.y + 3); ctx.lineTo(g.x + band * i, g.y + g.h - 3);
+      ctx.stroke();
+    }
+    ctx.lineCap = "round"; ctx.lineWidth = open ? 3 : 2;
+    ctx.strokeStyle = open ? (inside ? LOC[i].tint : "rgba(120,132,124,0.55)") : "rgba(70,78,74,0.35)";
+    ctx.beginPath(); ctx.moveTo(x - band * 0.34, base); ctx.lineTo(x + band * 0.34, base); ctx.stroke();
   }
-  if (!list.length){
-    ctx.font = "700 9px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#4d545a";
-    ctx.fillText("empty", g.x, (g.top + g.bottom)/2);
-  }
+  ctx.restore();
   list.forEach((a, i) => {
     const p = markerPos(a, i);
-    circle(p.x, p.y, 9, spOf(a).body, LW.inner);
-    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#0a0e0b"; ctx.fillText(String(a.depth), p.x, p.y + 3);
-    if (a.deaths > 0){                                // scars travel with them
-      for (let k = 0; k < a.deaths; k++)
-        circle(p.x - 12, p.y - 6 + k*6, 2.2, "#f2682c", 1.8);
-    }
+    circle(p.x, p.y, 5, a.garb || spOf(a).body, 2);
     if (a.flash){
-      const al = a.flash.t < 0.2 ? a.flash.t/0.2 : Math.min(1, (2 - a.flash.t)/0.6);
-      ctx.globalAlpha = al;
-      circle(p.x + 17, p.y, 8, "#232b2e", 2.5);
-      ctx.font = "800 11px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#ffe9b8";
-      ctx.fillText(a.flash.icon, p.x + 17, p.y + 4);
-      ctx.globalAlpha = 1;
+      const al = a.flash.t < 0.2 ? a.flash.t / 0.2 : Math.min(1, (2 - a.flash.t) / 0.6);
+      ctx.save(); ctx.globalAlpha = al * 0.9;
+      ctx.strokeStyle = C.fireCore; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 6.2832); ctx.stroke(); ctx.restore();
     }
   });
 }
-
-/* ============================ the keeper ============================ */
 
 const K = { x:0, y:0, tx:0, ty:0, mode:"idle", t:0, dir:1, placed:false };
 
 function keeperGoTo(x, y, mode){ K.tx = x; K.ty = y; K.mode = mode || "attend"; K.t = 0; }
 function keeperIdle(){ keeperGoTo(fx - 62, fy + 30, "idle"); }
+
+/* Vendors are built in the same language: a head, a body block, two pegs.
+   Hooded, because none of them are animals the player recruits. */
+function hooded(x, y, h, w, cloak, hood, dir, eyes){
+  contact(x, y + 2, w * 0.5, 0.42);
+  for (const sx of [-1, 1])
+    shape(()=>ctx.rect(x + sx * 3 - (sx > 0 ? 0 : 6), y - 8, 6, 8), mix(hood, OUTLINE, 0.3), LW.outer);
+  shape(()=>{ ctx.moveTo(x - w * 0.42, y - 20); ctx.lineTo(x + w * 0.42, y - 20);
+              ctx.lineTo(x + w * 0.46, y - 8); ctx.lineTo(x - w * 0.46, y - 8);
+              ctx.closePath(); }, cloak, LW.outer);
+  rrect(x, y - 20 - h * 0.42, w * 1.05, h * 0.84, 11, hood, LW.outer);
+  shape(()=>ctx.ellipse(x + dir * w * 0.10, y - 20 - h * 0.40, w * 0.30, h * 0.28, 0, 0, 6.2832),
+        mix(hood, OUTLINE, 0.5), LW.outer);
+  if (eyes) drawEyes(x + dir * w * 0.10, y - 20 - h * 0.40, w * 0.8, "normal");
+  rimLight(x, y - 20 - h * 0.42, w * 1.05, h * 0.84, 11);
+}
 
 function updateKeeper(dt){
   if (!K.placed){ K.x = fx - 62; K.y = fy + 30; K.tx = K.x; K.ty = K.y; K.placed = true; }
@@ -1694,24 +1722,31 @@ function updateKeeper(dt){
   if (d > 2){ const sp = Math.min(d, 54 * dt); K.x += dx/d * sp; K.y += dy/d * sp; K.dir = dx >= 0 ? 1 : -1; }
 }
 
+/* The keeper is built the same way as everyone else — head, block, two pegs — and
+   set apart by scale and colour instead: taller, darker, and nothing under the hood. */
 function drawKeeper(time){
   const walking = Math.hypot(K.tx - K.x, K.ty - K.y) > 2;
   const sway = walking ? Math.sin(time * 9) * 1.6 : Math.sin(time * 1.4) * 0.8;
-  const y = K.y + sway;
-  contact(K.x, K.y + 5, 20, 0.5);
-  shape(()=>{ ctx.moveTo(K.x - 12, y - 44); ctx.lineTo(K.x + 12, y - 44);
-              ctx.lineTo(K.x + 18, y + 2); ctx.quadraticCurveTo(K.x, y + 10, K.x - 18, y + 2);
-              ctx.closePath(); }, "#1e2427", LW.outer);                // taller than anyone here
-  rrect(K.x, y - 24, 30, 6, 3, C.keeper, LW.inner);                    // the one warm colour
-  circle(K.x, y - 48, 13.5, "#171d1f", LW.outer);                      // deep hood
-  circle(K.x + K.dir * 3, y - 47, 6.5, "#0d1113", LW.detail);          // nothing inside it
-  rimLight(K.x, K.y, 38, 60);
+  const y = K.y + sway, hw = 36, hh = 34, bw = 24, bh = 14;
+  contact(K.x, K.y + 3, 20, 0.5);
+  for (const sx of [-1, 1])                                            // pegs, same as theirs
+    shape(()=>ctx.rect(K.x + sx * 3 - (sx > 0 ? 0 : 9), y - 8, 9, 8), "#151a1c", LW.outer);
+  const bodyY = y - 8 - bh / 2;
+  shape(()=>{ ctx.moveTo(K.x - bw / 2, bodyY - bh / 2); ctx.lineTo(K.x + bw / 2, bodyY - bh / 2);
+              ctx.lineTo(K.x + bw / 2 + 2, bodyY + bh / 2); ctx.lineTo(K.x - bw / 2 - 2, bodyY + bh / 2);
+              ctx.closePath(); }, "#1e2427", LW.outer);
+  rrect(K.x, bodyY - bh * 0.34, bw * 0.6, 5, 2.5, C.keeper, LW.outer); // the one warm colour
+  const hy = y - 8 - bh - hh / 2;
+  rrect(K.x, hy, hw, hh, 14, "#171d1f", LW.outer);                     // the hood, worn as a head
+  shape(()=>ctx.ellipse(K.x + K.dir * 4, hy + hh * 0.10, hw * 0.30, hh * 0.30, 0, 0, 6.2832),
+        "#0d1113", LW.outer);                                          // nothing inside it
+  rimLight(K.x, hy, hw, hh, 14);
   const tend = K.mode === "tend" && !walking;                          // leans in to feed the fire
   ctx.save();
-  ctx.translate(K.x + K.dir * 13, y - 26);
+  ctx.translate(K.x + K.dir * 17, bodyY - 2);
   ctx.rotate(K.dir * (tend ? 0.5 + Math.sin(time * 2.2) * 0.22 : 0.15 + Math.sin(time * 0.9) * 0.06));
-  rrect(0, 0, 6, 34, 3, "#332f24", 3);
-  circle(0, -19, 4.5, "#d9c48a", 3);
+  rrect(0, 0, 6, 34, 3, "#332f24", LW.outer);
+  circle(0, -19, 4.5, C.keeper, LW.outer);
   ctx.restore();
 }
 
@@ -1721,9 +1756,7 @@ function relicBounds(){ return { x0: fx + 74, x1: fx + 172, y: fy + 76 }; }
 function drawReliquary(time){
   if (!S.relic.length && !S.seen.relic) return;
   const x0 = fx + 78, y = fy + 76;
-  ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "left";
-  ctx.fillStyle = "#4d545a"; ctx.fillText("LEFT BEHIND", x0, y - 20);
-  rrect(x0 + 46, y + 12, 108, 7, 3, "#2b3136", 3);            // the shelf itself
+  rrect(x0 + 46, y + 12, 108, 7, 3, "#2b3136", 3);            // the shelf, and no label on it
   S.relic.forEach((r, i) => {
     const p = relicPos(i), g = r.art;
     const mat = { common:"#4d545a", fine:"#c9a227", rare:"#4c5a38" }[g.rarity];
@@ -1733,8 +1766,7 @@ function drawReliquary(time){
       shape(()=>{ ctx.moveTo(p.x-9, p.y-12+bob); ctx.lineTo(p.x+9, p.y-12+bob);
                   ctx.lineTo(p.x, p.y+12+bob); ctx.closePath(); }, mat, 2.5);
     else circle(p.x, p.y + bob, 9, mat, 2.5);
-    if (g.cursed){ ctx.fillStyle = "#7a4a6e"; ctx.font = "800 9px ui-rounded, system-ui, sans-serif";
-                   ctx.textAlign = "center"; ctx.fillText("✦", p.x, p.y - 16 + bob); }
+    if (g.cursed) circle(p.x, p.y - 17 + bob, 3, C.cursed, 2);   // a mark, not a word
   });
   ctx.textAlign = "center";
 }
@@ -1743,13 +1775,10 @@ function drawPlots(time){
   const n = plotCount();
   for (let i = 0; i < n; i++){
     const p = plotPos(i), key = S.plots[i], lit = inLight(i);
-    if (!key){                                        // empty ground, waiting
-      ctx.setLineDash([5, 5]);
-      shape(()=>ctx.ellipse(p.x, p.y, 22, 11, 0, 0, 6.2832), "rgba(30,22,42,0.5)", 2);
+    if (!key){                                        // a footprint someone else laid
+      ctx.setLineDash([4, 6]);
+      shape(()=>ctx.ellipse(p.x, p.y, 22, 11, 0, 0, 6.2832), "rgba(23,27,30,0.45)", 2);
       ctx.setLineDash([]);
-      ctx.font = "800 8px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillStyle = lit ? "#4d545a" : "#2b3136";
-      ctx.fillText(lit ? "PLOT" : "OUTER", p.x, p.y + 3);
       continue;
     }
     const v = VMAP[key];
@@ -1762,19 +1791,7 @@ function drawPlots(time){
       ctx.font = "12px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
       ctx.fillText(v.glyph, p.x, p.y - 30);
     }
-    if (!lit){                                        // outside the light and slower for it
-      ctx.globalAlpha = 0.5;
-      ctx.font = "800 7px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillStyle = "#7d8a85"; ctx.fillText("OUTER", p.x, p.y + 20);
-      ctx.globalAlpha = 1;
-    }
-    for (const [a, b] of ADJACENCIES) if (adjActive(a, b) && (a === key || b === key)){
-      const other = plotPos(plotOf(a === key ? b : a));
-      ctx.globalAlpha = 0.35; ctx.strokeStyle = "#ffe9b8"; ctx.lineWidth = 2;
-      ctx.setLineDash([3, 4]);
-      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(other.x, other.y); ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
-    }
+    /* Inner and outer read from where the light falls. Adjacency is in the Build tab. */
   }
 }
 
@@ -1782,11 +1799,7 @@ function drawEmbers(){
   const n = T.MAX_EMBERS, gap = 15, x0 = fx + 16 - (n-1)*gap/2, y = fy + 94;
   for (let i = 0; i < n; i++)
     circle(x0 + i*gap, y, 4.5, i < Math.floor(S.embers) ? "#ffab3d" : "#232c20", 3);
-  if (S.taps < 8){
-    ctx.font = "700 11px ui-rounded, system-ui, sans-serif";
-    ctx.fillStyle = "#7d8a85"; ctx.textAlign = "center";
-    ctx.fillText("TAP THE FIRE", fx + 16, y + 22);
-  }
+  /* No text on the scene. The pips are the whole instruction. */
 }
 
 function drawFx(dt){
@@ -1803,7 +1816,7 @@ function drawFx(dt){
     const q = S.says[i]; q.t += dt;
     if (q.t > 4.2){ S.says.splice(i, 1); continue; }
     const who = S.pool.find(o => o.id === q.id);
-    if (who && who.state !== "away"){ q.x = who.x; q.y = who.y - 44; }
+    if (who && who.state !== "away"){ q.x = who.x; q.y = sayY(who); }
     ctx.globalAlpha = q.t < 0.5 ? q.t/0.5 : Math.min(1, (4.2 - q.t)/1.1);
     ctx.font = "600 11px ui-rounded, system-ui, sans-serif";
     const w = ctx.measureText(q.txt).width + 16;
@@ -1866,7 +1879,7 @@ function frame(now){
   S.emberT += dt;
   while (S.emberT >= T.EMBER_REGEN){ S.emberT -= T.EMBER_REGEN; S.embers = Math.min(T.MAX_EMBERS, S.embers + 1); }
 
-  RING_R = Math.max(FIRE_TAP_R + 16, lightR() * 0.92);
+  RING_R = Math.min(W / 2 - 32, Math.max(FIRE_TAP_R + 46, lightR() * 1.18));
   if (S.flameOn && !S.ending) tickFlame(dt);
   updatePool(dt);
   updateKeeper(dt);
@@ -1902,7 +1915,8 @@ function frame(now){
       ctx.globalAlpha = n.t < 0.3 ? n.t / 0.3 : Math.min(1, (4.5 - n.t) / 1.2);
       ctx.font = "800 15px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
       ctx.lineWidth = 5; ctx.strokeStyle = "#0a0e0b";
-      ctx.strokeText(n.txt, fx, 30); ctx.fillStyle = "#a9a3b5"; ctx.fillText(n.txt, fx, 30);
+      const ny = stripGeom().y + stripGeom().h + 24;    // clear of the road bar
+      ctx.strokeText(n.txt, fx, ny); ctx.fillStyle = "#a9a3b5"; ctx.fillText(n.txt, fx, ny);
       ctx.globalAlpha = 1;
     }
   }
@@ -1949,17 +1963,11 @@ cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
 
-  const sg = stripGeom();                       // the strip's head opens the road
-  if (x < sg.x + 26 && y < sg.top - 4){ openMap(); return; }
+  const sg = stripGeom();                       // the whole bar opens the road
+  if (y < sg.y + sg.h + 8){ openMap(); return; }
 
   const rb = relicBounds();                     // the shelf opens when tapped
   if (S.relic.length && Math.abs(y - rb.y) < 26 && x > rb.x0 - 14 && x < rb.x1){ openShelf(); return; }
-
-  const list = away();                          // the strip owns its own taps
-  for (let i = 0; i < list.length; i++){
-    const p = markerPos(list[i], i);
-    if (Math.hypot(x - p.x, y - p.y) < 20){ openLocation(locOf(list[i].depth)); return; }
-  }
 
   /* A figure owns a tight circle of their own; the fire owns the rest of its ground.
      Nobody may sit inside the fire's clear radius, so the fire is always tappable. */
@@ -1998,7 +2006,7 @@ function showCounsel(a){
   if (!a){ closeCounsel(); return; }
   S.sel = a.id; counsel.hidden = false;
   const hollow = a.state === "hollow";
-  cTone.style.background = hollow ? C.hollow : spOf(a).body;
+  cTone.style.background = hollow ? C.hollow : (a.garb || spOf(a).body);
   cTitle.textContent = (a.name ? a.name + ", " : "") + (hollow ? "hollowed" : "a " + spOf(a).name);
   cSub.textContent = hollow ? "Nothing left to spend" : spOf(a).note;
   const stale = counsel.querySelector(".cActs"); if (stale) stale.remove();
@@ -2012,7 +2020,9 @@ function showCounsel(a){
     const c = rekCost(a), free = vlv("ossu") >= 3 && !S.freeRiteUsed;
     cOdds.innerHTML = (a.name ? "<b>" + a.name + "</b>. " : "") + "Got as far as depth "
       + peakOf(a) + ". " + plural(a.deaths, "death") + ".<br>"
-      + "Carrying " + gearSummary(a) + ".<br>Holds a seat, and pays <b>nothing</b>.";
+      + "Carrying " + gearSummary(a) + ".<br>"
+      + "<b>" + Math.max(0, Math.ceil(hollowWindow() - (a.hollowT || 0))) + "s</b> before they stand up "
+      + "and walk out on their own.";
     cGear.hidden = false; cGear.className = "cPick"; cGear.innerHTML = "";
     const rite = document.createElement("button");
     rite.innerHTML = "<b>Rite of Rekindling — " + (free ? "free" : fmt(c)) + "</b><br><em>"
@@ -2856,7 +2866,7 @@ function serialize(){
     everHollowed:S.everHollowed, elapsed:S.elapsed,
     pool: S.pool.map(a => ({
       id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
-      slot:a.slot, tone:a.tone, sp:a.sp, build:a.build || 0, rate:a.rate || 1, peak:a.peak || 0, route:a.route == null ? null : a.route,
+      slot:a.slot, sp:a.sp, garb:a.garb, build:a.build || 0, rate:a.rate || 1, peak:a.peak || 0, route:a.route == null ? null : a.route,
       packed:!!a.packed,
       gear: a.gear ? { weapon:stripArt(a.gear.weapon), armour:stripArt(a.gear.armour),
                        trinket:stripArt(a.gear.trinket) } : null,
@@ -2922,6 +2932,7 @@ function restore(save){
     if (a.state === "rest" || a.state === "wait" || a.state === "walkin"){ a.slot = -1; a.state = "walkin"; }
     return a;
   });
+  for (const a of S.pool) if (!a.garb) a.garb = pickGarb(a.sp);   // once the circle is whole again
   for (let i = 0; i < T.SLOTS; i++) slotUsed[i] = null;
   S.relic = (save.relic || []).map(r => ({ art:rehydrate(r.art), depth:r.depth, deaths:r.deaths, name:r.name }));
   S.lost  = (save.lost  || []).map(l => ({ art:rehydrate(l.art), depth:l.depth, deaths:l.deaths }));

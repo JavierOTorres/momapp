@@ -1,4 +1,4 @@
-# Sanctuary — v4.1 (art pass)
+# Sanctuary — v5
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -19,12 +19,33 @@ at the centre of a dais built for larger bodies; broken columns stand at the
 edge of the light and fall into the dark as the flame dies, so the building
 disappears around you over a run.
 
-Six species — cat, dog, frog, crow, rabbit, goat — each a distinct silhouette
-at 40 pixels and each with its own way of dying. Identity is shape, not colour:
-every animal is warm-neutral against cool stone and dark moss, and the fire is
-the only bright thing on screen. A hollow keeps its silhouette exactly and
-loses everything else: colour drains to one grey, the eyes become empty
-sockets, and every other thing in the scene keeps moving while it does not.
+Every figure is a **head with legs**: a 30x32 head, a 12x22 body block under
+it, two 8x6 peg legs with daylight between them, 48 pixels in all. The head is
+always wider than the body — that one relationship is what keeps them from
+reverting to robes. Eyes sit on an inset face plate, lighter than the head and
+shaped by species: wide and low for frog, narrow for crow, squared for goat.
+Ears, horns and beaks attach outside the plate. Every shape carries the same
+3px near-black outline, with no interior weight hierarchy. The keeper is built
+the same way and set apart by scale and colour instead — taller, darker, and
+nothing under the hood.
+
+Colour is split. **Bodies stay animal-coloured** — browns, greys, greens,
+creams — and **garments carry the saturation**: red, gold, violet, teal, moss,
+rust. Species gives the silhouette and garment gives the name, so the garment
+is picked to be the rarest colour in the circle and never repeats on two of the
+same animal. Across 200 simulated rosters of eight, no two members ever shared
+both species and garment. The fire is still the brightest thing on screen; it
+is no longer the only saturated one.
+
+A hollow keeps its silhouette exactly — same species, same garment shape — and
+loses everything else: the face plate goes dark, the eyes become empty sockets,
+the garment desaturates while keeping its value, the posture drops, and every
+other thing in the scene keeps moving while it does not.
+
+**No text is drawn on the sanctuary scene** except the one-line event messages
+and the numbers that float off a payment. Depth, location, plot status and
+adjacency all live in cards. Inner and outer plots are told apart by whether
+the light reaches them, which was always legible without a label.
 
 The artifacts are human relics, which is why they come up filthy and why
 nobody can say what they were for. The item descriptions are guesses.
@@ -32,9 +53,11 @@ nobody can say what they were for. The item descriptions are guesses.
 ## The loop
 
 - **Souls**, one integer currency, with an honest trailing-60s average rate.
-- **The bonfire.** A recruit arrives every 5s until the pool holds 12. Each
-  guest takes a slot, pays on sitting down, rests 12s, then leaves for a
-  **45-second expedition**.
+- **The bonfire.** A recruit arrives every 5s until the pool holds **8** —
+  12 with Widen the Circle fully paid, 14 behind the Wider Fire unlock. The
+  light seats **5**, rising to 8. Each guest takes a seat, pays on sitting
+  down, rests 20s, then leaves for a **30-second expedition**. Fewer and
+  larger: at twenty figures nobody was individually recognisable.
 - **Depth.** Survive and depth goes up by one, and a rest pays
   `perRest x (1 + depth/2)` — a depth 4 veteran is worth three fresh arrivals.
   Depth is where the money is and depth is what kills them.
@@ -42,20 +65,25 @@ nobody can say what they were for. The item descriptions are guesses.
   rather than resetting it, so dying never restores an adventurer to safety.
   Each death makes the next one likelier. Red pips under every figure count
   the deaths against the three they get.
-- **Hollowing.** Three deaths (four with the Herbalist) and they hollow: grey,
-  slumped, silent, holding a fire slot forever, announced with an ash burst
-  and a line that fades. There are 8 slots, the Blacksmith holds 2 and the
-  Herbalist 1, so every hollow eats one of the rest.
+- **Hollowing is a moment, not a condition.** Three deaths (four with the
+  Herbalist) and they drop, drain of colour and stop. **They remain for 30
+  seconds** — 60 with the Ossuary at 2 — while a ring drains around them on the
+  ground, the only countdown in the game. Tap inside that window and both
+  actions are offered side by side. Let it expire and they stand and walk into
+  the dark on their own: the seat frees, the name enters the kept dead, and the
+  ash is paid anyway. **Never more than three on screen at once**; a fourth
+  makes the oldest leave immediately. Nothing accumulates, so there is no wall
+  of grey and nothing to administrate.
 - **Rekindling.** `150 x 1.6^n` clears one hollow and returns them at depth 0,
   deaths forgiven. Souls into growth, or souls into repair.
 - **Counsel.** Tap a resting adventurer for their depth, deaths, live survival
   odds and next payout. **Send shallow** runs their next expedition one layer
   short: safer, poorer, and no new depth. Tap a hollow to offer them the rite.
-- **The strip.** Every adventurer currently below is a marker descending a
-  track down the left, carrying their depth and their scars, with ambushes and
-  discoveries flashing as they go. Tap one to ring **the bell**: they come home
-  immediately and alive, no deeper than they left, and they pay you nothing.
-  It costs more every time.
+- **The road bar.** A compact horizontal strip under the status line, one band
+  per location, a marker per adventurer sinking through their band as they
+  travel and flashing at ambushes and discoveries. Tapping it opens the map.
+  Tap a marker to ring **the bell**: they come home immediately and alive, no
+  deeper than they left, and they pay you nothing. It costs more every time.
 - **Artifacts belong to whoever found them.** A survivor carries their find
   home filthy and it stays theirs — there is no inventory anywhere in the
   game. Clean it from their Counsel card by dragging the grime off, and its
@@ -104,11 +132,14 @@ nobody can say what they were for. The item descriptions are guesses.
   gate. A gate is tried once per fire against the attempting adventurer's
   gear, depth and scars — not a coin flip. Through it, the place below opens
   and they come back carrying something out of the gate itself. Fail and they
-  are thrown back, take a death, and drop what they had. The strip on the left
-  is the road; its head opens the map, its markers open the place.
-- **The flame.** 0 to 100, decaying always. The living circle feeds it, hollows
-  eat it, and only those who can reach a seat feed it fully. At zero the fire
-  is out and the run is over.
+  are thrown back, take a death, and drop what they had. The bar under the
+  status line is the road; tapping it opens the map, its markers open the
+  place.
+- **The flame.** 0 to 100, decaying always. The living circle feeds it and only
+  those who can reach a seat feed it fully; the ones out on the road feed it at
+  a third. **Each hollowing takes a one-time bite** of `5 + peak depth x 0.25`,
+  so the fire lurches when someone goes instead of dragging on a background
+  count. At zero the fire is out and the run is over.
 - **The cycle.** Runs end — at zero, or when you choose from the notes — and
   pay ash scaled by depth reached, souls earned and who is still standing. Ash
   buys structural unlocks that change how the next fire starts. No multipliers.
@@ -121,8 +152,8 @@ nobody can say what they were for. The item descriptions are guesses.
 - **Vendors are survival, skills are economy.** Blacksmith 200 (+2/rest, +12%
   survival). Herbalist 500 (+8% survival, and they endure a fourth death).
 
-State lives in memory only — a refresh resets the run. No save, no sound, no
-art beyond flat shapes.
+No sound. Everything on the canvas is flat shapes and outlines, drawn by hand
+in the file.
 
 ## Pacing
 
@@ -164,7 +195,26 @@ unlocks behind it.
 hollows stop pulling at the flame entirely. Simulated, that stretched runs from
 38 minutes to **136** — the fire effectively stops dying, which is not a run any
 more. The spec anticipated this and named the remedy, so the Ossuary halves the
-pull instead of removing it: **48.9 minutes**, inside the 35-50 window.
+pull instead of removing it: **48.9 minutes**, inside the 35-50 window. *v5
+removed the continuous pull altogether, so this level had nothing left to sell;
+it now buys time to decide instead — the window doubles from 30 seconds to 60.*
+
+**v5: the flame pressure had to be rebuilt from scratch.** Hollows used to
+accelerate decay continuously, and that background drag was the run's whole
+pressure. Nothing accumulates now, so it is gone. The spec's suggested
+replacement — a flat 6-intensity spike per hollowing — gave 23-to-33-minute
+runs, well short of the window. Grid-searching hearth value against spike size
+lands on `HEARTH 0.0074`, `5 + peak x 0.25`: a median of **40.2 minutes** over
+40 simulated runs, 15 hollowings, 18,600 souls earned — close enough to v4.1
+that the ash unlock costs need no rebalancing. Measured live, a spike on a
+peak-8 adventurer takes 7 points off the bar, which is the "clearly felt,
+roughly 5%" the spec asked for.
+
+**A full circle does hold the fire.** Measured in game at eight alive and five
+seats, the flame *gains* 0.47 intensity a minute; at four home and four on the
+road it sits at -0.18, effectively flat. With all eight out it loses 0.98 a
+minute. The pressure is that they are on the road, not that the circle is
+small.
 
 **Let Them Go stays small**, 1 to 2 ash by depth, against roughly 113 for a full
 run — under the 15% ceiling even used on every hollow, and doubled by the
@@ -193,7 +243,12 @@ in half the simulated runs.
 
 ## The test
 
-Play twenty minutes.
+One full cycle on a phone. **Can you tell every single one of them apart
+without tapping anything?** If not, the roster is still too large, however good
+the figures look. That is why the pool came down from twenty to eight and why
+garment colour is assigned to stay unique rather than rolled at random.
+
+The older test still stands underneath it. Play twenty minutes.
 1. **When someone reached two deaths, did you watch them?**
 2. **When they hollowed, did you care?**
 
