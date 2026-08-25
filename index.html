@@ -36,6 +36,8 @@
   }
   #soulWrap{display:flex;align-items:baseline;gap:8px}
   #souls{font-size:32px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
+  #matWrap{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-left:2px}
+  #matWrap span{color:#9bd0c4;font-size:14px}
   #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
   #rate{font-size:11px;color:var(--dim);text-align:right;line-height:1.5}
   #rate b{display:block;font-size:16px;color:var(--text)}
@@ -124,6 +126,10 @@
   }
   .cGear button i{display:block;color:var(--dim);font-style:normal;font-size:9px;letter-spacing:.08em}
   .cGear button.filled{background:var(--panel-2);color:var(--gold)}
+  .cGear button.cursed{color:#e0708a}
+  .cPick button b{font-size:11.5px}
+  .cPick button span{color:var(--gold);font-weight:700}
+  .cPick button em{color:var(--dim);font-style:italic;font-weight:600}
   .cPick{
     max-height:126px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:8px;
   }
@@ -201,7 +207,8 @@
 <body>
 <div id="app">
   <div id="top">
-    <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div></div>
+    <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div>
+      <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
     <div id="rate"><b>0.0</b>avg / sec, last 60s</div>
     <button id="bookBtn" title="The keeper's notes">📕</button>
   </div>
@@ -295,8 +302,12 @@ const T = {
   DEPTH_PAY:0.5,
   SMITH_COST:200, HERB_COST:500, REK_BASE:150, REK_GROWTH:1.6,
   BELL_BASE:40, BELL_GROWTH:1.55,
-  TRAY_CAP:6, DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.15,
-  TEST_GROWTH:1.6, TEST_BASE:{ sound:10, heat:10, bleed:24 },
+  DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.20,
+  MAT_DROP_BASE:0.10, MAT_DROP_PER_DEPTH:0.02, RELIC_CAP:3, CRAFT_SECONDS:15,
+  SMITH_LV:[0, 200, 800, 2500], SMITH_MAT:[0, 0, 12, 40],
+  HERB_LV:[0, 500, 1100, 3000], HERB_MAT:[0, 0, 14, 44],
+  FORGE_COST:{ fine:[150, 6], rare:[600, 20] },
+  CLEANSE_COST:{ rough:[200, 8], clean:[700, 24] },
   MAX_EMBERS:10, EMBER_REGEN:2
 };
 const SMITH_SLOTS = [1,2], HERB_SLOT = 6;
@@ -305,8 +316,8 @@ const S = {
   souls:0, lv:{flame:0, word:0, echo:0}, smith:false, herb:false, rekindles:0,
   embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
-  seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false },
-  tray:[], inv:[], lost:[], nextArt:1,
+  seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false, material:false, relic:false },
+  mat:0, relic:[], lost:[], nextArt:1, smithLv:0, herbLv:0,
   earnLog:[], floats:[], sparks:[], says:[]
 };
 
@@ -357,20 +368,33 @@ const ARCHIVE = [
     + "carrying something. It arrives filthy. The tray by the fire holds six and I have watched "
     + "a full tray turn a find into nothing." },
   { name:"Cleaning a find", open:()=>S.seen.artifact, body:
-    "Wiping the grime off tells me three things: the shape of it, what it is made of, and whether "
-    + "there is a mark on it. All three have lied to me before." },
-  { name:"Naming a find", open:()=>S.seen.ident, body:
-    "Whatever I write down is what we call it. What it does is what it always was. If I am wrong, "
-    + "I find out by watching whoever trusted me enough to wear it, and after three runs the truth "
-    + "is plain enough to correct the book." },
+    "It comes up filthy and it stays theirs. Wiping it clean takes a minute of my thumb and after "
+    + "that there is nothing left to wonder about: what it is, how good it is, and whether there is "
+    + "a mark on it are all plain. If the slot it belongs in is empty it goes straight on them." },
+  { name:"One of the two", open:()=>S.seen.ident, body:
+    "If they already carry something in that slot, I choose, and the one I do not choose goes in "
+    + "the fire. Nothing is kept in a drawer here. A second of a thing they already own never even "
+    + "reaches them — it goes straight in the scrap." },
   { name:"Cursed things", open:()=>S.seen.curse, body:
-    "Some of what comes up is owed on. A cursed piece does the opposite of its kind: a blade that "
-    + "costs survival, plate that deepens the scar, a charm that thins the purse. Clean, it looks "
-    + "exactly like the other sort." },
+    "About one in five is owed on, and the mark shows once it is clean. A cursed piece gives more "
+    + "than an honest one and takes the difference out of somewhere else: a blade that keeps them "
+    + "alive and cuts their pay by two fifths, plate that blunts the scar and costs eight points of "
+    + "survival, a charm that pays and makes every death cut deeper. Worth it, sometimes. That is "
+    + "the whole decision." },
+  { name:"Scrap", open:()=>S.seen.material, body:
+    "Twisted metal, spoiled reagents, whatever will not be a thing again. It comes up on its own and "
+    + "from duplicates. The smith and the herbalist both want it, and souls alone will not buy their "
+    + "later work." },
+  { name:"The forge and the still", open:()=>S.seen.material, body:
+    "Both of them can be paid to learn. The smith reaches common into fine, then fine into rare, "
+    + "working on the piece while it is still being worn. The herbalist lifts curses — roughly at "
+    + "first, taking a grade off the piece for it, and cleanly once she is fully paid for. Either "
+    + "takes about fifteen seconds and neither can be hurried." },
   { name:"What the dead leave", open:()=>S.seen.artifact, body:
-    "Whatever they were wearing stays at the depth that took them. Someone who survives a run that "
-    + "deep brings a piece of it up again. Whatever they were wearing when they hollowed is gone, "
-    + "and I have stopped going to look." }
+    "Whatever they were wearing when they died stays at the depth that took them, until someone "
+    + "survives a run that deep and brings it up. Whatever they were wearing when they hollowed "
+    + "goes on the shelf by the fire instead. I can hand one of those to someone living, once. The "
+    + "shelf holds three, and when a fourth arrives the oldest is not there any more." }
 ];
 
 const NODES = [
@@ -384,19 +408,19 @@ const NODES = [
 ];
 
 const cost      = n => Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
-const perRest   = () => 1 + S.lv.flame + (S.smith ? 2 : 0);
+const perRest   = () => 1 + S.lv.flame + (S.smithLv ? 2 : 0);
 const interval  = () => 5 * Math.pow(0.9, S.lv.word);
 const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
 const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindles));
 const bellCost  = () => Math.floor(T.BELL_BASE * Math.pow(T.BELL_GROWTH, S.bells));
 const away      = () => S.pool.filter(a => a.state === "away");
-const hollowAt  = () => S.herb ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
-const payFor    = a => Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + gearEffect(a, "trinket")));
+const hollowAt  = () => S.herbLv ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
+const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay) * mods(a).payMul));
 const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
 const survival  = (d, deaths, a) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
-                    T.SURV_BASE + (S.smith ? T.SURV_SMITH : 0) + (S.herb ? T.SURV_HERB : 0)
+                    T.SURV_BASE + (S.smithLv ? T.SURV_SMITH : 0) + (S.herbLv ? T.SURV_HERB : 0)
                     - d * T.DEPTH_PEN - deaths * (a ? deathPenFor(a) : T.DEATH_PEN)
-                    + (a ? gearEffect(a, "weapon") : 0)));
+                    + mods(a).surv));
 const hollows   = () => S.pool.filter(a => a.state === "hollow");
 const living    = () => S.pool.filter(a => a.state !== "hollow");
 const avgRate   = () => {                 // never divide by a window too short to mean anything
@@ -460,7 +484,7 @@ function slotPos(i){
   const a = -Math.PI/2 + (i / T.SLOTS) * Math.PI * 2 + 0.4;
   return { x: fx + Math.cos(a) * 96, y: fy + Math.sin(a) * 44 + 6 };
 }
-const reserved = i => (S.smith && SMITH_SLOTS.indexOf(i) >= 0) || (S.herb && i === HERB_SLOT);
+const reserved = i => (S.smithLv && SMITH_SLOTS.indexOf(i) >= 0) || (S.herbLv && i === HERB_SLOT);
 function claimSlot(a){
   for (let i = 0; i < T.SLOTS; i++){
     if (reserved(i) || slotUsed[i]) continue;
@@ -488,19 +512,6 @@ function earn(n, x, y, doubled){
   S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffd06b" : "#f2e6d8" });
 }
 
-function ageGear(a){
-  if (!a.gear) return;
-  for (const slot of A_SLOTS){
-    const g = a.gear[slot];
-    if (!g || !g.label) continue;
-    if (++g.runs >= 3 && !sameLabel(g.label, g)){
-      g.label = { slot:g.slot, rarity:g.rarity, cursed:g.cursed };
-      S.notice = { txt:"It was a " + artName(g.label).toLowerCase() + " all along.", t:0 };
-    }
-  }
-}
-const sameLabel = (l, a) => l.slot === a.slot && l.rarity === a.rarity && l.cursed === a.cursed;
-
 function sitDown(a){
   a.state = "rest"; a.t = T.REST;
   const p = slotPos(a.slot); a.x = p.x; a.y = p.y;
@@ -519,7 +530,6 @@ function sitDown(a){
 function resolveExpedition(a){
   const d = runDepth(a), survived = Math.random() < survival(d, a.deaths, a);
   a.shallow = false;
-  ageGear(a);                             // three runs and the truth outs itself
   if (survived){
     if (a.depth === d) a.depth = d + 1;   // sent shallow: banked, not deepened
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
@@ -530,7 +540,8 @@ function resolveExpedition(a){
     a.deaths++; S.seen.death = true;
     if (a.deaths === 1) a.pending = oneOf(LINES.firstDeath);
     const hollowing = a.deaths >= hollowAt();
-    loseGear(a, d, hollowing);            // dropped at depth, unless they hollow — then it burns
+    if (!hollowing) loseGear(a, d, false);   // dropped at the depth that took them
+    // a hollowing death keeps hold of it: goHollow puts it on the shelf instead
     a.depth = Math.floor(a.depth / 2);    // a setback, not a reset — the scar stays
     if (hollowing){ goHollow(a); return; }
   }
@@ -539,7 +550,11 @@ function resolveExpedition(a){
 
 function goHollow(a){                     // the thing the whole system exists to produce
   a.state = "hollow"; a.t = 0; S.seen.hollow = true;
-  loseGear(a, 0, true);                   // whatever they carried burns with them
+  if (a.gear) for (const slot of A_SLOTS){     // what they carried outlives them
+    const g = a.gear[slot];
+    if (g) toReliquary(g, a.depth, a.deaths);
+  }
+  a.gear = null; a.find = null; a.choice = null;
   releaseSlot(a);
   if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
   else { a.x = fx; a.y = fy + 78; }
@@ -605,63 +620,98 @@ function updatePool(dt){
 
 const A_SLOTS = ["weapon", "armour", "trinket"];
 const RARITIES = ["common", "fine", "rare"];
-const EFFECT = { weapon:{ common:0.04, fine:0.08, rare:0.14 },
-                 armour:{ common:0.03, fine:0.05, rare:0.08 },
-                 trinket:{ common:0.15, fine:0.30, rare:0.55 } };
-const APPARENT = { common:1, fine:1.8, rare:3 };
 const SLOT_NAME = { weapon:"Weapon", armour:"Armour", trinket:"Trinket" };
 const RARITY_NAME = { common:"Common", fine:"Fine", rare:"Rare" };
 
-const effectOf = a => EFFECT[a.slot][a.rarity] * (a.cursed ? -1 : 1);
-const testCost = (a, kind) =>
-  Math.round(T.TEST_BASE[kind] * APPARENT[a.clue.rarity] * Math.pow(T.TEST_GROWTH, a.tests));
-const artName = l => l ? (RARITY_NAME[l.rarity] + " " + SLOT_NAME[l.slot] + (l.cursed ? " (cursed)" : ""))
-                       : "Unidentified";
+/* A curse gives more than the clean version and takes it out of another system. */
+const EFFECT = {
+  weapon:  { common:0.04, fine:0.08, rare:0.14 },
+  armour:  { common:0.03, fine:0.05, rare:0.08 },
+  trinket: { common:0.15, fine:0.30, rare:0.55 }
+};
+const CURSED_EFFECT = {
+  weapon:  { common:0.07, fine:0.13, rare:0.22 },
+  armour:  { common:0.05, fine:0.08, rare:0.12 },
+  trinket: { common:0.25, fine:0.50, rare:0.90 }
+};
+const CURSE_COST = {                      // each cost lands on a different system
+  weapon:  "they pay 40% less",
+  armour:  "8% off their survival",
+  trinket: "every death cuts 5% deeper"
+};
+const MAT_VALUE = { common:1, fine:3, rare:8 };
 
-function rollRarity(){ const r = Math.random(); return r < 0.60 ? "common" : r < 0.90 ? "fine" : "rare"; }
-function lie(truth, pool, p){                 // clues point at the truth, usually
-  if (Math.random() < p) return truth;
-  const others = pool.filter(o => o !== truth);
-  return others[(Math.random() * others.length) | 0];
+const artTitle = g => RARITY_NAME[g.rarity] + " " + SLOT_NAME[g.slot];
+const magnitude = g => (g.cursed ? CURSED_EFFECT : EFFECT)[g.slot][g.rarity];
+
+function effectLine(g){
+  const v = magnitude(g);
+  const base = g.slot === "weapon"  ? "+" + Math.round(v*100) + "% survival"
+             : g.slot === "armour"  ? "scars cut " + Math.round(v*100) + "% shallower"
+             :                        "+" + v.toFixed(2).replace(/0$/,"") + "x payment";
+  return g.cursed ? base + ", and " + CURSE_COST[g.slot] : base;
 }
 
 function makeArtifact(depth){
   const slot = A_SLOTS[(Math.random()*3)|0], rarity = rollRarity();
   const cursed = Math.random() < T.CURSE_RATE;
-  return {
-    id: S.nextArt++, slot, rarity, cursed, depth,
-    clue: { slot: lie(slot, A_SLOTS, 0.75), rarity: lie(rarity, RARITIES, 0.70),
-            cursed: Math.random() < 0.75 ? cursed : !cursed },
-    grid: null, cleared: 0, sites: { form:false, material:false, glyph:false },
-    tests: 0, elim: { slot:[], rarity:[], cursed:[] },
-    label: null, runs: 0, wornBy: null
-  };
+  return { id:S.nextArt++, slot, rarity, cursed, depth, dusted:false,
+           line: oneOf(ART_LINES[slot][rarity]), curseLine: cursed ? oneOf(CURSE_LINES) : null,
+           grid:null, cleared:0, sites:{ form:false, material:false, glyph:false },
+           owner:null, craft:null };
 }
+function rollRarity(){ const r = Math.random(); return r < 0.60 ? "common" : r < 0.90 ? "fine" : "rare"; }
 
 function dropFor(a){
+  if (Math.random() < T.MAT_DROP_BASE + a.depth * T.MAT_DROP_PER_DEPTH){
+    const n = 1 + ((Math.random() * (1 + a.depth/3)) | 0);
+    S.mat += n; S.seen.material = true;
+    S.floats.push({ x:a.x, y:a.y - 30, t:0, txt:"+" + n + " scrap", col:"#9bd0c4" });
+  }
   const chance = Math.min(T.DROP_CAP, T.DROP_BASE + a.depth * T.DROP_PER_DEPTH);
   if (Math.random() >= chance) return;
-  if (S.tray.length >= T.TRAY_CAP){
-    S.notice = { txt:"Something came back. The tray was full.", t:0 };
+  const art = makeArtifact(a.depth);
+  const held = a.gear && a.gear[art.slot];
+  if (held && held.rarity === art.rarity){        // a second of what they already carry
+    S.mat += MAT_VALUE[art.rarity]; S.seen.material = true;
+    a.pending = "Brought up its twin. It went in the scrap.";
     return;
   }
-  S.tray.push(makeArtifact(a.depth));
+  if (a.find || a.choice){                        // hands already full
+    S.mat += MAT_VALUE[art.rarity]; S.seen.material = true;
+    return;
+  }
+  a.find = art; art.owner = a.id;
   S.seen.artifact = true;
-  S.notice = { txt:"They brought something back.", t:0 };
+  S.notice = { txt:"Something came up with them.", t:0 };
 }
 
-/* gear a given adventurer is wearing, by the slot it was filed under */
 const gearIn = (a, slot) => (a.gear && a.gear[slot]) || null;
-function gearEffect(a, slot){ const g = gearIn(a, slot); return g ? effectOf(g) : 0; }
-const deathPenFor = a => Math.max(0, T.DEATH_PEN - gearEffect(a, "armour"));
+
+/* what someone's gear does to them, all three slots at once */
+function mods(a){
+  const m = { surv:0, scar:0, pay:0, payMul:1 };
+  if (!a || !a.gear) return m;
+  for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (!g) continue;
+    const v = magnitude(g);
+    if (slot === "weapon"){ m.surv += v; if (g.cursed) m.payMul *= 0.6; }
+    else if (slot === "armour"){ m.scar -= v; if (g.cursed) m.surv -= 0.08; }
+    else { m.pay += v; if (g.cursed) m.scar += 0.05; }
+  }
+  return m;
+}
+const deathPenFor = a => Math.max(0, T.DEATH_PEN + mods(a).scar);
 
 function loseGear(a, depth, destroy){
+  if (a.find){ a.find = null; }                 // an uncleaned find goes down with them
+  if (a.choice){ a.choice = null; }
   if (!a.gear) return;
   for (const slot of A_SLOTS){
     const g = a.gear[slot];
     if (!g) continue;
-    g.wornBy = null;
-    if (!destroy) S.lost.push({ art:g, depth });
+        if (!destroy) S.lost.push({ art:g, depth, deaths:a.deaths });
   }
   a.gear = null;
 }
@@ -670,8 +720,15 @@ function recoverGear(a, depth){               // a deep enough run finds what th
   const i = S.lost.findIndex(l => l.depth <= depth);
   if (i < 0) return;
   const found = S.lost.splice(i, 1)[0];
-  S.inv.push(found.art);
-  S.notice = { txt:"Recovered from depth " + found.depth + ": " + artName(found.art.label), t:0 };
+  toReliquary(found.art, found.depth, found.deaths || 0);
+  S.notice = { txt:"Brought up someone else's " + SLOT_NAME[found.art.slot].toLowerCase() + ".", t:0 };
+}
+
+function toReliquary(art, depth, deaths){
+  art.owner = null; art.craft = null;
+  S.relic.push({ art, depth, deaths });
+  S.seen.relic = true;
+  while (S.relic.length > T.RELIC_CAP) S.relic.shift();   // oldest goes, quietly
 }
 
 /* ============================ voice ============================
@@ -827,6 +884,11 @@ function drawAdventurer(a, time){
     ctx.font = "800 10px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
     ctx.fillStyle = "#ffd06b"; ctx.fillText("D" + a.depth, a.x, top + 4);
   }
+  if (a.find || a.choice){
+    circle(a.x - 17, top + 1, 8, "#c9a45c", 3);
+    ctx.font = "800 10px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "#0c0812"; ctx.fillText(a.choice ? "!" : "✦", a.x - 17, top + 4);
+  }
   if (a.shallow){
     circle(a.x + 17, top + 1, 7, "#7fa8d0", 3);
     ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
@@ -904,28 +966,6 @@ function drawStrip(time){
   });
 }
 
-function trayGeom(){ const w = 34, gap = 6; return { w, gap, y: H - 26,
-  x0: fx + 16 - (T.TRAY_CAP - 1) * (w + gap) / 2 }; }
-function trayPos(i){ const g = trayGeom(); return { x: g.x0 + i * (g.w + g.gap), y: g.y }; }
-
-function drawTray(time){
-  if (!S.tray.length && !S.seen.artifact) return;
-  const g = trayGeom();
-  ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-  ctx.fillStyle = "#5a4f6b";
-  ctx.fillText("UNIDENTIFIED  " + S.tray.length + "/" + T.TRAY_CAP, fx + 16, g.y - 24);
-  for (let i = 0; i < T.TRAY_CAP; i++){
-    const p = trayPos(i), art = S.tray[i];
-    rrect(p.x, p.y, g.w, g.w, 10, art ? "#3a2c4a" : "#221a2e", 3);
-    if (!art) continue;
-    const bob = Math.sin(time*2 + i) * 1.2;
-    shape(()=>{ ctx.moveTo(p.x - 8, p.y + 7 + bob); ctx.lineTo(p.x, p.y - 9 + bob);
-                ctx.lineTo(p.x + 8, p.y + 7 + bob); ctx.closePath(); }, "#5c5468", 2.5);
-    ctx.fillStyle = "#9a8aa8"; ctx.font = "800 10px ui-rounded, system-ui, sans-serif";
-    ctx.fillText("?", p.x, p.y + 5 + bob);
-  }
-}
-
 /* ============================ the keeper ============================ */
 
 const K = { x:0, y:0, tx:0, ty:0, mode:"idle", t:0, dir:1, placed:false };
@@ -961,6 +1001,29 @@ function drawKeeper(time){
   rrect(0, 0, 6, 34, 3, "#5a3f2c", 3);
   circle(0, -19, 4.5, "#e0904a", 3);
   ctx.restore();
+}
+
+function relicPos(i){ return { x: fx + 92 + i * 30, y: fy + 76 }; }
+
+function drawReliquary(time){
+  if (!S.relic.length && !S.seen.relic) return;
+  const x0 = fx + 78, y = fy + 76;
+  ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "left";
+  ctx.fillStyle = "#5a4f6b"; ctx.fillText("RELIQUARY", x0, y - 20);
+  rrect(x0 + 46, y + 12, 108, 7, 3, "#3a2c4a", 3);            // the shelf itself
+  S.relic.forEach((r, i) => {
+    const p = relicPos(i), g = r.art;
+    const mat = { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[g.rarity];
+    const bob = Math.sin(time * 1.6 + i) * 1;
+    if (g.slot === "weapon") rrect(p.x, p.y + bob, 7, 26, 3, mat, 2.5);
+    else if (g.slot === "armour")
+      shape(()=>{ ctx.moveTo(p.x-9, p.y-12+bob); ctx.lineTo(p.x+9, p.y-12+bob);
+                  ctx.lineTo(p.x, p.y+12+bob); ctx.closePath(); }, mat, 2.5);
+    else circle(p.x, p.y + bob, 9, mat, 2.5);
+    if (g.cursed){ ctx.fillStyle = "#c4506a"; ctx.font = "800 9px ui-rounded, system-ui, sans-serif";
+                   ctx.textAlign = "center"; ctx.fillText("✦", p.x, p.y - 16 + bob); }
+  });
+  ctx.textAlign = "center";
 }
 
 function drawEmbers(){
@@ -1033,6 +1096,7 @@ function frame(now){
 
   updatePool(dt);
   updateKeeper(dt);
+  tickCraft(dt);
   while (S.earnLog.length && S.earnLog[0].t < S.elapsed - 60) S.earnLog.shift();
   flare = Math.max(0, flare - dt * 1.6);
   sparkT += dt;
@@ -1044,14 +1108,14 @@ function frame(now){
   onStage.sort((a,b) => a.y - b.y);
   const behind = onStage.filter(a => a.y <= fy), front = onStage.filter(a => a.y > fy);
   behind.forEach(a => drawAdventurer(a, time));
-  if (S.smith) drawBlacksmith(time);
-  if (S.herb) drawHerbalist(time);
+  if (S.smithLv) drawBlacksmith(time);
+  if (S.herbLv) drawHerbalist(time);
   if (K.y <= fy) drawKeeper(time);
   drawFire(time);
   front.forEach(a => drawAdventurer(a, time));
   if (K.y > fy) drawKeeper(time);
   drawEmbers();
-  drawTray(time);
+  drawReliquary(time);
   drawStrip(time);
   drawFx(dt);
 
@@ -1080,14 +1144,6 @@ const byId = id => S.pool.find(a => a.id === id);
 cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
-
-  const tg = trayGeom();                        // the tray owns its own taps
-  if (Math.abs(y - tg.y) < 24){
-    for (let i = 0; i < S.tray.length; i++){
-      const tp = trayPos(i);
-      if (Math.abs(x - tp.x) < 20){ openArtifact(S.tray[i]); return; }
-    }
-  }
 
   const list = away();                          // the strip owns its own taps
   for (let i = 0; i < list.length; i++){
@@ -1131,7 +1187,10 @@ function showCounsel(a){
   cTitle.textContent = hollow ? "Hollowed" : "Adventurer";
   cSub.textContent = hollow ? "Nothing left to spend" : "Rests at your fire";
   cGear.hidden = hollow;
-  if (hollow) cGear.innerHTML = ""; else renderGear(a);
+  if (hollow) cGear.innerHTML = "";
+  else if (a.choice) renderChoice(a);
+  else if (a.find) renderFind(a);
+  else renderGear(a);
 
   if (hollow){
     cOdds.innerHTML = "Holds a slot at the fire. Pays <b>nothing</b>, ever.<br>"
@@ -1164,50 +1223,122 @@ function showCounsel(a){
 const cGear = counsel.querySelector(".cGear");
 let picking = null;
 
+function renderFind(a){
+  cGear.className = "cPick"; cGear.innerHTML = "";
+  const b = document.createElement("button");
+  b.innerHTML = "<b>They brought something up</b><br><span>It is filthy. Clean it and see.</span>";
+  b.onclick = () => openArtifact(a.find);
+  cGear.appendChild(b);
+}
+
+function renderChoice(a){
+  cGear.className = "cPick"; cGear.innerHTML = "";
+  const g = a.choice, worn = gearIn(a, g.slot);
+  const row = (title, art, keep) => {
+    const b = document.createElement("button");
+    b.innerHTML = "<b>" + title + ": " + artTitle(art) + (art.cursed ? " ✦" : "") +
+      "</b><br><span>" + effectLine(art) + "</span><br><em>" + art.line + "</em>";
+    b.onclick = () => {
+      if (!keep){ a.gear[g.slot] = g; }        // the other one goes in the fire either way
+      a.choice = null;
+      S.notice = { txt:"The other one went in the fire.", t:0 };
+      showCounsel(a);
+    };
+    cGear.appendChild(b); return b;
+  };
+  const head = document.createElement("button");
+  head.disabled = true;
+  head.innerHTML = "<b>Only one of these can be kept.</b><br><span>The other is destroyed.</span>";
+  cGear.appendChild(head);
+  row("Keep", worn, true);
+  row("Take", g, false);
+}
+
+function craftOffers(g){
+  const out = [];
+  if (S.smithLv >= 2 && g.rarity === "common") out.push(["forge", "fine", T.FORGE_COST.fine]);
+  if (S.smithLv >= 3 && g.rarity === "fine")   out.push(["forge", "rare", T.FORGE_COST.rare]);
+  if (g.cursed && S.herbLv >= 3) out.push(["cleanse", "clean", T.CLEANSE_COST.clean]);
+  else if (g.cursed && S.herbLv >= 2 && g.rarity !== "common") out.push(["cleanse", "rough", T.CLEANSE_COST.rough]);
+  return out;
+}
+
+function startCraft(a, slot, kind, grade, cost){
+  const g = gearIn(a, slot);
+  if (!g || g.craft || S.souls < cost[0] || S.mat < cost[1]) return;
+  S.souls -= cost[0]; S.mat -= cost[1];
+  g.craft = { kind, grade, left:T.CRAFT_SECONDS };
+  keeperGoTo(kind === "forge" ? Math.min(fx + 70, W - 70) : Math.max(fx - 74, 60), fy + 24, "attend");
+  showCounsel(a);
+}
+
+function tickCraft(dt){
+  for (const a of S.pool){
+    if (!a.gear) continue;
+    for (const slot of A_SLOTS){
+      const g = a.gear[slot];
+      if (!g || !g.craft) continue;
+      if ((g.craft.left -= dt) > 0) continue;
+      const c = g.craft; g.craft = null;
+      if (c.kind === "forge"){ g.rarity = c.grade; S.notice = { txt:"Reforged. " + artTitle(g) + ".", t:0 }; }
+      else {
+        g.cursed = false; g.curseLine = null;
+        if (c.grade === "rough" && g.rarity !== "common")
+          g.rarity = g.rarity === "rare" ? "fine" : "common";
+        S.notice = { txt:"The mark is off it. " + artTitle(g) + ".", t:0 };
+      }
+      if (S.sel === a.id) showCounsel(a);
+    }
+  }
+}
+
+function gearButton(a, slot){
+  const g = gearIn(a, slot), b = document.createElement("button");
+  b.className = g ? (g.cursed ? "filled cursed" : "filled") : "";
+  b.innerHTML = "<i>" + SLOT_NAME[slot].toUpperCase() + "</i>" +
+    (g ? (g.craft ? Math.ceil(g.craft.left) + "s" : RARITY_NAME[g.rarity] + (g.cursed ? " ✦" : "")) : "empty");
+  b.onclick = () => { picking = slot; showCounsel(a); };
+  return b;
+}
+
 function renderGear(a){
   cGear.innerHTML = "";
-  if (picking){
-    cGear.className = "cPick";
-    const opts = S.inv.filter(g => !g.wornBy && g.label.slot === picking);
-    const worn = gearIn(a, picking);
-    if (worn){
-      const b = document.createElement("button");
-      b.textContent = "Take back the " + artName(worn.label).toLowerCase();
-      b.onclick = () => { worn.wornBy = null; a.gear[picking] = null; S.inv.push(worn); picking = null; showCounsel(a); };
-      cGear.appendChild(b);
-    }
-    if (!opts.length && !worn){
-      const b = document.createElement("button");
-      b.textContent = "Nothing identified for this slot.";
-      b.disabled = true; cGear.appendChild(b);
-    }
-    opts.forEach(g => {
-      const b = document.createElement("button");
-      b.textContent = artName(g.label);
-      b.onclick = () => {
-        a.gear = a.gear || {};
-        const old = a.gear[picking];
-        if (old){ old.wornBy = null; S.inv.push(old); }
-        a.gear[picking] = g; g.wornBy = a.id; g.runs = 0;
-        S.inv.splice(S.inv.indexOf(g), 1);
-        picking = null; showCounsel(a);
-      };
-      cGear.appendChild(b);
-    });
-    const back = document.createElement("button");
-    back.textContent = "Back"; back.onclick = () => { picking = null; showCounsel(a); };
-    cGear.appendChild(back);
+  if (!picking){
+    cGear.className = "cGear";
+    A_SLOTS.forEach(slot => cGear.appendChild(gearButton(a, slot)));
     return;
   }
-  cGear.className = "cGear";
-  for (const slot of A_SLOTS){
-    const g = gearIn(a, slot), b = document.createElement("button");
-    b.className = g ? "filled" : "";
-    b.innerHTML = "<i>" + SLOT_NAME[slot].toUpperCase() + "</i>" +
-                  (g ? RARITY_NAME[g.label.rarity] + (g.label.cursed ? "!" : "") : "empty");
-    b.onclick = () => { picking = slot; showCounsel(a); };
-    cGear.appendChild(b);
+  cGear.className = "cPick";
+  const slot = picking, worn = gearIn(a, slot);
+  const add = (html, fn, dis) => {
+    const b = document.createElement("button");
+    b.innerHTML = html; b.disabled = !!dis; if (fn) b.onclick = fn;
+    cGear.appendChild(b); return b;
+  };
+  if (worn){
+    add("<b>" + artTitle(worn) + (worn.cursed ? " ✦" : "") + "</b><br><span>" + effectLine(worn) +
+        "</span><br><em>" + worn.line + (worn.curseLine ? " " + worn.curseLine : "") + "</em>", null, true);
+    if (worn.craft) add("At the " + (worn.craft.kind === "forge" ? "forge" : "herbalist") + ", " +
+                        Math.ceil(worn.craft.left) + "s", null, true);
+    else for (const [kind, grade, cost] of craftOffers(worn)){
+      const label = kind === "forge" ? "Reforge to " + RARITY_NAME[grade].toLowerCase()
+                  : grade === "clean" ? "Lift the curse" : "Lift the curse, lose a grade";
+      add(label + "<br><span>" + fmt(cost[0]) + " souls · " + cost[1] + " scrap</span>",
+          () => startCraft(a, slot, kind, grade, cost), S.souls < cost[0] || S.mat < cost[1]);
+    }
+  } else {
+    const shelf = S.relic.filter(r => r.art.slot === slot);
+    if (!shelf.length) add("Nothing to put here.", null, true);
+    shelf.forEach(r => add(
+      "<b>" + artTitle(r.art) + (r.art.cursed ? " ✦" : "") + "</b><br><span>" + effectLine(r.art) +
+      "</span><br><em>Carried by someone who reached depth " + r.depth + ", and died " + r.deaths + " times.</em>",
+      () => {
+        S.relic.splice(S.relic.indexOf(r), 1);
+        a.gear = a.gear || {}; a.gear[slot] = r.art; r.art.owner = a.id;
+        picking = null; showCounsel(a);
+      }));
   }
+  add("Back", () => { picking = null; showCounsel(a); });
 }
 
 function rekindle(a){
@@ -1242,14 +1373,9 @@ function openArtifact(a){
       grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); paintGrime();
     } else { grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); }
   }
-  pick = a.label ? Object.assign({}, a.label)
-                 : { slot:a.clue.slot, rarity:a.clue.rarity, cursed:a.clue.cursed };
-  artDust.hidden = a.dusted; artTest.hidden = !a.dusted;
-  document.querySelector(".artTitle").textContent = a.dusted ? "At the fire" : "Unidentified";
-  document.querySelector(".artSub").textContent = a.dusted
-    ? "Test it, or name it and find out the hard way."
-    : "Found at depth " + a.depth + ".";
-  if (a.dusted) renderTest();
+  artDust.hidden = false;
+  document.querySelector(".artTitle").textContent = "Filthy";
+  document.querySelector(".artSub").textContent = "Brought up from depth " + a.depth + ".";
   drawArt();
 }
 function closeArtifact(){ open_ = null; artEl.hidden = true; }
@@ -1270,8 +1396,8 @@ function paintGrime(){
 function drawArt(){
   const a = open_; if (!a) return;
   actx.clearRect(0, 0, AW, AH);
-  const mat = { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[a.clue.rarity];
-  const dark = { common:"#5e5868", fine:"#8a6a34", rare:"#5f8f86" }[a.clue.rarity];
+  const mat = { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[a.rarity];
+  const dark = { common:"#5e5868", fine:"#8a6a34", rare:"#5f8f86" }[a.rarity];
   const cx = AW/2, cy = AH/2;
   actx.lineWidth = 4; actx.strokeStyle = "#0c0812"; actx.lineJoin = "round";
   const box = (x, y, w, h, r, fill) => {
@@ -1281,13 +1407,13 @@ function drawArt(){
     actx.arcTo(x-w/2, y+h/2, x-w/2, y-h/2, r); actx.arcTo(x-w/2, y-h/2, x+w/2, y-h/2, r);
     actx.closePath(); actx.fillStyle = fill; actx.fill(); actx.stroke();
   };
-  if (a.clue.slot === "weapon"){                    // form is the slot tell
+  if (a.slot === "weapon"){                         // the shape is the truth once clean
     actx.beginPath(); actx.moveTo(cx, cy - 74); actx.lineTo(cx + 13, cy - 46);
     actx.lineTo(cx + 13, cy + 30); actx.lineTo(cx - 13, cy + 30); actx.lineTo(cx - 13, cy - 46);
     actx.closePath(); actx.fillStyle = mat; actx.fill(); actx.stroke();
     box(cx, cy + 38, 56, 12, 5, dark);
     box(cx, cy + 60, 14, 34, 6, dark);
-  } else if (a.clue.slot === "armour"){
+  } else if (a.slot === "armour"){
     actx.beginPath(); actx.moveTo(cx - 44, cy - 58); actx.lineTo(cx + 44, cy - 58);
     actx.lineTo(cx + 36, cy + 34); actx.lineTo(cx, cy + 70); actx.lineTo(cx - 36, cy + 34);
     actx.closePath(); actx.fillStyle = mat; actx.fill(); actx.stroke();
@@ -1303,9 +1429,9 @@ function drawArt(){
   }
   const g = SITES.glyph;                            // glyph is the curse tell
   actx.save(); actx.translate(AW*g[0], AH*g[1]);
-  actx.lineWidth = 3.4; actx.strokeStyle = a.clue.cursed ? "#c4506a" : "#e8dcc0";
+  actx.lineWidth = 3.4; actx.strokeStyle = a.cursed ? "#c4506a" : "#e8dcc0";
   actx.beginPath();
-  if (a.clue.cursed){ actx.moveTo(-9,-9); actx.lineTo(4,-2); actx.lineTo(-4,3); actx.lineTo(9,10); }
+  if (a.cursed){ actx.moveTo(-9,-9); actx.lineTo(4,-2); actx.lineTo(-4,3); actx.lineTo(9,10); }
   else { actx.arc(0, 0, 9, 0.5, 5.4); }
   actx.stroke(); actx.restore();
 
@@ -1348,67 +1474,17 @@ artCv.addEventListener("pointerup",   () => { wiping = false; });
 artCv.addEventListener("pointercancel", () => { wiping = false; });
 
 artToFire.addEventListener("click", () => {
-  const a = open_; if (!a) return;
-  a.dusted = true; openArtifact(a);
-});
-
-/* ---- deduction ---- */
-const AXES = { slot:A_SLOTS, rarity:RARITIES, cursed:[false, true] };
-const axisLabel = (axis, v) => axis === "cursed" ? (v ? "Cursed" : "Blessed")
-                 : axis === "slot" ? SLOT_NAME[v] : RARITY_NAME[v];
-
-function renderTest(){
-  const a = open_; if (!a) return;
-  for (const axis of ["slot","rarity","cursed"]){
-    const host = artTest.querySelector('.axis[data-axis="' + axis + '"]');
-    host.innerHTML = "";
-    for (const v of AXES[axis]){
-      const b = document.createElement("button");
-      b.textContent = axisLabel(axis, v);
-      const out = a.elim[axis].indexOf(v) >= 0;
-      b.className = (out ? "out " : "") + (pick[axis] === v ? "on" : "");
-      b.disabled = out;
-      b.addEventListener("click", () => { pick[axis] = v; renderTest(); });
-      host.appendChild(b);
-    }
-  }
-  const LABELS = { sound:"Sound it<br>narrows slot", heat:"Heat it<br>narrows rarity",
-                   bleed:"Bleed it<br>reads the curse" };
-  artTest.querySelectorAll(".tests button").forEach(b => {
-    const kind = b.dataset.test, axis = kind === "sound" ? "slot" : kind === "heat" ? "rarity" : "cursed";
-    const left = AXES[axis].filter(v => a.elim[axis].indexOf(v) < 0).length;
-    const c = testCost(a, kind);
-    b.innerHTML = LABELS[kind] + "<b>" + (left <= 1 ? "done" : fmt(c)) + "</b>";
-    b.disabled = testing > 0 || left <= 1 || S.souls < c;
-    b.onclick = () => runTest(a, kind, axis, c);
-  });
-  document.getElementById("artName").textContent =
-    "Name it: " + artName(pick);
-}
-
-function runTest(a, kind, axis, cost){
-  if (S.souls < cost || testing) return;
-  S.souls -= cost; a.tests++; testing = 1;
-  const truth = axis === "cursed" ? a.cursed : a[axis];
-  const wrong = AXES[axis].filter(v => v !== truth && a.elim[axis].indexOf(v) < 0);
-  artTest.querySelectorAll(".tests button").forEach(b => b.disabled = true);
-  setTimeout(() => {                                 // a few seconds at the fire
-    if (wrong.length) a.elim[axis].push(wrong[(Math.random()*wrong.length)|0]);
-    const left = AXES[axis].filter(v => a.elim[axis].indexOf(v) < 0);
-    if (left.indexOf(pick[axis]) < 0) pick[axis] = left[0];
-    testing = 0; renderTest(); refresh();
-  }, 1800);
-  renderTest();
-}
-
-document.getElementById("artName").addEventListener("click", () => {
-  const a = open_; if (!a || !a.dusted) return;
-  a.label = { slot:pick.slot, rarity:pick.rarity, cursed:pick.cursed };
-  a.runs = 0;
-  const i = S.tray.indexOf(a); if (i >= 0) S.tray.splice(i, 1);
-  S.inv.push(a);
-  S.seen.ident = true; if (a.cursed) S.seen.curse = true;
-  closeArtifact(); render();
+  const g = open_; if (!g) return;
+  g.dusted = true;
+  const a = S.pool.find(o => o.id === g.owner);
+  closeArtifact();
+  if (!a) return;
+  a.find = null;
+  a.gear = a.gear || {};
+  if (!a.gear[g.slot]){ a.gear[g.slot] = g; S.notice = { txt:artTitle(g) + ". It fits.", t:0 }; }
+  else a.choice = g;                          // one of the two is going in the fire
+  S.seen.ident = true; if (g.cursed) S.seen.curse = true;
+  showCounsel(a);
 });
 
 /* ============================ ui ============================ */
@@ -1419,6 +1495,7 @@ const rateEl  = document.querySelector("#rate b");
 const noteEl  = document.getElementById("note");
 const popEl   = { fire:document.getElementById("pFire"), away:document.getElementById("pAway"),
                   hollow:document.getElementById("pHollow") };
+const matWrap = document.getElementById("matWrap"), matEl = document.getElementById("mat");
 const fmt = n => Math.floor(n).toLocaleString("en-US");
 let rows = [];
 
@@ -1480,23 +1557,41 @@ function render(){
     });
     noteEl.textContent = "Skills grow the take. Vendors keep them alive.";
   } else {
-    card({
-      glyph:"🔨", tint:"#5a3f2c", name:"The Blacksmith", level:null, level2:()=>0,
-      desc:()=> S.smith ? "Repairs paid at the fire: +2 souls per rest, +12% survival."
-                        : "Adventurers pay for repairs. +2 souls per rest, +12% survival. Holds 2 slots.",
-      label:()=> S.smith ? "Built" : fmt(T.SMITH_COST),
-      enabled:()=> !S.smith && S.souls >= T.SMITH_COST, done:()=>S.smith,
-      onBuy(){ if (S.smith || S.souls < T.SMITH_COST) return; S.souls -= T.SMITH_COST; S.smith = true;
-               evictReserved(); keeperGoTo(Math.min(fx + 70, W - 70), fy + 26, "attend"); render(); }
-    });
-    card({
-      glyph:"🌿", tint:"#3f5a3e", name:"The Herbalist", level:null, level2:()=>0,
-      desc:()=> S.herb ? "Poultices at the fire: +8% survival, and they endure a 4th death."
-                       : "+8% survival, and adventurers hollow on the 4th death instead of the 3rd. Holds 1 slot.",
-      label:()=> S.herb ? "Built" : fmt(T.HERB_COST),
-      enabled:()=> !S.herb && S.souls >= T.HERB_COST, done:()=>S.herb,
-      onBuy(){ if (S.herb || S.souls < T.HERB_COST) return; S.souls -= T.HERB_COST; S.herb = true;
-               evictReserved(); keeperGoTo(Math.max(fx - 74, 60), fy + 20, "attend"); render(); }
+    const VENDORS = [
+      { key:"smithLv", glyph:"🔨", tint:"#5a3f2c", name:"The Blacksmith",
+        souls:T.SMITH_LV, mats:T.SMITH_MAT, slots:2,
+        blurb:[ "Pays for repairs at your fire: +2 souls a rest, +12% survival. Holds 2 places.",
+                "He will reforge a common piece into a fine one, on the wearer, without taking it off them.",
+                "He will reforge a fine piece into a rare one. This is the last thing he learns.",
+                "Reforges common to fine, and fine to rare, on the wearer." ] },
+      { key:"herbLv", glyph:"🌿", tint:"#3f5a3e", name:"The Herbalist",
+        souls:T.HERB_LV, mats:T.HERB_MAT, slots:1,
+        blurb:[ "+8% survival, and a fourth death before anyone hollows. Holds 1 place.",
+                "She will lift a curse, though the piece comes back a grade poorer for it.",
+                "She will lift a curse and leave the piece exactly as strong as it was.",
+                "Lifts curses cleanly, and buys everyone a fourth death." ] }
+    ];
+    VENDORS.forEach(v => {
+      const lv = () => S[v.key], next = () => Math.min(3, lv() + 1);
+      const priceS = () => v.souls[next()], priceM = () => v.mats[next()];
+      card({
+        glyph:v.glyph, tint:v.tint, name:v.name, level:lv(), level2:lv,
+        desc:()=> lv() >= 3 ? v.blurb[3]
+                : v.blurb[lv()] + "  Next: " + fmt(priceS()) + " souls" +
+                  (priceM() ? " and " + priceM() + " scrap." : "."),
+        label:()=> lv() >= 3 ? "Built" : fmt(priceS()),
+        enabled:()=> lv() < 3 && S.souls >= priceS() && S.mat >= priceM(),
+        done:()=> lv() >= 3,
+        onBuy(){
+          if (lv() >= 3 || S.souls < priceS() || S.mat < priceM()) return;
+          S.souls -= priceS(); S.mat -= priceM(); S[v.key] = next();
+          if (S[v.key] === 1){
+            evictReserved();
+            keeperGoTo(v.key === "smithLv" ? Math.min(fx + 70, W - 70) : Math.max(fx - 74, 60), fy + 24, "attend");
+          }
+          render();
+        }
+      });
     });
     noteEl.textContent = "Vendors take room at the fire. That is the whole cost of them.";
   }
@@ -1515,6 +1610,8 @@ function evictReserved(){                 // a new vendor turns guests out of it
 
 function refresh(){
   soulsEl.textContent = fmt(S.souls);
+  matWrap.hidden = !S.seen.material;
+  matEl.textContent = fmt(S.mat);
   rateEl.textContent = avgRate().toFixed(1);
   const atFire = S.pool.filter(a => a.state === "rest" || a.state === "wait").length;
   popEl.fire.textContent = atFire;

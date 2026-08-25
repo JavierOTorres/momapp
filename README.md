@@ -1,4 +1,4 @@
-# Sanctuary — vertical slice v2
+# Sanctuary — vertical slice v3
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -37,21 +37,26 @@ a static single file so it can be wrapped with Capacitor later.
   discoveries flashing as they go. Tap one to ring **the bell**: they come home
   immediately and alive, no deeper than they left, and they pay you nothing.
   It costs more every time.
-- **Artifacts.** Survivors drag things back — 12% a run, +3% per layer, capped
-  at 45%. Finds land filthy in a tray of 6; fill it and the next one is left
-  where it lay. Drag across a find to **dust** it, and its form, material and
-  glyph surface: the slot, the rarity, and whether it is cursed. All three lie
-  about a quarter of the time.
-- **Testing and being wrong.** At the fire, sound it to narrow the slot, heat
-  it for rarity, bleed it for the curse. Each test costs more than the last on
-  that piece and more again if it looks valuable. Name it whenever you like —
-  there is no confirmation and no safety net. A cursed ring filed as blessed
-  does exactly what it truly is to whoever you hand it to, and the label only
-  corrects itself after three expeditions.
-- **Gear.** Three slots per adventurer, effects applied to their survival,
-  their scar, and their purse. What they wear when they die stays at that
-  depth until someone survives a run that deep; what they wear when they
-  hollow is gone.
+- **Artifacts belong to whoever found them.** A survivor carries their find
+  home filthy and it stays theirs — there is no inventory anywhere in the
+  game. Clean it from their Counsel card by dragging the grime off, and its
+  slot, rarity and curse are all plain. Empty slot, it goes straight on them;
+  full slot, you choose, and the one you don't choose burns. A second of
+  something they already carry becomes scrap before it reaches them.
+- **Curses are visible and worth considering.** One find in five is marked. A
+  cursed piece gives more than an honest one and bills a different system: a
+  blade that keeps them alive and cuts their pay by two fifths, plate that
+  blunts the scar for eight points of survival, a charm that pays and makes
+  every death cut deeper.
+- **Gear.** Three slots per adventurer, applied to survival, scar and purse.
+  What they wear when they die stays at that depth until someone survives a run
+  that deep. What they wear when they *hollow* goes to the **reliquary**, a
+  shelf by the fire holding three, each labelled with the depth and death count
+  of whoever carried it. You can hand one to someone living, once.
+- **Vendor craft.** Both vendors take three levels, paid in souls and scrap.
+  The smith reforges common to fine and fine to rare, on the wearer, without
+  taking it off them. The herbalist lifts curses — roughly at first, costing
+  the piece a grade, and cleanly once fully paid for.
 - **The Archive.** A third tab. Plain-language entries for every mechanic,
   locked to their names until the thing has happened to you.
 - **Vendors are survival, skills are economy.** Blacksmith 200 (+2/rest, +12%
@@ -78,12 +83,24 @@ the scarred adventurers nearest to hollowing are precisely the ones wearing
 nothing — the loss rule pays for the survival rule. First artifact drop lands
 at 94 seconds of real play, against a target of three minutes.
 
-**One balance target is not met.** Guessing every artifact outearns testing
-them by roughly a third over 30 simulated minutes, and does not cost
-measurably more hollows, so testing does not yet pay for itself in aggregate.
-Its value is targeted rather than average — knowing one specific ring is
-cursed before handing it to a depth 6 veteran — and an aggregate simulation
-cannot see that. Worth watching in play before moving the numbers.
+**v3 fills the hall.** At 45s expeditions against 12s rests only 24% of the
+pool was ever home, which is why the sanctuary looked abandoned. At 30/20 it
+is 48%, measured over a minute of real play.
+
+**Cursed gear is a real trade.** Simulated, wearing every cursed find earns
+about 2% less than burning them all and pushes the choke from 23.4 to 27.1
+minutes. Tempting, neither obviously right nor wrong.
+
+**Blacksmith 3 is not reachable, and the reason matters.** At 2500 souls it
+was hit in 0 of 20 simulated hours under greedy play, 2 of 20 when chasing it
+deliberately, and 0 of 20 when rekindling above all else. Scrap is not the
+constraint — 64 spare at the hour mark — souls are, because the sanctuary
+chokes at 22 to 27 minutes and income stops there. A 35-to-45-minute target
+cannot coexist with a 25-minute choke: rekindling cannot outrun hollowing
+because its price grows 1.6x per use while hollows keep arriving every two
+minutes. The prices ship as specced. The fix is a decision about which target
+gives — a cheaper level 3, or a rekindle curve that lets a diligent keeper
+hold the fire past 35 minutes.
 
 Two honest gaps. The median first hollow is 7.2 rather than 8-14, though the
 run-to-run spread covers it (p10 5.4, p90 13.2), and choke lands at 19-21
