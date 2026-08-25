@@ -1,4 +1,4 @@
-# Sanctuary — vertical slice v1.1
+# Sanctuary — vertical slice v2
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -32,6 +32,28 @@ a static single file so it can be wrapped with Capacitor later.
 - **Counsel.** Tap a resting adventurer for their depth, deaths, live survival
   odds and next payout. **Send shallow** runs their next expedition one layer
   short: safer, poorer, and no new depth. Tap a hollow to offer them the rite.
+- **The strip.** Every adventurer currently below is a marker descending a
+  track down the left, carrying their depth and their scars, with ambushes and
+  discoveries flashing as they go. Tap one to ring **the bell**: they come home
+  immediately and alive, no deeper than they left, and they pay you nothing.
+  It costs more every time.
+- **Artifacts.** Survivors drag things back — 12% a run, +3% per layer, capped
+  at 45%. Finds land filthy in a tray of 6; fill it and the next one is left
+  where it lay. Drag across a find to **dust** it, and its form, material and
+  glyph surface: the slot, the rarity, and whether it is cursed. All three lie
+  about a quarter of the time.
+- **Testing and being wrong.** At the fire, sound it to narrow the slot, heat
+  it for rarity, bleed it for the curse. Each test costs more than the last on
+  that piece and more again if it looks valuable. Name it whenever you like —
+  there is no confirmation and no safety net. A cursed ring filed as blessed
+  does exactly what it truly is to whoever you hand it to, and the label only
+  corrects itself after three expeditions.
+- **Gear.** Three slots per adventurer, effects applied to their survival,
+  their scar, and their purse. What they wear when they die stays at that
+  depth until someone survives a run that deep; what they wear when they
+  hollow is gone.
+- **The Archive.** A third tab. Plain-language entries for every mechanic,
+  locked to their names until the thing has happened to you.
 - **Vendors are survival, skills are economy.** Blacksmith 200 (+2/rest, +12%
   survival). Herbalist 500 (+8% survival, and they endure a fourth death).
 
@@ -40,16 +62,28 @@ art beyond flat shapes.
 
 ## Pacing
 
-Simulated before building, every time. v1.1 keeps the patch's `DEATH_PENALTY`
-of 0.10 exactly and moves only `base`, which is the dial the spec names: at
-0.84 the new spiral runs far too hot (first hollow at 5 minutes, sanctuary
-choked by 11). `base 0.98` lands the arc and keeps the slide legible — 92%
-fresh, 80% at depth 4 with one death, 70% with two.
+Simulated before building, every time. `base 0.98` with a `0.10` death scar
+keeps the slide legible — 92% fresh, 80% at depth 4 with one death, 70% with
+two — and lands the arc.
 
 | | first hollow | Herbalist | choke | with rekindling | Counsel-heavy |
 |---|---|---|---|---|---|
 | target | 8-14 min | — | ~25 min | later | delayed, not escaped |
 | shipped (median) | 7.2 | 10.5 | 19.0 | 21.5 | chokes at 34, or never |
+
+**v2 needed no retune.** The expectation was that artifacts would push survival
+up and slow hollowing, but simulated with typical gear the first hollow moves
+from 7.1 to 6.8 minutes, which is inside the noise. Gear is lost on death, so
+the scarred adventurers nearest to hollowing are precisely the ones wearing
+nothing — the loss rule pays for the survival rule. First artifact drop lands
+at 94 seconds of real play, against a target of three minutes.
+
+**One balance target is not met.** Guessing every artifact outearns testing
+them by roughly a third over 30 simulated minutes, and does not cost
+measurably more hollows, so testing does not yet pay for itself in aggregate.
+Its value is targeted rather than average — knowing one specific ring is
+cursed before handing it to a depth 6 veteran — and an aggregate simulation
+cannot see that. Worth watching in play before moving the numbers.
 
 Two honest gaps. The median first hollow is 7.2 rather than 8-14, though the
 run-to-run spread covers it (p10 5.4, p90 13.2), and choke lands at 19-21

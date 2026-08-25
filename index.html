@@ -53,6 +53,35 @@
   canvas{display:block;width:100%;height:100%}
 
   /* ---------- counsel card ---------- */
+  #art{
+    position:absolute;inset:0;z-index:6;background:rgba(15,11,22,0.96);
+    display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 12px;
+  }
+  #art[hidden]{display:none}
+  .artTop{display:flex;align-items:center;gap:10px;width:100%}
+  .artTitle{font-size:15px}
+  .artSub{font-size:11px;font-weight:600;color:var(--dim);margin-top:2px}
+  #artCv{
+    width:240px;height:200px;flex:0 0 auto;border:3px solid var(--line);border-radius:14px;
+    background:#1b1526;touch-action:none;
+  }
+  .artHint{font-size:11px;font-weight:600;color:var(--dim);text-align:center;margin:2px 0 6px}
+  #artDust,#artTest{width:100%;display:flex;flex-direction:column;gap:6px}
+  #artTest[hidden],#artDust[hidden]{display:none}
+  .axis{display:flex;gap:6px}
+  .axis button{
+    flex:1;padding:8px 2px;border:3px solid var(--line);border-radius:10px;
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:11px;
+  }
+  .axis button.on{background:var(--gold);color:var(--ink)}
+  .axis button.out{opacity:.35;text-decoration:line-through}
+  .tests{display:flex;gap:6px;margin-top:2px}
+  .tests button{
+    flex:1;padding:9px 2px;border:3px solid var(--line);border-radius:10px;
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:10.5px;line-height:1.3;
+  }
+  .tests button:disabled{opacity:.4}
+  .tests button b{display:block;color:var(--gold);font-size:11px}
   #counsel{
     position:absolute;left:10px;right:10px;bottom:10px;z-index:5;
     background:var(--panel-2);border:3px solid var(--line);border-radius:16px;
@@ -72,6 +101,20 @@
     border:3px solid var(--line);font-size:11.5px;font-weight:600;color:var(--dim);line-height:1.45;
   }
   .cOdds b{font-size:15px;color:var(--text);font-weight:800}
+  .cGear{display:flex;gap:6px;margin-bottom:8px}
+  .cGear button{
+    flex:1;padding:7px 3px;border:3px solid var(--line);border-radius:11px;
+    background:var(--panel);color:var(--text);font:inherit;font-size:10px;line-height:1.3;
+  }
+  .cGear button i{display:block;color:var(--dim);font-style:normal;font-size:9px;letter-spacing:.08em}
+  .cGear button.filled{background:var(--panel-2);color:var(--gold)}
+  .cPick{
+    max-height:126px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:8px;
+  }
+  .cPick button{
+    width:100%;padding:8px;border:3px solid var(--line);border-radius:10px;
+    background:var(--panel);color:var(--text);font:inherit;font-size:11px;text-align:left;
+  }
   .cAct{
     width:100%;padding:11px;border:3px solid var(--line);border-radius:12px;
     background:var(--cold);color:var(--ink);font:inherit;font-size:14px;
@@ -153,6 +196,29 @@
 
   <div id="stage">
     <canvas id="cv"></canvas>
+    <div id="art" hidden>
+      <div class="artTop">
+        <div><div class="artTitle">Unidentified</div><div class="artSub"></div></div>
+        <button class="cClose" id="artX">✕</button>
+      </div>
+      <canvas id="artCv" width="240" height="200"></canvas>
+      <div id="artDust">
+        <div class="artHint">Drag to wipe the grime away.</div>
+        <button class="cAct" id="artToFire" disabled>To the fire</button>
+      </div>
+      <div id="artTest" hidden>
+        <div class="axis" data-axis="slot"></div>
+        <div class="axis" data-axis="rarity"></div>
+        <div class="axis" data-axis="cursed"></div>
+        <div class="tests">
+          <button data-test="sound"></button>
+          <button data-test="heat"></button>
+          <button data-test="bleed"></button>
+        </div>
+        <button class="cAct warm" id="artName">Name it</button>
+      </div>
+    </div>
+
     <div id="counsel" hidden>
       <div class="cTop">
         <div class="cTone"></div>
@@ -160,6 +226,7 @@
         <button class="cClose">✕</button>
       </div>
       <div class="cOdds"></div>
+      <div class="cGear"></div>
       <button class="cAct"></button>
       <div class="cNote"></div>
     </div>
@@ -204,6 +271,8 @@ const T = {
   DEPTH_PAY:0.5,
   SMITH_COST:200, HERB_COST:500, REK_BASE:150, REK_GROWTH:1.6,
   BELL_BASE:40, BELL_GROWTH:1.55,
+  TRAY_CAP:6, DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.15,
+  TEST_GROWTH:1.6, TEST_BASE:{ sound:10, heat:10, bleed:24 },
   MAX_EMBERS:10, EMBER_REGEN:2
 };
 const SMITH_SLOTS = [1,2], HERB_SLOT = 6;
@@ -212,7 +281,8 @@ const S = {
   souls:0, lv:{flame:0, word:0, echo:0}, smith:false, herb:false, rekindles:0,
   embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
-  seen:{ depth:false, death:false, hollow:false },
+  seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false },
+  tray:[], inv:[], lost:[], nextArt:1,
   earnLog:[], floats:[], sparks:[]
 };
 
@@ -245,6 +315,31 @@ const ARCHIVE = [
     "The Blacksmith pays you 2 more per rest and adds 12% survival. The Herbalist adds 8% "
     + "survival and buys everyone a fourth death before they hollow. Both hold slots that "
     + "guests can no longer sit in." },
+  { name:"Artifacts", open:()=>S.seen.artifact, body:
+    "A survivor sometimes drags something home — 12% of the time, plus 3% per layer of depth. "
+    + "It lands in the tray on the sanctuary floor, filthy and unreadable. The tray holds 6. "
+    + "Fill it and the next find is left where it lay." },
+  { name:"Dusting", open:()=>S.seen.artifact, body:
+    "Tap a find and drag across it to clean it. Three things surface as the grime comes off: "
+    + "its form, which suggests the slot; its material, which suggests the rarity; and a glyph, "
+    + "which suggests whether it is cursed. Suggests. Not proves." },
+  { name:"Testing", open:()=>S.seen.artifact, body:
+    "At the fire you can sound it to narrow the slot, heat it to narrow the rarity, or bleed it "
+    + "to read the curse. Each test costs souls, costs more than the last one on that piece, and "
+    + "costs more again if the piece looks valuable. Testing eats the profit the thing represents." },
+  { name:"Naming and being wrong", open:()=>S.seen.ident, body:
+    "Naming a piece files it under whatever you decided. What it actually does is whatever it "
+    + "actually is. A cursed ring filed as blessed will be worn by someone who trusts you, and "
+    + "you will find out what it was by watching what happens to them. After three expeditions "
+    + "the truth is obvious and the label corrects itself." },
+  { name:"Curses", open:()=>S.seen.curse, body:
+    "Roughly one find in seven is cursed, and a cursed piece does the opposite of what its kind "
+    + "should: a weapon that costs survival, armour that deepens the scar, a trinket that thins "
+    + "the purse. It looks identical to a clean one until you test it." },
+  { name:"Losing gear", open:()=>S.seen.artifact, body:
+    "Whatever someone is wearing when they die stays down there at the depth they died. Any "
+    + "adventurer who later survives a run that deep brings a piece of it back. Whatever someone "
+    + "is wearing when they hollow is gone for good." },
   { name:"Counsel", open:()=>S.seen.depth, body:
     "Tap someone resting to see what they are worth and how close they are to hollowing. "
     + "Send shallow runs their next expedition one layer short: safer, poorer, no new depth. "
@@ -269,11 +364,12 @@ const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindl
 const bellCost  = () => Math.floor(T.BELL_BASE * Math.pow(T.BELL_GROWTH, S.bells));
 const away      = () => S.pool.filter(a => a.state === "away");
 const hollowAt  = () => S.herb ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
-const payFor    = a => Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY));
+const payFor    = a => Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + gearEffect(a, "trinket")));
 const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
-const survival  = (d, deaths) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
+const survival  = (d, deaths, a) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
                     T.SURV_BASE + (S.smith ? T.SURV_SMITH : 0) + (S.herb ? T.SURV_HERB : 0)
-                    - d * T.DEPTH_PEN - deaths * T.DEATH_PEN));
+                    - d * T.DEPTH_PEN - deaths * (a ? deathPenFor(a) : T.DEATH_PEN)
+                    + (a ? gearEffect(a, "weapon") : 0)));
 const hollows   = () => S.pool.filter(a => a.state === "hollow");
 const living    = () => S.pool.filter(a => a.state !== "hollow");
 const avgRate   = () => {                 // never divide by a window too short to mean anything
@@ -365,6 +461,19 @@ function earn(n, x, y, doubled){
   S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffd06b" : "#f2e6d8" });
 }
 
+function ageGear(a){
+  if (!a.gear) return;
+  for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (!g || !g.label) continue;
+    if (++g.runs >= 3 && !sameLabel(g.label, g)){
+      g.label = { slot:g.slot, rarity:g.rarity, cursed:g.cursed };
+      S.notice = { txt:"It was a " + artName(g.label).toLowerCase() + " all along.", t:0 };
+    }
+  }
+}
+const sameLabel = (l, a) => l.slot === a.slot && l.rarity === a.rarity && l.cursed === a.cursed;
+
 function sitDown(a){
   a.state = "rest"; a.t = T.REST;
   const p = slotPos(a.slot); a.x = p.x; a.y = p.y;
@@ -380,21 +489,27 @@ function sitDown(a){
 }
 
 function resolveExpedition(a){
-  const d = runDepth(a), survived = Math.random() < survival(d, a.deaths);
+  const d = runDepth(a), survived = Math.random() < survival(d, a.deaths, a);
   a.shallow = false;
+  ageGear(a);                             // three runs and the truth outs itself
   if (survived){
     if (a.depth === d) a.depth = d + 1;   // sent shallow: banked, not deepened
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
+    dropFor(a);
+    recoverGear(a, d);
   } else {
     a.deaths++; S.seen.death = true;
+    const hollowing = a.deaths >= hollowAt();
+    loseGear(a, d, hollowing);            // dropped at depth, unless they hollow — then it burns
     a.depth = Math.floor(a.depth / 2);    // a setback, not a reset — the scar stays
-    if (a.deaths >= hollowAt()){ goHollow(a); return; }
+    if (hollowing){ goHollow(a); return; }
   }
   edgeSpawn(a); a.state = "walkin";
 }
 
 function goHollow(a){                     // the thing the whole system exists to produce
   a.state = "hollow"; a.t = 0; S.seen.hollow = true;
+  loseGear(a, 0, true);                   // whatever they carried burns with them
   releaseSlot(a);
   if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
   else { a.x = fx; a.y = fy + 78; }
@@ -452,6 +567,79 @@ function updatePool(dt){
       if (a.t <= 0) resolveExpedition(a);
     }
   }
+}
+
+/* ============================ artifacts ============================ */
+
+const A_SLOTS = ["weapon", "armour", "trinket"];
+const RARITIES = ["common", "fine", "rare"];
+const EFFECT = { weapon:{ common:0.04, fine:0.08, rare:0.14 },
+                 armour:{ common:0.03, fine:0.05, rare:0.08 },
+                 trinket:{ common:0.15, fine:0.30, rare:0.55 } };
+const APPARENT = { common:1, fine:1.8, rare:3 };
+const SLOT_NAME = { weapon:"Weapon", armour:"Armour", trinket:"Trinket" };
+const RARITY_NAME = { common:"Common", fine:"Fine", rare:"Rare" };
+
+const effectOf = a => EFFECT[a.slot][a.rarity] * (a.cursed ? -1 : 1);
+const testCost = (a, kind) =>
+  Math.round(T.TEST_BASE[kind] * APPARENT[a.clue.rarity] * Math.pow(T.TEST_GROWTH, a.tests));
+const artName = l => l ? (RARITY_NAME[l.rarity] + " " + SLOT_NAME[l.slot] + (l.cursed ? " (cursed)" : ""))
+                       : "Unidentified";
+
+function rollRarity(){ const r = Math.random(); return r < 0.60 ? "common" : r < 0.90 ? "fine" : "rare"; }
+function lie(truth, pool, p){                 // clues point at the truth, usually
+  if (Math.random() < p) return truth;
+  const others = pool.filter(o => o !== truth);
+  return others[(Math.random() * others.length) | 0];
+}
+
+function makeArtifact(depth){
+  const slot = A_SLOTS[(Math.random()*3)|0], rarity = rollRarity();
+  const cursed = Math.random() < T.CURSE_RATE;
+  return {
+    id: S.nextArt++, slot, rarity, cursed, depth,
+    clue: { slot: lie(slot, A_SLOTS, 0.75), rarity: lie(rarity, RARITIES, 0.70),
+            cursed: Math.random() < 0.75 ? cursed : !cursed },
+    grid: null, cleared: 0, sites: { form:false, material:false, glyph:false },
+    tests: 0, elim: { slot:[], rarity:[], cursed:[] },
+    label: null, runs: 0, wornBy: null
+  };
+}
+
+function dropFor(a){
+  const chance = Math.min(T.DROP_CAP, T.DROP_BASE + a.depth * T.DROP_PER_DEPTH);
+  if (Math.random() >= chance) return;
+  if (S.tray.length >= T.TRAY_CAP){
+    S.notice = { txt:"Something came back. The tray was full.", t:0 };
+    return;
+  }
+  S.tray.push(makeArtifact(a.depth));
+  S.seen.artifact = true;
+  S.notice = { txt:"They brought something back.", t:0 };
+}
+
+/* gear a given adventurer is wearing, by the slot it was filed under */
+const gearIn = (a, slot) => (a.gear && a.gear[slot]) || null;
+function gearEffect(a, slot){ const g = gearIn(a, slot); return g ? effectOf(g) : 0; }
+const deathPenFor = a => Math.max(0, T.DEATH_PEN - gearEffect(a, "armour"));
+
+function loseGear(a, depth, destroy){
+  if (!a.gear) return;
+  for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (!g) continue;
+    g.wornBy = null;
+    if (!destroy) S.lost.push({ art:g, depth });
+  }
+  a.gear = null;
+}
+
+function recoverGear(a, depth){               // a deep enough run finds what the dead dropped
+  const i = S.lost.findIndex(l => l.depth <= depth);
+  if (i < 0) return;
+  const found = S.lost.splice(i, 1)[0];
+  S.inv.push(found.art);
+  S.notice = { txt:"Recovered from depth " + found.depth + ": " + artName(found.art.label), t:0 };
 }
 
 const EVENTS = ["!", "✦", "~"];           // ambush, discovery, narrow escape
@@ -623,6 +811,28 @@ function drawStrip(time){
   });
 }
 
+function trayGeom(){ const w = 34, gap = 6; return { w, gap, y: H - 26,
+  x0: fx + 16 - (T.TRAY_CAP - 1) * (w + gap) / 2 }; }
+function trayPos(i){ const g = trayGeom(); return { x: g.x0 + i * (g.w + g.gap), y: g.y }; }
+
+function drawTray(time){
+  if (!S.tray.length && !S.seen.artifact) return;
+  const g = trayGeom();
+  ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+  ctx.fillStyle = "#5a4f6b";
+  ctx.fillText("UNIDENTIFIED  " + S.tray.length + "/" + T.TRAY_CAP, fx + 16, g.y - 24);
+  for (let i = 0; i < T.TRAY_CAP; i++){
+    const p = trayPos(i), art = S.tray[i];
+    rrect(p.x, p.y, g.w, g.w, 10, art ? "#3a2c4a" : "#221a2e", 3);
+    if (!art) continue;
+    const bob = Math.sin(time*2 + i) * 1.2;
+    shape(()=>{ ctx.moveTo(p.x - 8, p.y + 7 + bob); ctx.lineTo(p.x, p.y - 9 + bob);
+                ctx.lineTo(p.x + 8, p.y + 7 + bob); ctx.closePath(); }, "#5c5468", 2.5);
+    ctx.fillStyle = "#9a8aa8"; ctx.font = "800 10px ui-rounded, system-ui, sans-serif";
+    ctx.fillText("?", p.x, p.y + 5 + bob);
+  }
+}
+
 function drawEmbers(){
   const n = T.MAX_EMBERS, gap = 15, x0 = fx + 16 - (n-1)*gap/2, y = fy + 94;
   for (let i = 0; i < n; i++)
@@ -695,6 +905,7 @@ function frame(now){
   drawFire(time);
   front.forEach(a => drawAdventurer(a, time));
   drawEmbers();
+  drawTray(time);
   drawStrip(time);
   drawFx(dt);
 
@@ -723,6 +934,14 @@ const byId = id => S.pool.find(a => a.id === id);
 cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
+
+  const tg = trayGeom();                        // the tray owns its own taps
+  if (Math.abs(y - tg.y) < 24){
+    for (let i = 0; i < S.tray.length; i++){
+      const tp = trayPos(i);
+      if (Math.abs(x - tp.x) < 20){ openArtifact(S.tray[i]); return; }
+    }
+  }
 
   const list = away();                          // the strip owns its own taps
   for (let i = 0; i < list.length; i++){
@@ -753,7 +972,7 @@ const cSub = counsel.querySelector(".cSub"), cOdds = counsel.querySelector(".cOd
 const cAct = counsel.querySelector(".cAct"), cNote = counsel.querySelector(".cNote");
 counsel.querySelector(".cClose").addEventListener("click", closeCounsel);
 
-function closeCounsel(){ S.sel = null; counsel.hidden = true; }
+function closeCounsel(){ S.sel = null; picking = null; counsel.hidden = true; }
 const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
 
 function showCounsel(a){
@@ -763,6 +982,8 @@ function showCounsel(a){
   cTone.style.background = hollow ? desat(a.tone[0]) : a.tone[0];
   cTitle.textContent = hollow ? "Hollowed" : "Adventurer";
   cSub.textContent = hollow ? "Nothing left to spend" : "Rests at your fire";
+  cGear.hidden = hollow;
+  if (hollow) cGear.innerHTML = ""; else renderGear(a);
 
   if (hollow){
     cOdds.innerHTML = "Holds a slot at the fire. Pays <b>nothing</b>, ever.<br>"
@@ -774,7 +995,7 @@ function showCounsel(a){
     cAct.onclick = () => { if (rekindle(a)) closeCounsel(); };
     cNote.textContent = "Back to the pool at depth 0, their deaths forgiven.";
   } else {
-    const d = runDepth(a), odds = Math.round(survival(d, a.deaths) * 100);
+    const d = runDepth(a), odds = Math.round(survival(d, a.deaths, a) * 100);
     const mult = (1 + d * T.DEPTH_PAY).toFixed(1).replace(/\.0$/, "");
     const left = hollowAt() - a.deaths;
     cOdds.innerHTML =
@@ -792,6 +1013,55 @@ function showCounsel(a){
   }
 }
 
+const cGear = counsel.querySelector(".cGear");
+let picking = null;
+
+function renderGear(a){
+  cGear.innerHTML = "";
+  if (picking){
+    cGear.className = "cPick";
+    const opts = S.inv.filter(g => !g.wornBy && g.label.slot === picking);
+    const worn = gearIn(a, picking);
+    if (worn){
+      const b = document.createElement("button");
+      b.textContent = "Take back the " + artName(worn.label).toLowerCase();
+      b.onclick = () => { worn.wornBy = null; a.gear[picking] = null; S.inv.push(worn); picking = null; showCounsel(a); };
+      cGear.appendChild(b);
+    }
+    if (!opts.length && !worn){
+      const b = document.createElement("button");
+      b.textContent = "Nothing identified for this slot.";
+      b.disabled = true; cGear.appendChild(b);
+    }
+    opts.forEach(g => {
+      const b = document.createElement("button");
+      b.textContent = artName(g.label);
+      b.onclick = () => {
+        a.gear = a.gear || {};
+        const old = a.gear[picking];
+        if (old){ old.wornBy = null; S.inv.push(old); }
+        a.gear[picking] = g; g.wornBy = a.id; g.runs = 0;
+        S.inv.splice(S.inv.indexOf(g), 1);
+        picking = null; showCounsel(a);
+      };
+      cGear.appendChild(b);
+    });
+    const back = document.createElement("button");
+    back.textContent = "Back"; back.onclick = () => { picking = null; showCounsel(a); };
+    cGear.appendChild(back);
+    return;
+  }
+  cGear.className = "cGear";
+  for (const slot of A_SLOTS){
+    const g = gearIn(a, slot), b = document.createElement("button");
+    b.className = g ? "filled" : "";
+    b.innerHTML = "<i>" + SLOT_NAME[slot].toUpperCase() + "</i>" +
+                  (g ? RARITY_NAME[g.label.rarity] + (g.label.cursed ? "!" : "") : "empty");
+    b.onclick = () => { picking = slot; showCounsel(a); };
+    cGear.appendChild(b);
+  }
+}
+
 function rekindle(a){
   const c = rekCost();
   if (!a || a.state !== "hollow" || S.souls < c) return false;
@@ -801,6 +1071,197 @@ function rekindle(a){
   for (let k = 0; k < 14; k++) sparks(a.x, a.y - 10, 1.1);
   render(); return true;
 }
+
+/* ==================== dusting and deduction ==================== */
+
+const artEl = document.getElementById("art");
+const artCv = document.getElementById("artCv");
+const actx  = artCv.getContext("2d");
+const artDust = document.getElementById("artDust");
+const artTest = document.getElementById("artTest");
+const artToFire = document.getElementById("artToFire");
+const AW = 240, AH = 200, GRID = 20;
+const SITES = { glyph:[0.50, 0.15], material:[0.32, 0.62], form:[0.70, 0.64] };
+let grimeCv = null, gctx = null, open_ = null, wiping = false, pick = null, testing = 0;
+
+function openArtifact(a){
+  open_ = a; artEl.hidden = false; closeCounsel();
+  if (!a.dusted){                                   // the grime only exists before it comes off
+    if (!a.grimeCv){
+      a.grid = a.grid || new Uint8Array(GRID * GRID);
+      a.grimeCv = document.createElement("canvas");
+      a.grimeCv.width = AW; a.grimeCv.height = AH;
+      grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); paintGrime();
+    } else { grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); }
+  }
+  pick = a.label ? Object.assign({}, a.label)
+                 : { slot:a.clue.slot, rarity:a.clue.rarity, cursed:a.clue.cursed };
+  artDust.hidden = a.dusted; artTest.hidden = !a.dusted;
+  document.querySelector(".artTitle").textContent = a.dusted ? "At the fire" : "Unidentified";
+  document.querySelector(".artSub").textContent = a.dusted
+    ? "Test it, or name it and find out the hard way."
+    : "Found at depth " + a.depth + ".";
+  if (a.dusted) renderTest();
+  drawArt();
+}
+function closeArtifact(){ open_ = null; artEl.hidden = true; }
+document.getElementById("artX").addEventListener("click", closeArtifact);
+
+function paintGrime(){
+  gctx.globalCompositeOperation = "source-over";
+  gctx.fillStyle = "#4a3f52"; gctx.fillRect(0, 0, AW, AH);
+  for (let i = 0; i < 420; i++){                    // crust, so wiping reads as work
+    gctx.fillStyle = ["#3d3345","#574a5e","#443a4d"][(Math.random()*3)|0];
+    gctx.beginPath();
+    gctx.arc(Math.random()*AW, Math.random()*AH, 3 + Math.random()*9, 0, 6.2832);
+    gctx.fill();
+  }
+}
+
+/* the artifact as it appears — which is not always as it is */
+function drawArt(){
+  const a = open_; if (!a) return;
+  actx.clearRect(0, 0, AW, AH);
+  const mat = { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[a.clue.rarity];
+  const dark = { common:"#5e5868", fine:"#8a6a34", rare:"#5f8f86" }[a.clue.rarity];
+  const cx = AW/2, cy = AH/2;
+  actx.lineWidth = 4; actx.strokeStyle = "#0c0812"; actx.lineJoin = "round";
+  const box = (x, y, w, h, r, fill) => {
+    actx.beginPath();
+    actx.moveTo(x-w/2+r, y-h/2);
+    actx.arcTo(x+w/2, y-h/2, x+w/2, y+h/2, r); actx.arcTo(x+w/2, y+h/2, x-w/2, y+h/2, r);
+    actx.arcTo(x-w/2, y+h/2, x-w/2, y-h/2, r); actx.arcTo(x-w/2, y-h/2, x+w/2, y-h/2, r);
+    actx.closePath(); actx.fillStyle = fill; actx.fill(); actx.stroke();
+  };
+  if (a.clue.slot === "weapon"){                    // form is the slot tell
+    actx.beginPath(); actx.moveTo(cx, cy - 74); actx.lineTo(cx + 13, cy - 46);
+    actx.lineTo(cx + 13, cy + 30); actx.lineTo(cx - 13, cy + 30); actx.lineTo(cx - 13, cy - 46);
+    actx.closePath(); actx.fillStyle = mat; actx.fill(); actx.stroke();
+    box(cx, cy + 38, 56, 12, 5, dark);
+    box(cx, cy + 60, 14, 34, 6, dark);
+  } else if (a.clue.slot === "armour"){
+    actx.beginPath(); actx.moveTo(cx - 44, cy - 58); actx.lineTo(cx + 44, cy - 58);
+    actx.lineTo(cx + 36, cy + 34); actx.lineTo(cx, cy + 70); actx.lineTo(cx - 36, cy + 34);
+    actx.closePath(); actx.fillStyle = mat; actx.fill(); actx.stroke();
+    box(cx, cy - 4, 42, 60, 12, dark);
+  } else {
+    actx.beginPath(); actx.arc(cx, cy + 10, 46, 0, 6.2832);
+    actx.arc(cx, cy + 10, 26, 0, 6.2832, true);
+    actx.fillStyle = mat; actx.fill("evenodd");
+    actx.beginPath(); actx.arc(cx, cy + 10, 46, 0, 6.2832); actx.stroke();
+    actx.beginPath(); actx.arc(cx, cy + 10, 26, 0, 6.2832); actx.stroke();
+    actx.beginPath(); actx.arc(cx, cy - 32, 14, 0, 6.2832);
+    actx.fillStyle = dark; actx.fill(); actx.stroke();
+  }
+  const g = SITES.glyph;                            // glyph is the curse tell
+  actx.save(); actx.translate(AW*g[0], AH*g[1]);
+  actx.lineWidth = 3.4; actx.strokeStyle = a.clue.cursed ? "#c4506a" : "#e8dcc0";
+  actx.beginPath();
+  if (a.clue.cursed){ actx.moveTo(-9,-9); actx.lineTo(4,-2); actx.lineTo(-4,3); actx.lineTo(9,10); }
+  else { actx.arc(0, 0, 9, 0.5, 5.4); }
+  actx.stroke(); actx.restore();
+
+  if (!a.dusted && grimeCv) actx.drawImage(grimeCv, 0, 0);
+}
+
+function cellCleared(nx, ny){
+  const a = open_, gx = Math.min(GRID-1, (nx*GRID)|0), gy = Math.min(GRID-1, (ny*GRID)|0);
+  return a.grid[gy*GRID + gx] === 1;
+}
+
+function wipe(e){
+  const a = open_; if (!a || a.dusted) return;
+  const r = artCv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * AW / r.width, y = (e.clientY - r.top) * AH / r.height;
+  const R = 24;
+  gctx.globalCompositeOperation = "destination-out";
+  const grad = gctx.createRadialGradient(x, y, 0, x, y, R);   // soft edges, not a hard hole
+  grad.addColorStop(0, "rgba(0,0,0,1)"); grad.addColorStop(0.65, "rgba(0,0,0,0.9)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  gctx.fillStyle = grad; gctx.beginPath(); gctx.arc(x, y, R, 0, 6.2832); gctx.fill();
+
+  const cw = AW/GRID, ch = AH/GRID;
+  for (let gy = 0; gy < GRID; gy++) for (let gx = 0; gx < GRID; gx++){
+    if (a.grid[gy*GRID+gx]) continue;
+    if (Math.hypot((gx+0.5)*cw - x, (gy+0.5)*ch - y) < R*0.8){ a.grid[gy*GRID+gx] = 1; a.cleared++; }
+  }
+  for (const k in SITES) if (!a.sites[k] && cellCleared(SITES[k][0], SITES[k][1])) a.sites[k] = true;
+  for (let i = 0; i < 3; i++)
+    S.sparks.push({ x:fx + (Math.random()-0.5)*10, y:fy - 10, vx:(Math.random()-0.5)*20,
+                    vy:-14, t:0, life:0.4, col:"#6f6478" });
+  const frac = a.cleared / (GRID*GRID);
+  artToFire.disabled = frac < 0.62;
+  artToFire.textContent = frac < 0.62 ? "Keep wiping — " + Math.round(frac/0.62*100) + "%" : "To the fire";
+  drawArt();
+}
+artCv.addEventListener("pointerdown", e => { wiping = true; artCv.setPointerCapture(e.pointerId); wipe(e); });
+artCv.addEventListener("pointermove", e => { if (wiping) wipe(e); });
+artCv.addEventListener("pointerup",   () => { wiping = false; });
+artCv.addEventListener("pointercancel", () => { wiping = false; });
+
+artToFire.addEventListener("click", () => {
+  const a = open_; if (!a) return;
+  a.dusted = true; openArtifact(a);
+});
+
+/* ---- deduction ---- */
+const AXES = { slot:A_SLOTS, rarity:RARITIES, cursed:[false, true] };
+const axisLabel = (axis, v) => axis === "cursed" ? (v ? "Cursed" : "Blessed")
+                 : axis === "slot" ? SLOT_NAME[v] : RARITY_NAME[v];
+
+function renderTest(){
+  const a = open_; if (!a) return;
+  for (const axis of ["slot","rarity","cursed"]){
+    const host = artTest.querySelector('.axis[data-axis="' + axis + '"]');
+    host.innerHTML = "";
+    for (const v of AXES[axis]){
+      const b = document.createElement("button");
+      b.textContent = axisLabel(axis, v);
+      const out = a.elim[axis].indexOf(v) >= 0;
+      b.className = (out ? "out " : "") + (pick[axis] === v ? "on" : "");
+      b.disabled = out;
+      b.addEventListener("click", () => { pick[axis] = v; renderTest(); });
+      host.appendChild(b);
+    }
+  }
+  const LABELS = { sound:"Sound it<br>narrows slot", heat:"Heat it<br>narrows rarity",
+                   bleed:"Bleed it<br>reads the curse" };
+  artTest.querySelectorAll(".tests button").forEach(b => {
+    const kind = b.dataset.test, axis = kind === "sound" ? "slot" : kind === "heat" ? "rarity" : "cursed";
+    const left = AXES[axis].filter(v => a.elim[axis].indexOf(v) < 0).length;
+    const c = testCost(a, kind);
+    b.innerHTML = LABELS[kind] + "<b>" + (left <= 1 ? "done" : fmt(c)) + "</b>";
+    b.disabled = testing > 0 || left <= 1 || S.souls < c;
+    b.onclick = () => runTest(a, kind, axis, c);
+  });
+  document.getElementById("artName").textContent =
+    "Name it: " + artName(pick);
+}
+
+function runTest(a, kind, axis, cost){
+  if (S.souls < cost || testing) return;
+  S.souls -= cost; a.tests++; testing = 1;
+  const truth = axis === "cursed" ? a.cursed : a[axis];
+  const wrong = AXES[axis].filter(v => v !== truth && a.elim[axis].indexOf(v) < 0);
+  artTest.querySelectorAll(".tests button").forEach(b => b.disabled = true);
+  setTimeout(() => {                                 // a few seconds at the fire
+    if (wrong.length) a.elim[axis].push(wrong[(Math.random()*wrong.length)|0]);
+    const left = AXES[axis].filter(v => a.elim[axis].indexOf(v) < 0);
+    if (left.indexOf(pick[axis]) < 0) pick[axis] = left[0];
+    testing = 0; renderTest(); refresh();
+  }, 1800);
+  renderTest();
+}
+
+document.getElementById("artName").addEventListener("click", () => {
+  const a = open_; if (!a || !a.dusted) return;
+  a.label = { slot:pick.slot, rarity:pick.rarity, cursed:pick.cursed };
+  a.runs = 0;
+  const i = S.tray.indexOf(a); if (i >= 0) S.tray.splice(i, 1);
+  S.inv.push(a);
+  S.seen.ident = true; if (a.cursed) S.seen.curse = true;
+  closeArtifact(); render();
+});
 
 /* ============================ ui ============================ */
 
