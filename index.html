@@ -86,6 +86,17 @@
     background:var(--panel);border-top:3px solid var(--line);
     display:flex;flex-direction:column;
   }
+  #tip{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:9px 12px;background:#2e2440;border-bottom:3px solid var(--line);
+    font-size:12px;font-weight:700;color:var(--gold);
+  }
+  #tip[hidden]{display:none}
+  #tip span{flex:1 1 auto;line-height:1.35}
+  #tipX{
+    flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:3px solid var(--line);
+    background:var(--panel);color:var(--dim);font:inherit;font-size:11px;
+  }
   #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
   .tab{
     flex:1;padding:13px 0;background:var(--panel-2);color:var(--dim);
@@ -128,7 +139,7 @@
   </div>
   <div id="pop">
     <span><i class="dFire"></i><em id="pFire">0</em> at fire</span>
-    <span><i class="dAway"></i><em id="pAway">0</em> away</span>
+    <span><i class="dAway"></i><em id="pAway">0</em> on expedition</span>
     <span><i class="dHollow"></i><em id="pHollow">0</em> hollow</span>
   </div>
 
@@ -147,6 +158,10 @@
   </div>
 
   <div id="bottom">
+    <div id="tip" hidden>
+      <span>Deeper adventurers pay more, and die more.</span>
+      <button id="tipX">✕</button>
+    </div>
     <div id="tabs">
       <button class="tab on" data-tab="skills">Skills</button>
       <button class="tab" data-tab="build">Build</button>
@@ -162,19 +177,19 @@
 
 /* ============================ tuning ============================
 
-   Survival is the one place these numbers depart from the v1 spec.
-   The spec's 0.60 base / -0.06 per depth kills 40% of shallow runs;
-   across a pool of 12 on 45s cycles that manufactures a hollow roughly
-   every minute, and the sanctuary is fully hollowed by minute 10 —
-   long before the Herbalist that is supposed to answer it.
-   0.84 / -0.05 keeps the shape (base + vendors - depth, same clamps)
-   and lands the spec's own pacing targets: first hollow ~6min,
-   Herbalist ~12min, choke ~22min, later still if you rekindle.
-   Everything else below is the spec's number.                        */
+   Deaths now scar permanently and depth halves instead of resetting,
+   so dying no longer hands an adventurer their survivability back.
+   DEATH_PEN is the spec's 0.10; SURV_BASE is the dial that moved.
+   At 0.84 the spiral runs far too hot — first hollow at 5 minutes and
+   a choked sanctuary by 11 — so base goes up, not the penalty down.
+   0.98 keeps the slide legible (92% fresh, 80% at depth 4 with one
+   death, 70% with two) and lands: first hollow ~7min (p90 13),
+   Herbalist ~10, choke ~19, ~22 if you rekindle, and a Counsel-heavy
+   player stalls past 30 without ever escaping it.                    */
 
 const T = {
   POOL:12, SLOTS:8, AWAY:45, REST:12, WALK:62,
-  SURV_BASE:0.84, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05,
+  SURV_BASE:0.98, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05, DEATH_PEN:0.10,
   SURV_MIN:0.15, SURV_MAX:0.92,
   HOLLOW_AT:3, HOLLOW_AT_HERB:4,
   DEPTH_PAY:0.5,
@@ -207,8 +222,9 @@ const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindl
 const hollowAt  = () => S.herb ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
 const payFor    = a => Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY));
 const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
-const survival  = d => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
-                    T.SURV_BASE + (S.smith ? T.SURV_SMITH : 0) + (S.herb ? T.SURV_HERB : 0) - d * T.DEPTH_PEN));
+const survival  = (d, deaths) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
+                    T.SURV_BASE + (S.smith ? T.SURV_SMITH : 0) + (S.herb ? T.SURV_HERB : 0)
+                    - d * T.DEPTH_PEN - deaths * T.DEATH_PEN));
 const hollows   = () => S.pool.filter(a => a.state === "hollow");
 const living    = () => S.pool.filter(a => a.state !== "hollow");
 const avgRate   = () => {                 // never divide by a window too short to mean anything
@@ -310,19 +326,29 @@ function sitDown(a){
 }
 
 function resolveExpedition(a){
-  const d = runDepth(a), survived = Math.random() < survival(d);
+  const d = runDepth(a), survived = Math.random() < survival(d, a.deaths);
   a.shallow = false;
   if (survived){
     if (a.depth === d) a.depth = d + 1;   // sent shallow: banked, not deepened
+    if (a.depth === 1 && !S.tipSeen) showTip();
   } else {
-    a.deaths++; a.depth = 0;
-    if (a.deaths >= hollowAt()){
-      a.state = "hollow"; a.t = 0; a.queue = 0;
-      if (S.sel === a.id) showCounsel(a);
-      return;
-    }
+    a.deaths++;
+    a.depth = Math.floor(a.depth / 2);    // a setback, not a reset — the scar stays
+    if (a.deaths >= hollowAt()){ goHollow(a); return; }
   }
   edgeSpawn(a); a.state = "walkin";
+}
+
+function goHollow(a){                     // the thing the whole system exists to produce
+  a.state = "hollow"; a.t = 0;
+  releaseSlot(a);
+  if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
+  else { a.x = fx; a.y = fy + 78; }
+  S.notice = { txt:"Someone has gone hollow.", t:0 };
+  for (let k = 0; k < 22; k++)
+    S.sparks.push({ x:a.x + (Math.random()-0.5)*18, y:a.y - 14, vx:(Math.random()-0.5)*44,
+                    vy:-30-Math.random()*40, t:0, life:1.1 + Math.random()*0.7, col:"#8e86a0" });
+  if (S.sel === a.id) showCounsel(a);
 }
 
 function updatePool(dt){
@@ -402,12 +428,19 @@ function figure(x, y, h, w, cloak, hood, dir, face){
   circle(x + dir*w*0.16, y - h - 1, w*0.30, face || "#e8cfae", 3);
 }
 
+function drawPips(x, y, deaths, cap, hollow){
+  const gap = 9, x0 = x - (cap - 1) * gap / 2;
+  for (let i = 0; i < cap; i++)
+    circle(x0 + i*gap, y, 3.4, i < deaths ? (hollow ? "#6a6270" : "#ff5f3d") : "#2a2136", 2.5);
+}
+
 function drawAdventurer(a, time){
   if (a.state === "hollow"){
     const x = a.x, y = a.y;
     ctx.save(); ctx.translate(x, y); ctx.rotate(0.13); ctx.translate(-x, -y);
     figure(x, y, 13, 21, desat(a.tone[0]), desat(a.tone[1]), 1, "#544d5e");
     ctx.restore();
+    drawPips(x, y + 14, a.deaths, Math.max(a.deaths, hollowAt()), true);
     return;
   }
   const rest = a.state === "rest", bob = rest ? 0 : Math.sin(a.bob) * 1.8;
@@ -429,10 +462,7 @@ function drawAdventurer(a, time){
     ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
     ctx.fillStyle = "#0c0812"; ctx.fillText("↓", a.x + 17, top + 4);
   }
-  if (a.deaths > 0 && rest){                        // scars: one notch per death
-    for (let i = 0; i < a.deaths; i++)
-      circle(a.x - 8 + i*7, y - 4, 2.4, "#0c0812", 2);
-  }
+  drawPips(a.x, y + 14, a.deaths, hollowAt(), false);   // how close they are, at a glance
 }
 
 function drawBlacksmith(time){
@@ -480,7 +510,7 @@ function drawFx(dt){
     const p = S.sparks[i]; p.t += dt;
     if (p.t > p.life){ S.sparks.splice(i,1); continue; }
     p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 14*dt;
-    ctx.globalAlpha = 1 - p.t/p.life; ctx.fillStyle = "#ffd06b";
+    ctx.globalAlpha = 1 - p.t/p.life; ctx.fillStyle = p.col || "#ffd06b";
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -538,6 +568,19 @@ function frame(now){
   drawEmbers();
   drawFx(dt);
 
+  if (S.notice){
+    S.notice.t += dt;
+    if (S.notice.t > 4.5) S.notice = null;
+    else {
+      const n = S.notice;
+      ctx.globalAlpha = n.t < 0.3 ? n.t / 0.3 : Math.min(1, (4.5 - n.t) / 1.2);
+      ctx.font = "800 15px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.lineWidth = 5; ctx.strokeStyle = "#0c0812";
+      ctx.strokeText(n.txt, fx, 30); ctx.fillStyle = "#c9bfd6"; ctx.fillText(n.txt, fx, 30);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   uiT += dt;
   if (uiT > 0.15){ uiT = 0; refresh(); if (S.sel != null) showCounsel(byId(S.sel)); }
   requestAnimationFrame(frame);
@@ -583,14 +626,11 @@ function showCounsel(a){
   const hollow = a.state === "hollow";
   cTone.style.background = hollow ? desat(a.tone[0]) : a.tone[0];
   cTitle.textContent = hollow ? "Hollowed" : "Adventurer";
-  cSub.textContent = hollow
-    ? plural(a.deaths, "death") + ", and nothing left to spend"
-    : a.deaths === 0
-      ? "Depth " + a.depth + " · unscarred"
-      : "Depth " + a.depth + " · " + plural(a.deaths, "death") + " · " + (hollowAt() - a.deaths) + " from hollowing";
+  cSub.textContent = hollow ? "Nothing left to spend" : "Rests at your fire";
 
   if (hollow){
-    cOdds.innerHTML = "Holds a slot at the fire. Pays <b>nothing</b>, ever.";
+    cOdds.innerHTML = "Holds a slot at the fire. Pays <b>nothing</b>, ever.<br>"
+                    + plural(a.deaths, "death") + ", and no more expeditions.";
     const c = rekCost();
     cAct.textContent = "Rite of Rekindling — " + fmt(c);
     cAct.className = "cAct warm";
@@ -598,9 +638,14 @@ function showCounsel(a){
     cAct.onclick = () => { if (rekindle(a)) closeCounsel(); };
     cNote.textContent = "Back to the pool at depth 0, their deaths forgiven.";
   } else {
-    const d = runDepth(a), odds = Math.round(survival(d) * 100);
-    cOdds.innerHTML = "Survives the next expedition <b>" + odds + "%</b> of the time, and pays <b>"
-                    + fmt(payFor(a)) + "</b> when they come back.";
+    const d = runDepth(a), odds = Math.round(survival(d, a.deaths) * 100);
+    const mult = (1 + d * T.DEPTH_PAY).toFixed(1).replace(/\.0$/, "");
+    const left = hollowAt() - a.deaths;
+    cOdds.innerHTML =
+      "Depth " + d + ". Pays <b>" + mult + "x</b>, or " + plural(payFor(a), "soul") + ".<br>" +
+      "Deaths " + a.deaths + " of " + hollowAt() + ". " +
+      (left === 1 ? "One more and they hollow." : left === 2 ? "Two more and they hollow." : "Unscarred.") + "<br>" +
+      "Survival <b>" + odds + "%</b>.";
     cAct.textContent = a.shallow ? "Sent shallow" : "Send shallow";
     cAct.className = "cAct";
     cAct.disabled = a.shallow || a.depth === 0;
@@ -667,7 +712,7 @@ function render(){
       glyph:"✨", tint:"#4a3c2c", name:"Rite of Rekindling", level:S.rekindles, level2:()=>S.rekindles,
       desc:()=> hollows().length
         ? "Clears one hollow and returns them to the pool, depth 0, deaths forgiven."
-        : "Nothing to rekindle. No one has hollowed yet.",
+        : "The way back from hollowing. Nothing to rekindle yet — no one has gone.",
       label:()=>fmt(rekCost()),
       enabled:()=> hollows().length > 0 && S.souls >= rekCost(),
       onBuy(){ rekindle(hollows()[0]); }
@@ -714,6 +759,10 @@ function refresh(){
   popEl.hollow.textContent = hollows().length;
   rows.forEach(u => u());
 }
+
+const tipEl = document.getElementById("tip");
+function showTip(){ if (S.tipSeen) return; S.tipSeen = true; tipEl.hidden = false; }
+document.getElementById("tipX").addEventListener("click", ()=>{ tipEl.hidden = true; });
 
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
