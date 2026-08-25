@@ -39,6 +39,22 @@
   #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
   #rate{font-size:11px;color:var(--dim);text-align:right;line-height:1.5}
   #rate b{display:block;font-size:16px;color:var(--text)}
+  #bookBtn{
+    flex:0 0 auto;margin-left:12px;width:38px;height:38px;border-radius:11px;
+    border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
+  }
+  #book{
+    position:fixed;inset:0;z-index:20;background:#15101c;
+    display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  #book[hidden]{display:none}
+  .bookTop{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:3px solid var(--line);
+    background:var(--panel);
+  }
+  .bookTop h3{margin:0;font-size:15px;letter-spacing:.06em}
+  .bookTop p{margin:3px 0 0;font-size:11px;font-weight:600;color:var(--dim);font-style:italic}
+  #bookList{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
   #pop{
     flex:0 0 auto;display:flex;gap:14px;padding:0 16px 9px;
     background:var(--panel);border-bottom:3px solid var(--line);
@@ -187,6 +203,7 @@
   <div id="top">
     <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div></div>
     <div id="rate"><b>0.0</b>avg / sec, last 60s</div>
+    <button id="bookBtn" title="The keeper's notes">📕</button>
   </div>
   <div id="pop">
     <span><i class="dFire"></i><em id="pFire">0</em> at fire</span>
@@ -232,6 +249,14 @@
     </div>
   </div>
 
+  <div id="book" hidden>
+    <div class="bookTop">
+      <div><h3>The keeper's notes</h3><p>Kept because no one else was going to.</p></div>
+      <button class="cClose" id="bookX" style="margin-left:auto">✕</button>
+    </div>
+    <div id="bookList"></div>
+  </div>
+
   <div id="bottom">
     <div id="tip" hidden>
       <span>Deeper adventurers pay more, and die more.</span>
@@ -240,7 +265,6 @@
     <div id="tabs">
       <button class="tab on" data-tab="skills">Skills</button>
       <button class="tab" data-tab="build">Build</button>
-      <button class="tab" data-tab="archive">Archive</button>
     </div>
     <div id="list"></div>
     <div class="note" id="note"></div>
@@ -264,7 +288,7 @@
    player stalls past 30 without ever escaping it.                    */
 
 const T = {
-  POOL:12, SLOTS:8, AWAY:45, REST:12, WALK:62,
+  POOL:12, SLOTS:8, AWAY:30, REST:20, WALK:62,
   SURV_BASE:0.98, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05, DEATH_PEN:0.10,
   SURV_MIN:0.15, SURV_MAX:0.92,
   HOLLOW_AT:3, HOLLOW_AT_HERB:4,
@@ -283,67 +307,70 @@ const S = {
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
   seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false },
   tray:[], inv:[], lost:[], nextArt:1,
-  earnLog:[], floats:[], sparks:[]
+  earnLog:[], floats:[], sparks:[], says:[]
 };
 
 const ARCHIVE = [
   { name:"Souls", open:()=>true, body:
-    "The only currency. Adventurers pay them for a night at your fire, and you spend them on "
-    + "skills, vendors, the bell, and testing what they drag home." },
+    "What they pay with. I have never asked where it comes from and they have never offered. "
+    + "It buys skills, vendors, the bell, and whatever the smith and the herbalist want for their "
+    + "work. It does not buy anyone back." },
+  { name:"The fire", open:()=>true, body:
+    "It does not need me. I tend it anyway. Stoking it by hand pulls a soul out of the embers, "
+    + "ten of them at a time, and one comes back every two seconds. Early on that is most of the "
+    + "money. Later it is a thing to do with my hands." },
   { name:"Expeditions", open:()=>true, body:
-    "A guest rests, pays, and leaves for 45 seconds. The strip on the left is where they are: "
-    + "the marker descends as they go deeper, and the number on it is their depth." },
+    "They rest twenty seconds, pay, and go down for thirty. The track on the left is how I know "
+    + "where they are. The number on the marker is how deep. The pips beside it are how many "
+    + "times they have already died." },
   { name:"The bell", open:()=>true, body:
-    "Tap a marker on the strip to call someone home. They arrive alive, no deeper than they "
-    + "left, and they pay you nothing. It costs more every time you ring it." },
+    "Rung, it brings one of them straight back up. They arrive alive, no deeper than they went, "
+    + "and they owe me nothing, which is the point and also the cost. It asks more of me every "
+    + "time I ring it." },
   { name:"Depth", open:()=>S.seen.depth, body:
-    "Each survived expedition takes them one layer deeper. A rest pays more the deeper they "
-    + "are — depth 4 pays three times what a fresh arrival does — and every layer costs 5% "
-    + "survival. Depth is where the money is and depth is what kills them." },
+    "Every run they survive takes them one layer further down. A rest pays half again as much for "
+    + "each layer, so the ones who go deepest keep this place standing. Each layer also takes five "
+    + "points off their odds of coming back. Both of those things are the same sentence." },
   { name:"Deaths and scars", open:()=>S.seen.death, body:
-    "Dying is not the end of an adventurer. They come back, halved in depth and carrying a "
-    + "scar: 10% off their survival, permanently. The red pips under a figure are the count. "
-    + "Nothing removes a scar except the Rite of Rekindling." },
+    "Dying does not end them. It halves how deep they are and it takes ten points off their odds "
+    + "for good. The red pips under a figure are how many they have taken. Nothing lifts a scar "
+    + "but the rite, and the rite is not cheap." },
   { name:"Hollowing", open:()=>S.seen.hollow, body:
-    "Three deaths and they hollow. A hollow sits at your fire grey and slumped, pays nothing, "
-    + "never leaves, and holds a slot forever. There are 8 slots; the Blacksmith keeps 2 and "
-    + "the Herbalist 1. Count what is left." },
-  { name:"Rekindling", open:()=>S.seen.hollow, body:
-    "The way back. It clears one hollow and returns them to the pool at depth 0 with their "
-    + "deaths forgiven. The price rises every time, faster than your income does." },
-  { name:"Vendors", open:()=>true, body:
-    "The Blacksmith pays you 2 more per rest and adds 12% survival. The Herbalist adds 8% "
-    + "survival and buys everyone a fourth death before they hollow. Both hold slots that "
-    + "guests can no longer sit in." },
-  { name:"Artifacts", open:()=>S.seen.artifact, body:
-    "A survivor sometimes drags something home — 12% of the time, plus 3% per layer of depth. "
-    + "It lands in the tray on the sanctuary floor, filthy and unreadable. The tray holds 6. "
-    + "Fill it and the next find is left where it lay." },
-  { name:"Dusting", open:()=>S.seen.artifact, body:
-    "Tap a find and drag across it to clean it. Three things surface as the grime comes off: "
-    + "its form, which suggests the slot; its material, which suggests the rarity; and a glyph, "
-    + "which suggests whether it is cursed. Suggests. Not proves." },
-  { name:"Testing", open:()=>S.seen.artifact, body:
-    "At the fire you can sound it to narrow the slot, heat it to narrow the rarity, or bleed it "
-    + "to read the curse. Each test costs souls, costs more than the last one on that piece, and "
-    + "costs more again if the piece looks valuable. Testing eats the profit the thing represents." },
-  { name:"Naming and being wrong", open:()=>S.seen.ident, body:
-    "Naming a piece files it under whatever you decided. What it actually does is whatever it "
-    + "actually is. A cursed ring filed as blessed will be worn by someone who trusts you, and "
-    + "you will find out what it was by watching what happens to them. After three expeditions "
-    + "the truth is obvious and the label corrects itself." },
-  { name:"Curses", open:()=>S.seen.curse, body:
-    "Roughly one find in seven is cursed, and a cursed piece does the opposite of what its kind "
-    + "should: a weapon that costs survival, armour that deepens the scar, a trinket that thins "
-    + "the purse. It looks identical to a clean one until you test it." },
-  { name:"Losing gear", open:()=>S.seen.artifact, body:
-    "Whatever someone is wearing when they die stays down there at the depth they died. Any "
-    + "adventurer who later survives a run that deep brings a piece of it back. Whatever someone "
-    + "is wearing when they hollow is gone for good." },
+    "The third death does it. The fourth, if the herbalist is here. Afterwards they sit where I "
+    + "put them, grey, and they do not pay and they do not leave. There are eight places at the "
+    + "fire. The smith keeps two and the herbalist one. Count what is left and you will see the "
+    + "shape of the end." },
+  { name:"The rite of rekindling", open:()=>S.seen.hollow, body:
+    "It brings one of them back from grey: no depth, no scars, no memory of it that I can see. "
+    + "The price climbs every time and my income does not climb with it. I have not decided yet "
+    + "whether it is mercy." },
+  { name:"The vendors", open:()=>true, body:
+    "The smith takes two places and gives back two souls a rest and twelve points of survival. "
+    + "The herbalist takes one place, gives eight points, and buys everyone a fourth death. They "
+    + "are worth their room. Everything at this fire costs room." },
   { name:"Counsel", open:()=>S.seen.depth, body:
-    "Tap someone resting to see what they are worth and how close they are to hollowing. "
-    + "Send shallow runs their next expedition one layer short: safer, poorer, no new depth. "
-    + "It is how you bank a veteran instead of pushing them." }
+    "Sitting with one of them tells me what they are worth and how close they are. Sending them "
+    + "shallow means one layer short of where they have been: better odds, a thinner purse, and "
+    + "no new ground. It is how you keep a veteran instead of spending one." },
+  { name:"What they bring back", open:()=>S.seen.artifact, body:
+    "Twelve times in a hundred, and three more for every layer down, one of them comes up "
+    + "carrying something. It arrives filthy. The tray by the fire holds six and I have watched "
+    + "a full tray turn a find into nothing." },
+  { name:"Cleaning a find", open:()=>S.seen.artifact, body:
+    "Wiping the grime off tells me three things: the shape of it, what it is made of, and whether "
+    + "there is a mark on it. All three have lied to me before." },
+  { name:"Naming a find", open:()=>S.seen.ident, body:
+    "Whatever I write down is what we call it. What it does is what it always was. If I am wrong, "
+    + "I find out by watching whoever trusted me enough to wear it, and after three runs the truth "
+    + "is plain enough to correct the book." },
+  { name:"Cursed things", open:()=>S.seen.curse, body:
+    "Some of what comes up is owed on. A cursed piece does the opposite of its kind: a blade that "
+    + "costs survival, plate that deepens the scar, a charm that thins the purse. Clean, it looks "
+    + "exactly like the other sort." },
+  { name:"What the dead leave", open:()=>S.seen.artifact, body:
+    "Whatever they were wearing stays at the depth that took them. Someone who survives a run that "
+    + "deep brings a piece of it up again. Whatever they were wearing when they hollowed is gone, "
+    + "and I have stopped going to look." }
 ];
 
 const NODES = [
@@ -484,6 +511,7 @@ function sitDown(a){
     const doubled = Math.random() < echoChance();
     earn(payFor(a) * (doubled ? 2 : 1), a.x, a.y - 26, doubled);
   }
+  if (a.pending){ say(a, a.pending); a.pending = null; }
   a.shallow = false;                    // the discount is spent on this rest
   for (let k = 0; k < 4; k++) sparks(a.x, a.y - 10, 0.7);
 }
@@ -497,8 +525,10 @@ function resolveExpedition(a){
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
     dropFor(a);
     recoverGear(a, d);
+    if (Math.random() < 0.25) a.pending = oneOf(d >= 5 ? LINES.deepRet : LINES.ret);
   } else {
     a.deaths++; S.seen.death = true;
+    if (a.deaths === 1) a.pending = oneOf(LINES.firstDeath);
     const hollowing = a.deaths >= hollowAt();
     loseGear(a, d, hollowing);            // dropped at depth, unless they hollow — then it burns
     a.depth = Math.floor(a.depth / 2);    // a setback, not a reset — the scar stays
@@ -513,6 +543,8 @@ function goHollow(a){                     // the thing the whole system exists t
   releaseSlot(a);
   if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
   else { a.x = fx; a.y = fy + 78; }
+  const first = !S.everHollowed; S.everHollowed = true;
+  say(a, oneOf(first ? LINES.firstHollow : LINES.hollow));
   S.notice = { txt:"Someone has gone hollow.", t:0 };
   for (let k = 0; k < 22; k++)
     S.sparks.push({ x:a.x + (Math.random()-0.5)*18, y:a.y - 14, vx:(Math.random()-0.5)*44,
@@ -641,6 +673,67 @@ function recoverGear(a, depth){               // a deep enough run finds what th
   S.inv.push(found.art);
   S.notice = { txt:"Recovered from depth " + found.depth + ": " + artName(found.art.label), t:0 };
 }
+
+/* ============================ voice ============================
+   Flat, past tense, no jokes. Written on a gravestone, not a tooltip. */
+
+const LINES = {
+  hollow: [ "The fire stopped being warm.", "Something went out and did not come back.",
+            "They forgot which one was the door.", "No one saw the moment it happened.",
+            "The eyes stayed open. Nothing behind them." ],
+  firstHollow: [ "This is what the third death looks like." ],
+  firstDeath: [ "They came back wrong the first time. They always do.",
+                "Something was left behind down there." ],
+  ret: [ "They did not talk about it.", "Came back lighter than they went.",
+         "Sat closer to the fire than before.", "Counted the others twice.",
+         "Wiped something off their hands for a long while.", "Slept without lying down." ],
+  deepRet: [ "Said the dark had a floor.", "Something down there knew their name.",
+             "Came back up counting.", "Would not say what turned back." ]
+};
+const oneOf = arr => arr[(Math.random() * arr.length) | 0];
+
+function say(a, txt){
+  S.says.push({ id:a.id, x:a.x, y:a.y - 44, txt, t:0 });
+  if (S.says.length > 4) S.says.shift();
+}
+
+const ART_LINES = {
+  weapon: {
+    common: [ "Notched, and sharpened past its best shape.",
+              "The grip was rewrapped by someone in a hurry.",
+              "Cheap steel. It had still been used." ],
+    fine:   [ "Balanced by a hand that knew the work.",
+              "Someone kept it oiled to the end.",
+              "A maker's mark, filed half away." ],
+    rare:   [ "It does not dull. That was noticed early.",
+              "Older than the sanctuary, and less patient.",
+              "The edge is quiet where the rest of it is not." ]
+  },
+  armour: {
+    common: [ "Dented inward, twice, in the same place.",
+              "Straps replaced with something that was not leather.",
+              "It had already failed once." ],
+    fine:   [ "Fitted. Someone measured for this.",
+              "Scored across the back, which says enough.",
+              "Repaired well, and often." ],
+    rare:   [ "Nothing has managed to mark it yet.",
+              "Cold to hold, and colder to wear.",
+              "It remembers a better owner." ]
+  },
+  trinket: {
+    common: [ "Worn smooth by a thumb, over years.",
+              "Not worth anything. Carried anyway.",
+              "A knot of wire and someone's hair." ],
+    fine:   [ "Kept in a pocket, not on a hand.",
+              "It was a gift, going by the inscription.",
+              "Small, and expensive, and never sold." ]
+    , rare: [ "The dark parts of it move when watched.",
+              "Whoever set these stones did not finish.",
+              "It hums against the teeth." ]
+  }
+};
+const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn.",
+                      "The last owner is still paying.", "It takes the difference back." ];
 
 const EVENTS = ["!", "✦", "~"];           // ambush, discovery, narrow escape
 
@@ -833,6 +926,43 @@ function drawTray(time){
   }
 }
 
+/* ============================ the keeper ============================ */
+
+const K = { x:0, y:0, tx:0, ty:0, mode:"idle", t:0, dir:1, placed:false };
+
+function keeperGoTo(x, y, mode){ K.tx = x; K.ty = y; K.mode = mode || "attend"; K.t = 0; }
+function keeperIdle(){ keeperGoTo(fx - 62, fy + 30, "idle"); }
+
+function updateKeeper(dt){
+  if (!K.placed){ K.x = fx - 62; K.y = fy + 30; K.tx = K.x; K.ty = K.y; K.placed = true; }
+  if (S.sel != null){                        // stands with whoever you are counselling
+    const who = S.pool.find(o => o.id === S.sel);
+    if (who && who.state !== "away") keeperGoTo(who.x + (who.x > fx ? -34 : 34), who.y + 6, "attend");
+  } else if (K.mode !== "idle" && (K.t += dt) > 6) keeperIdle();
+  const dx = K.tx - K.x, dy = K.ty - K.y, d = Math.hypot(dx, dy);
+  if (d > 2){ const sp = Math.min(d, 54 * dt); K.x += dx/d * sp; K.y += dy/d * sp; K.dir = dx >= 0 ? 1 : -1; }
+}
+
+function drawKeeper(time){
+  const walking = Math.hypot(K.tx - K.x, K.ty - K.y) > 2;
+  const sway = walking ? Math.sin(time * 9) * 1.6 : Math.sin(time * 1.4) * 0.8;
+  const y = K.y + sway;
+  shape(()=>ctx.ellipse(K.x, K.y + 6, 17, 5, 0, 0, 6.2832), "rgba(0,0,0,0.34)", 0.001);
+  shape(()=>{ ctx.moveTo(K.x - 12, y - 40); ctx.lineTo(K.x + 12, y - 40);
+              ctx.lineTo(K.x + 17, y + 2); ctx.quadraticCurveTo(K.x, y + 9, K.x - 17, y + 2);
+              ctx.closePath(); }, "#2b2136", 4);                      // taller, plainer robe
+  rrect(K.x, y - 22, 30, 7, 3, "#e0904a", 3);                          // the one warm colour
+  circle(K.x, y - 44, 13, "#241a30", 4);                               // deep hood
+  circle(K.x + K.dir * 3, y - 43, 6, "#3a2c4a", 3);                    // no face to speak of
+  const tend = K.mode === "tend" && !walking;                          // leans in to feed the fire
+  ctx.save();
+  ctx.translate(K.x + K.dir * 13, y - 26);
+  ctx.rotate(K.dir * (tend ? 0.5 + Math.sin(time * 2.2) * 0.22 : 0.15 + Math.sin(time * 0.9) * 0.06));
+  rrect(0, 0, 6, 34, 3, "#5a3f2c", 3);
+  circle(0, -19, 4.5, "#e0904a", 3);
+  ctx.restore();
+}
+
 function drawEmbers(){
   const n = T.MAX_EMBERS, gap = 15, x0 = fx + 16 - (n-1)*gap/2, y = fy + 94;
   for (let i = 0; i < n; i++)
@@ -854,6 +984,19 @@ function drawFx(dt){
     ctx.globalAlpha = 1;
   }
   ctx.textAlign = "center";
+  for (let i = S.says.length - 1; i >= 0; i--){
+    const q = S.says[i]; q.t += dt;
+    if (q.t > 4.2){ S.says.splice(i, 1); continue; }
+    const who = S.pool.find(o => o.id === q.id);
+    if (who && who.state !== "away"){ q.x = who.x; q.y = who.y - 44; }
+    ctx.globalAlpha = q.t < 0.5 ? q.t/0.5 : Math.min(1, (4.2 - q.t)/1.1);
+    ctx.font = "600 11px ui-rounded, system-ui, sans-serif";
+    const w = ctx.measureText(q.txt).width + 16;
+    const bx = Math.max(w/2 + 4, Math.min(W - w/2 - 4, q.x));   // never off the edge
+    rrect(bx, q.y, w, 20, 9, "rgba(20,15,28,0.9)", 2);
+    ctx.fillStyle = "#c9bfd6"; ctx.fillText(q.txt, bx, q.y + 4);
+    ctx.globalAlpha = 1;
+  }
   for (let i = S.floats.length - 1; i >= 0; i--){
     const f = S.floats[i]; f.t += dt;
     if (f.t > 1.2){ S.floats.splice(i,1); continue; }
@@ -889,6 +1032,7 @@ function frame(now){
   while (S.emberT >= T.EMBER_REGEN){ S.emberT -= T.EMBER_REGEN; S.embers = Math.min(T.MAX_EMBERS, S.embers + 1); }
 
   updatePool(dt);
+  updateKeeper(dt);
   while (S.earnLog.length && S.earnLog[0].t < S.elapsed - 60) S.earnLog.shift();
   flare = Math.max(0, flare - dt * 1.6);
   sparkT += dt;
@@ -902,8 +1046,10 @@ function frame(now){
   behind.forEach(a => drawAdventurer(a, time));
   if (S.smith) drawBlacksmith(time);
   if (S.herb) drawHerbalist(time);
+  if (K.y <= fy) drawKeeper(time);
   drawFire(time);
   front.forEach(a => drawAdventurer(a, time));
+  if (K.y > fy) drawKeeper(time);
   drawEmbers();
   drawTray(time);
   drawStrip(time);
@@ -946,7 +1092,7 @@ cv.addEventListener("pointerdown", e => {
   const list = away();                          // the strip owns its own taps
   for (let i = 0; i < list.length; i++){
     const p = markerPos(list[i], i);
-    if (Math.hypot(x - p.x, y - p.y) < 20){ ringBell(list[i]); return; }
+    if (Math.hypot(x - p.x, y - p.y) < 20){ ringBell(list[i]); keeperGoTo(fx - 78, fy - 6, "attend"); return; }
   }
 
   let hit = null, best = 34;                    // a guest is worth more than the fire behind them
@@ -955,11 +1101,13 @@ cv.addEventListener("pointerdown", e => {
     const d = Math.hypot(x - a.x, y - (a.y - 14));
     if (d < best){ best = d; hit = a; }
   }
-  if (hit){ S.sel = hit.id; showCounsel(hit); return; }
+  if (hit){ S.sel = hit.id; showCounsel(hit);
+            keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
 
   if (Math.hypot(x - fx, (y - fy + 14) * 0.85) > 84){ closeCounsel(); return; }
   S.taps++;
   if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" }); return; }
+  keeperGoTo(fx - 52, fy + 26, "tend");
   S.embers--; earn(1, fx + (Math.random()-0.5)*20, fy - 46, false); flare = 0.5;
   for (let k = 0; k < 5; k++) sparks(fx + (Math.random()-0.5)*16, fy - 22, 0.6);
 });
@@ -1297,22 +1445,24 @@ function card(o){
   });
 }
 
-function entry(e){
-  const open = e.open(), el = document.createElement("div");
-  el.className = "entry" + (open ? "" : " locked");
-  el.innerHTML = "<h4></h4><p></p>";
-  el.querySelector("h4").textContent = e.name;
-  el.querySelector("p").textContent = open ? e.body : "Not yet.";
-  listEl.appendChild(el);
+const bookEl = document.getElementById("book"), bookList = document.getElementById("bookList");
+function openBook(){
+  bookList.innerHTML = "";
+  for (const e of ARCHIVE){
+    const open = e.open(), el = document.createElement("div");
+    el.className = "entry" + (open ? "" : " locked");
+    el.innerHTML = "<h4></h4><p></p>";
+    el.querySelector("h4").textContent = e.name;
+    el.querySelector("p").textContent = open ? e.body : "Nothing written here yet.";
+    bookList.appendChild(el);
+  }
+  bookEl.hidden = false;
 }
+document.getElementById("bookBtn").addEventListener("click", openBook);
+document.getElementById("bookX").addEventListener("click", ()=>{ bookEl.hidden = true; });
 
 function render(){
   listEl.innerHTML = ""; rows = [];
-  if (S.tab === "archive"){
-    ARCHIVE.forEach(entry);
-    noteEl.textContent = "A reference, not a tutorial. It waits until you come looking.";
-    refresh(); return;
-  }
   if (S.tab === "skills"){
     NODES.forEach(n => card({
       glyph:n.glyph, tint:"#3a2c4a", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
@@ -1336,7 +1486,8 @@ function render(){
                         : "Adventurers pay for repairs. +2 souls per rest, +12% survival. Holds 2 slots.",
       label:()=> S.smith ? "Built" : fmt(T.SMITH_COST),
       enabled:()=> !S.smith && S.souls >= T.SMITH_COST, done:()=>S.smith,
-      onBuy(){ if (S.smith || S.souls < T.SMITH_COST) return; S.souls -= T.SMITH_COST; S.smith = true; evictReserved(); render(); }
+      onBuy(){ if (S.smith || S.souls < T.SMITH_COST) return; S.souls -= T.SMITH_COST; S.smith = true;
+               evictReserved(); keeperGoTo(Math.min(fx + 70, W - 70), fy + 26, "attend"); render(); }
     });
     card({
       glyph:"🌿", tint:"#3f5a3e", name:"The Herbalist", level:null, level2:()=>0,
@@ -1344,7 +1495,8 @@ function render(){
                        : "+8% survival, and adventurers hollow on the 4th death instead of the 3rd. Holds 1 slot.",
       label:()=> S.herb ? "Built" : fmt(T.HERB_COST),
       enabled:()=> !S.herb && S.souls >= T.HERB_COST, done:()=>S.herb,
-      onBuy(){ if (S.herb || S.souls < T.HERB_COST) return; S.souls -= T.HERB_COST; S.herb = true; evictReserved(); render(); }
+      onBuy(){ if (S.herb || S.souls < T.HERB_COST) return; S.souls -= T.HERB_COST; S.herb = true;
+               evictReserved(); keeperGoTo(Math.max(fx - 74, 60), fy + 20, "attend"); render(); }
     });
     noteEl.textContent = "Vendors take room at the fire. That is the whole cost of them.";
   }
