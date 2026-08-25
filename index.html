@@ -30,25 +30,25 @@
 
   /* ---------- top bar ---------- */
   #top{
-    flex:0 0 auto;padding:10px 16px 6px;
+    flex:0 0 auto;padding:9px 10px 6px;gap:6px;
     display:flex;align-items:center;justify-content:space-between;
     background:var(--panel);
   }
-  #soulWrap{display:flex;align-items:baseline;gap:8px}
-  #souls{font-size:32px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
-  #matWrap{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-left:2px}
-  #matWrap span{color:#9bd0c4;font-size:14px}
-  #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
-  #rate{font-size:10px;color:var(--dim);text-align:right;line-height:1.4;white-space:nowrap}
-  #rate b{display:block;font-size:16px;color:var(--text)}
-  #flameWrap{flex:0 0 auto;margin-left:10px;text-align:center}
+  #soulWrap{display:flex;align-items:baseline;gap:5px;min-width:0;flex-wrap:wrap}
+  #souls{font-size:25px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
+  #matWrap{font-size:9px;color:var(--dim);letter-spacing:.04em}
+  #matWrap span{color:#9bd0c4;font-size:12px}
+  #soulLabel{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+  #rate{font-size:8px;color:var(--dim);text-align:right;line-height:1.3;white-space:nowrap}
+  #rate b{display:block;font-size:13px;color:var(--text)}
+  #flameWrap{flex:0 0 auto;margin-left:6px;text-align:center}
   #flameBar{
     width:52px;height:9px;border:3px solid var(--line);border-radius:6px;background:#241a30;overflow:hidden;
   }
   #flameBar i{display:block;height:100%;width:100%;background:var(--ember);transition:width .3s linear}
   #flameNum{display:block;font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
   #bookBtn{
-    flex:0 0 auto;margin-left:12px;width:38px;height:38px;border-radius:11px;
+    flex:0 0 auto;margin-left:6px;width:34px;height:34px;border-radius:10px;
     border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
   }
   #sheet{
@@ -91,6 +91,15 @@
   canvas{display:block;width:100%;height:100%}
 
   /* ---------- counsel card ---------- */
+  #gest{
+    position:fixed;inset:0;z-index:30;background:rgba(15,11,22,0.97);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;
+  }
+  #gest[hidden]{display:none}
+  #gestCv{
+    width:260px;height:190px;border:3px solid var(--line);border-radius:14px;
+    background:#1b1526;touch-action:none;
+  }
   #art{
     position:absolute;inset:0;z-index:6;background:rgba(15,11,22,0.96);
     display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 12px;
@@ -147,6 +156,12 @@
   .cGear button i{display:block;color:var(--dim);font-style:normal;font-size:9px;letter-spacing:.08em}
   .cGear button.filled{background:var(--panel-2);color:var(--gold)}
   .cGear button.cursed{color:#e0708a}
+  .cActs{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+  .cActs button{
+    width:100%;padding:8px 10px;border:3px solid var(--line);border-radius:11px;text-align:left;
+    background:var(--panel);color:var(--text);font:inherit;font-size:11.5px;
+  }
+  .cActs button i{display:block;color:var(--dim);font-style:normal;font-size:10px;margin-top:2px}
   .cPick button b{font-size:11.5px}
   .cPick button span{color:var(--gold);font-weight:700}
   .cPick button em{color:var(--dim);font-style:italic;font-weight:600}
@@ -213,6 +228,10 @@
   .buy:active{transform:translateY(2px)}
   .buy:disabled{background:var(--disabled);color:#7d7090;transform:none}
   .buy.done{background:var(--good);color:var(--ink)}
+  .razeBtn{
+    flex:0 0 auto;margin-left:6px;padding:9px 7px;border:3px solid var(--line);border-radius:11px;
+    background:var(--panel);color:var(--dim);font:inherit;font-size:10px;
+  }
   .entry{
     background:var(--panel-2);border:3px solid var(--line);border-radius:14px;padding:10px 12px;
   }
@@ -241,6 +260,14 @@
 
   <div id="stage">
     <canvas id="cv"></canvas>
+    <div id="gest" hidden>
+      <div class="artTop">
+        <div><div class="artTitle" id="gestTitle"></div><div class="artSub" id="gestHint"></div></div>
+        <button class="cClose" id="gestX">✕</button>
+      </div>
+      <canvas id="gestCv" width="260" height="190"></canvas>
+    </div>
+
     <div id="art" hidden>
       <div class="artTop">
         <div><div class="artTitle">Unidentified</div><div class="artSub"></div></div>
@@ -330,7 +357,7 @@ const T = {
   HOLLOW_AT:3, HOLLOW_AT_HERB:4,
   DEPTH_PAY:0.5,
   SMITH_COST:200, HERB_COST:500, REK_BASE:150, REK_GROWTH:1.6,
-  BELL_BASE:40, BELL_GROWTH:1.55,
+  BELL_BASE:40, BELL_GROWTH:1.55, LETGO_COST:40,
   DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.20,
   MAT_DROP_BASE:0.10, MAT_DROP_PER_DEPTH:0.02, RELIC_CAP:3, CRAFT_SECONDS:15,
   FLAME_MAX:100, BASE_DECAY:0.037, HEARTH:0.005, FAR_FEED:0.35, HOLLOW_DECAY:0.010,
@@ -348,7 +375,9 @@ const S = {
   embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
   seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false, material:false, relic:false },
-  mat:0, relic:[], lost:[], nextArt:1, smithLv:0, herbLv:0,
+  mat:0, relic:[], lost:[], nextArt:1,
+  v:{ smith:0, herb:0, quart:0, carto:0, ossu:0, tink:0 }, plots:[null,null,null,null,null,null,null],
+  spent:{}, marked:null, freeRiteUsed:false,
   offline:null, ending:false, flameOn:true, everHollowed:false,
   flame:100, flameMax:100, runStart:0, peakDepth:0, runEarned:0,
   unlocked:0, log:[],
@@ -394,6 +423,20 @@ const ARCHIVE = [
     "The smith takes two places and gives back two souls a rest and twelve points of survival. "
     + "The herbalist takes one place, gives eight points, and buys everyone a fourth death. They "
     + "are worth their room. Everything at this fire costs room." },
+  { name:"Standing beside each other", open:()=>true, body:
+    "Two of them on neighbouring ground start working together, and it shows as a line between "
+    + "the plots. The smith beside the tinker: half again as much scrap out of anything broken. "
+    + "The herbalist beside the ossuary: letting one go lifts a death off somebody still standing. "
+    + "The quartermaster beside the cartographer: routed adventurers travel a tenth faster again. "
+    + "The smith beside the quartermaster: reforged weapons ask less scrap. The herbalist beside "
+    + "the cartographer: a marked place turns up fewer cursed things. The ossuary beside the "
+    + "tinker: what the grey leave reaches the shelf unspoiled." },
+  { name:"Ground", open:()=>true, body:
+    "Four plots to start and one more for every three levels of Kindled Flame, to seven. What "
+    + "stands inside the light works quickly and takes a seat from the ring for itself. What "
+    + "stands outside it works slower, weaker, and costs no seat. The light moves, so the same "
+    + "plot is not always the same bargain. Anything can be pulled down for half the souls put "
+    + "into it, and its levels go with it." },
   { name:"The road", open:()=>true, body:
     "Seven places, each one two layers deep, each one shut behind a gate until somebody gets "
     + "through it. A gate is tried once a fire, against what the one trying it is carrying and how "
@@ -458,23 +501,37 @@ const NODES = [
 ];
 
 const cost      = n => Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
-const perRest   = () => 1 + S.lv.flame + (S.smithLv ? 2 : 0);
+const perRest   = () => 1 + S.lv.flame + (built("smith") ? 2 : 0);
 const interval  = () => 5 * Math.pow(0.9, S.lv.word);
 const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
-const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindles));
+const peakOf    = a => Math.max(a.peak || 0, a.depth || 0);
+const rekCost   = a => a ? 120 + peakOf(a) * 45 : 120;      // a deep veteran is worth paying for
+const letGoCost = () => T.LETGO_COST;
+const letGoAsh  = a => Math.max(1, Math.floor(peakOf(a) / 5)) * (vlv("ossu") >= 1 ? 2 : 1);
 const bellCost  = () => Math.floor(T.BELL_BASE * Math.pow(T.BELL_GROWTH, S.bells));
 const away      = () => S.pool.filter(a => a.state === "away");
 const poolCap   = () => T.POOL + S.lv.circle + (has("wider") ? 2 : 0);
 const has       = k => S.meta.unlocks.indexOf(k) >= 0;
 const flameLife = () => Math.max(0, Math.min(1, S.flame / T.FLAME_MAX));
+function awayScale(a){                                     // supplies make the road shorter
+  let f = 1;
+  const q = vlv("quart");
+  if (q) f -= (q === 1 ? 0.15 : 0.25) * vEff("quart");
+  if (a && a.packed) f -= 0.05;
+  if (a && a.route != null && adjActive("quart", "carto")) f -= 0.10;
+  return Math.max(0.5, f);
+}
 const lightR    = () => (104 + S.lv.flame * 9) * (0.5 + 0.5 * flameLife());
 const ringCap   = () => Math.max(T.RING_MIN, Math.round(
                     Math.min(T.RING_MAX, T.RING_BASE + Math.floor(S.lv.flame / 2)) * (0.45 + 0.55 * flameLife())));
-const vendorSeats = () => (S.smithLv ? 2 : 0) + (S.herbLv ? 1 : 0);
+const vendorSeats = () => VENDORS.reduce((n, v) => n + (built(v.key) && inLight(plotOf(v.key)) ? v.seats : 0), 0);
 const usableSeats = () => Math.max(1, ringCap() - vendorSeats());
 
 function tickFlame(dt){
-  const alive = living().length, dead = hollows().length;
+  const alive = living().length;
+  /* The ossuary halves the pull rather than removing it: at zero the flame simply
+     stopped dying (136 minute runs in simulation), which is not a run any more. */
+  const dead = hollows().length * (vlv("ossu") >= 2 ? 0.5 : 1);
   const seats = Math.max(0, usableSeats() - dead);
   const atFire = Math.min(alive, seats);
   const feed = atFire + T.FAR_FEED * Math.max(0, alive - atFire);
@@ -482,11 +539,12 @@ function tickFlame(dt){
   S.flame = Math.max(0, Math.min(S.flameMax, S.flame - rate * dt));
   if (S.flame <= 0 && !S.ending) endRun(false);
 }
-const hollowAt  = () => S.herbLv ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
+const hollowAt  = () => built("herb") ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
 const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay) * mods(a).payMul));
-const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
+const runDepth  = a => a.route != null ? Math.min(a.depth, locFloor(a.route) + 1)
+                     : a.shallow ? Math.max(0, a.depth - 1) : a.depth;
 const survival  = (d, deaths, a) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
-                    T.SURV_BASE + (S.smithLv ? T.SURV_SMITH : 0) + (S.herbLv ? T.SURV_HERB : 0)
+                    T.SURV_BASE + (built("smith") ? T.SURV_SMITH * vEff("smith") : 0) + (built("herb") ? T.SURV_HERB * vEff("herb") : 0)
                     - d * T.DEPTH_PEN - deaths * (a ? deathPenFor(a) : T.DEATH_PEN)
                     + mods(a).surv));
 const hollows   = () => S.pool.filter(a => a.state === "hollow");
@@ -553,7 +611,7 @@ let RING_R = 108;                         // recomputed each frame: the seats si
 function slotPos(i){
   const n = Math.max(1, ringCap());
   const a = -Math.PI/2 + (i / n) * Math.PI * 2 + 0.4;
-  return { x: fx + Math.cos(a) * RING_R, y: fy + Math.sin(a) * (RING_R * 0.46) + 6 };
+  return { x: fx + Math.cos(a) * RING_R, y: fy + Math.sin(a) * (RING_R * 0.52) + 14 };
 }
 function claimSlot(a){
   const n = usableSeats();
@@ -609,6 +667,7 @@ function resolveExpedition(a){
         if (!attemptGate(a, S.unlocked + 1)){ edgeSpawn(a); a.state = "walkin"; return; }
       }
       a.depth = Math.min(wouldBe, deepestAllowed());
+      if (a.depth > (a.peak || 0)) a.peak = a.depth;
     }
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
     if (a.depth >= T.NAME_AT_DEPTH && !a.name){
@@ -619,6 +678,7 @@ function resolveExpedition(a){
     dropFor(a);
     recoverGear(a, d);
     if (Math.random() < 0.25) a.pending = oneOf(d >= 5 ? LINES.deepRet : LINES.ret);
+    a.packed = false; a.skipped = false; a.route = null;
   } else {
     a.deaths++; S.seen.death = true;
     if (a.deaths === 1) a.pending = oneOf(LINES.firstDeath);
@@ -690,7 +750,8 @@ function updatePool(dt){
       a.y += (fy + 46 - a.y) * Math.min(1, dt);
       a.dir = Math.sign(a.exit - a.x);
       if (Math.abs(a.x - a.exit) <= Math.max(6, speed * dt)){
-        a.state = "away"; a.t = T.AWAY;
+        a.state = "away";
+        a.t = T.AWAY * awayScale(a);
         a.events = [0.22 + Math.random()*0.12, 0.5 + Math.random()*0.12, 0.74 + Math.random()*0.12]
           .slice(0, 2 + (Math.random() < 0.5 ? 1 : 0))
           .map(at => ({ at, icon: EVENTS[(Math.random()*EVENTS.length)|0], fired:false }));
@@ -701,7 +762,11 @@ function updatePool(dt){
       const prog = 1 - a.t / T.AWAY;
       if (a.events) for (const e of a.events)
         if (!e.fired && prog >= e.at){
-          e.fired = true; a.flash = { icon:e.icon, t:0 };
+          e.fired = true;
+          if (a.packed && vlv("quart") >= 3 && !a.skipped){   // supplies carry them past the first
+            a.skipped = true; continue;
+          }
+          a.flash = { icon:e.icon, t:0 };
           const L = LOC[locOf(a.depth)];
           logEvent(locOf(a.depth), oneOf(L.events).replace("{n}", a.name || "Someone"));
         }
@@ -750,12 +815,16 @@ function effectLine(g){
 function makeArtifact(depth){
   const slot = A_SLOTS[(Math.random()*3)|0], rarity = rollRarity();
   const cursed = Math.random() < T.CURSE_RATE;
-  return { id:S.nextArt++, slot, rarity, cursed, depth, dusted:false,
+  return { id:S.nextArt++, slot, rarity, cursed, depth, dusted:false, loc:locOf(depth),
            line: oneOf(ART_LINES[slot][rarity]), curseLine: cursed ? oneOf(CURSE_LINES) : null,
            grid:null, cleared:0, sites:{ form:false, material:false, glyph:false },
            owner:null, craft:null };
 }
 function rollRarity(){ const r = Math.random(); return r < 0.60 ? "common" : r < 0.90 ? "fine" : "rare"; }
+
+function markedBonus(a){                       // a marked place turns up better things
+  return S.marked != null && locOf(a.depth) === S.marked ? 1 : 0;
+}
 
 function dropFor(a){
   if (Math.random() < T.MAT_DROP_BASE + a.depth * T.MAT_DROP_PER_DEPTH){
@@ -766,6 +835,11 @@ function dropFor(a){
   const chance = Math.min(T.DROP_CAP, T.DROP_BASE + a.depth * T.DROP_PER_DEPTH);
   if (Math.random() >= chance) return;
   const art = makeArtifact(a.depth);
+  if (markedBonus(a)){
+    if (art.rarity === "common") art.rarity = "fine";
+    else if (art.rarity === "fine") art.rarity = "rare";
+    if (adjActive("herb", "carto") && art.cursed && Math.random() < 0.5) art.cursed = false;
+  }
   const held = a.gear && a.gear[art.slot];
   if (held && held.rarity === art.rarity){        // a second of what they already carry
     S.mat += MAT_VALUE[art.rarity]; S.seen.material = true;
@@ -889,6 +963,78 @@ const ART_LINES = {
 const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn.",
                       "The last owner is still paying.", "It takes the difference back." ];
 
+/* ==================== the trade and the ground ==================== */
+
+const VENDORS = [
+  { key:"smith", name:"The Blacksmith", glyph:"🔨", tint:"#5a3f2c", verb:"hammer", seats:2,
+    cost:[0,200,800,2500], mat:[0,0,12,40],
+    blurb:["Pays for repairs: +2 souls a rest, +12% survival.",
+           "Reforges common into fine, on the wearer.",
+           "Reforges fine into rare. The last thing he learns.",
+           "Reforges common to fine and fine to rare, on the wearer."] },
+  { key:"herb", name:"The Herbalist", glyph:"🌿", tint:"#3f5a3e", verb:"stir", seats:1,
+    cost:[0,500,1100,3000], mat:[0,0,14,44],
+    blurb:["+8% survival, and a fourth death before anyone hollows.",
+           "Lifts a curse, though the piece comes back a grade poorer.",
+           "Lifts a curse and leaves the piece as strong as it was.",
+           "Lifts curses cleanly, and buys everyone a fourth death."] },
+  { key:"quart", name:"The Quartermaster", glyph:"🎒", tint:"#6b5a3c", verb:"pack", seats:1,
+    cost:[0,1200,2200,4000], mat:[0,0,16,46],
+    blurb:["Supplies for the road. Expeditions run 15% shorter.",
+           "Expeditions run 25% shorter.",
+           "25% shorter, and anyone packed off walks past their first trouble.",
+           "25% shorter, and the packed walk past their first trouble."] },
+  { key:"carto", name:"The Cartographer", glyph:"🗺", tint:"#4a5a74", verb:"route", seats:1,
+    cost:[0,2000,3200,5200], mat:[0,0,18,50],
+    blurb:["Maps of the road. You choose where each of them goes.",
+           "Gates are measured before they are tried, not after.",
+           "One place a fire can be marked: better things come out of it.",
+           "You route them, you see the gates, and one place a fire runs rich."] },
+  { key:"ossu", name:"The Ossuary", glyph:"⚱", tint:"#4a4458", verb:"vigil", seats:1,
+    cost:[0,900,1800,3600], mat:[0,0,14,42],
+    blurb:["Keeps the dead. Letting one go pays double ash.",
+           "The grey pull at the flame half as hard while this stands.",
+           "One rite a fire costs nothing.",
+           "Double ash, half the pull from the grey, and one free rite a fire."] },
+  { key:"tink", name:"The Tinker", glyph:"⚙", tint:"#5c5468", verb:"break", seats:1,
+    cost:[0,700,1500,3000], mat:[0,0,12,38],
+    blurb:["Deals in scrap. Gear can be broken down, off the shelf or off a back.",
+           "Scrap buys souls, badly. Souls buy scrap, worse.",
+           "One thing on the shelf a fire can be beaten into another shape.",
+           "Breaks down, trades badly, and reshapes one shelved thing a fire."] }
+];
+const VMAP = {}; VENDORS.forEach(v => VMAP[v.key] = v);
+
+const plotCount = () => Math.min(7, 4 + Math.floor(S.lv.flame / 3));
+function plotPos(i){
+  const n = Math.max(4, plotCount());
+  const a = -Math.PI / 2 + (i / n) * Math.PI * 2 + 0.55;
+  const r = 100 + (i % 3) * 30;                     // fixed ground; the light is what moves
+  return { x: fx + Math.cos(a) * r, y: fy + Math.sin(a) * r * 0.46 + 10, r };
+}
+const inLight = i => i >= 0 && plotPos(i).r <= lightR() * 1.12;
+const plotOf  = key => S.plots.indexOf(key);
+const vlv     = key => S.v[key] || 0;
+const built   = key => vlv(key) > 0;
+const vEff    = key => { const i = plotOf(key); return i < 0 ? 0 : (inLight(i) ? 1 : 0.7); };
+const vSlow   = key => { const i = plotOf(key); return i >= 0 && !inLight(i) ? 1.5 : 1; };
+
+function adjacent(k1, k2){
+  const a = plotOf(k1), b = plotOf(k2), n = Math.max(4, plotCount());
+  if (a < 0 || b < 0) return false;
+  const d = Math.abs(a - b);
+  return d === 1 || d === n - 1;
+}
+const ADJACENCIES = [
+  ["smith","tink",  "Breaking gear down yields half again as much scrap."],
+  ["herb","ossu",   "Letting one go lifts a death off somebody still standing."],
+  ["quart","carto", "Anyone routed travels a tenth faster again."],
+  ["smith","quart", "Reforging weapons asks less scrap."],
+  ["herb","carto",  "A marked place turns up fewer cursed things."],
+  ["ossu","tink",   "What the grey leave reaches the shelf unspoiled."]
+];
+const adjActive = (a, b) => built(a) && built(b) && adjacent(a, b);
+
 /* ==================== the road ==================== */
 
 const LOC = [
@@ -928,6 +1074,15 @@ const LOC = [
             "There is a door. {n} says it is not locked."],
     gateLine:"Brought back through the last door." }
 ];
+const CLEAN = ["wipe", "scrape", "press", "cut", "thaw", "creep", "creep"];
+const CLEAN_HINT = {
+  wipe:  "Drag across it. The ash comes off.",
+  scrape:"Scrape one way, over and over. Back the other way does nothing.",
+  press: "Hold still on it. The water comes out where you press.",
+  cut:   "Follow the roots. Cut along them, not across.",
+  thaw:  "Warm it in patches. What you leave goes back to ice.",
+  creep: "Wipe it. The deep ash comes back at the edges."
+};
 const DEPTHS_PER_LOC = 2;
 const locOf = d => Math.min(LOC.length - 1, Math.floor(d / DEPTHS_PER_LOC));
 const locFloor = i => i * DEPTHS_PER_LOC;                    // first depth of a place
@@ -1122,8 +1277,9 @@ function drawAdventurer(a, time){
   drawPips(a.x, y + 14, a.deaths, hollowAt(), false);   // how close they are, at a glance
 }
 
-function drawBlacksmith(time){
-  const x = Math.min(fx + RING_R * 0.86, W - 58), y = fy + 26, swing = Math.sin(time*5.2);
+function drawBlacksmith(time, px, py){
+  const x = px != null ? px : Math.min(fx + RING_R * 0.86, W - 58);
+  const y = py != null ? py : fy + 26, swing = Math.sin(time*5.2);
   rrect(x + 34, y - 4, 26, 9, 4, "#3a2c4a", 4);
   shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
               ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#5c5468", 4);
@@ -1138,8 +1294,9 @@ function drawBlacksmith(time){
   if (swing > 0.95) sparks(x + 34, y - 26, 0.4);
 }
 
-function drawHerbalist(time){
-  const x = Math.max(fx - RING_R * 0.86, 48), y = fy + 8, grind = Math.sin(time*3.1);
+function drawHerbalist(time, px, py){
+  const x = px != null ? px : Math.max(fx - RING_R * 0.86, 48);
+  const y = py != null ? py : fy + 8, grind = Math.sin(time*3.1);
   rrect(x - 25, y - 2, 22, 9, 4, "#3a2c4a", 4);              // bench, tucked outside the ring
   shape(()=>{ ctx.moveTo(x-33, y-8); ctx.lineTo(x-17, y-8); ctx.lineTo(x-20, y-18);
               ctx.lineTo(x-30, y-18); ctx.closePath(); }, "#6f8a72", 4);      // mortar
@@ -1256,6 +1413,45 @@ function drawReliquary(time){
   ctx.textAlign = "center";
 }
 
+function drawPlots(time){
+  const n = plotCount();
+  for (let i = 0; i < n; i++){
+    const p = plotPos(i), key = S.plots[i], lit = inLight(i);
+    if (!key){                                        // empty ground, waiting
+      ctx.setLineDash([5, 5]);
+      shape(()=>ctx.ellipse(p.x, p.y, 22, 11, 0, 0, 6.2832), "rgba(30,22,42,0.5)", 2);
+      ctx.setLineDash([]);
+      ctx.font = "800 8px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = lit ? "#5a4f6b" : "#3a3046";
+      ctx.fillText(lit ? "PLOT" : "OUTER", p.x, p.y + 3);
+      continue;
+    }
+    const v = VMAP[key];
+    shape(()=>ctx.ellipse(p.x, p.y + 8, 24, 9, 0, 0, 6.2832), "rgba(0,0,0,0.3)", 0.001);
+    if (key === "smith") drawBlacksmith(time, p.x, p.y);
+    else if (key === "herb") drawHerbalist(time, p.x, p.y);
+    else {
+      figure(p.x, p.y, 26, 26, v.tint, mix(v.tint, "#0c0812", 0.45), p.x > fx ? -1 : 1);
+      rrect(p.x, p.y - 10, 17, 19, 6, mix(v.tint, "#0c0812", 0.25), 3);
+      ctx.font = "12px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(v.glyph, p.x, p.y - 30);
+    }
+    if (!lit){                                        // outside the light and slower for it
+      ctx.globalAlpha = 0.5;
+      ctx.font = "800 7px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = "#9a8aa8"; ctx.fillText("OUTER", p.x, p.y + 20);
+      ctx.globalAlpha = 1;
+    }
+    for (const [a, b] of ADJACENCIES) if (adjActive(a, b) && (a === key || b === key)){
+      const other = plotPos(plotOf(a === key ? b : a));
+      ctx.globalAlpha = 0.35; ctx.strokeStyle = "#ffd06b"; ctx.lineWidth = 2;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(other.x, other.y); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+  }
+}
+
 function drawEmbers(){
   const n = T.MAX_EMBERS, gap = 15, x0 = fx + 16 - (n-1)*gap/2, y = fy + 94;
   for (let i = 0; i < n; i++)
@@ -1341,8 +1537,7 @@ function frame(now){
   onStage.sort((a,b) => a.y - b.y);
   const behind = onStage.filter(a => a.y <= fy), front = onStage.filter(a => a.y > fy);
   behind.forEach(a => drawAdventurer(a, time));
-  if (S.smithLv) drawBlacksmith(time);
-  if (S.herbLv) drawHerbalist(time);
+  drawPlots(time);
   if (K.y <= fy) drawKeeper(time);
   drawFire(time);
   front.forEach(a => drawAdventurer(a, time));
@@ -1364,6 +1559,34 @@ function frame(now){
       ctx.globalAlpha = 1;
     }
   }
+
+  if (open_ && !open_.dusted && (open_.clean === "thaw" || open_.clean === "creep")){
+    open_.regrow = (open_.regrow || 0) + dt;
+    if (open_.regrow > (open_.clean === "thaw" ? 1.1 : 1.7)){
+      open_.regrow = 0;
+      const a = open_, edge = a.clean === "creep";
+      for (let k = 0; k < 6; k++){
+        const gx = (Math.random() * GRID) | 0, gy = (Math.random() * GRID) | 0;
+        const isEdge = gx < 3 || gy < 3 || gx > GRID - 4 || gy > GRID - 4;
+        if (edge && !isEdge) continue;
+        if (a.grid[gy * GRID + gx]){ a.grid[gy * GRID + gx] = 0; a.cleared--; }
+      }
+      if (a.grimeCv){
+        const g2 = a.grimeCv.getContext("2d");
+        g2.globalCompositeOperation = "source-over";
+        g2.fillStyle = a.clean === "thaw" ? "rgba(150,190,210,0.30)" : "rgba(74,63,82,0.28)";
+        if (a.clean === "creep"){
+          g2.fillRect(0, 0, AW, 22); g2.fillRect(0, AH - 22, AW, 22);
+          g2.fillRect(0, 0, 22, AH); g2.fillRect(AW - 22, 0, 22, AH);
+        } else g2.fillRect(0, 0, AW, AH);
+      }
+      const frac = a.cleared / (GRID * GRID);
+      artToFire.disabled = frac < 0.62;
+      drawArt();
+    }
+  }
+
+  drawGesture(dt);
 
   uiT += dt;
   if (uiT > 0.15){ uiT = 0; refresh(); if (S.sel != null) showCounsel(byId(S.sel)); }
@@ -1390,18 +1613,18 @@ cv.addEventListener("pointerdown", e => {
     if (Math.hypot(x - p.x, y - p.y) < 20){ openLocation(locOf(list[i].depth)); return; }
   }
 
-  const onFire = Math.hypot(x - fx, (y - fy + 14) * 0.85) < FIRE_TAP_R;
-  if (!onFire){                                // guests only own taps outside the fire
-    let hit = null, best = 34;
-    for (const a of S.pool){
-      if (a.state !== "rest" && a.state !== "hollow") continue;
-      const d = Math.hypot(x - a.x, y - (a.y - 14));
-      if (d < best){ best = d; hit = a; }
-    }
-    if (hit){ S.sel = hit.id; showCounsel(hit);
-              keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
-    closeCounsel(); return;
+  /* A figure owns a tight circle of their own; the fire owns the rest of its ground.
+     Nobody may sit inside the fire's clear radius, so the fire is always tappable. */
+  let hit = null, best = 26;
+  for (const a of S.pool){
+    if (a.state !== "rest" && a.state !== "hollow") continue;
+    const d = Math.hypot(x - a.x, y - (a.y - 16));
+    if (d < best){ best = d; hit = a; }
   }
+  if (hit){ S.sel = hit.id; showCounsel(hit);
+            keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
+  const dx = (x - fx) / 56, dy = (y - (fy - 6)) / 50;
+  if (dx*dx + dy*dy > 1){ closeCounsel(); return; }
   S.taps++;
   if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" }); return; }
   keeperGoTo(fx - 52, fy + 26, "tend");
@@ -1417,7 +1640,10 @@ const cSub = counsel.querySelector(".cSub"), cOdds = counsel.querySelector(".cOd
 const cAct = counsel.querySelector(".cAct"), cNote = counsel.querySelector(".cNote");
 counsel.querySelector(".cClose").addEventListener("click", closeCounsel);
 
-function closeCounsel(){ S.sel = null; picking = null; counsel.hidden = true; }
+function closeCounsel(){
+  S.sel = null; picking = null; counsel.hidden = true;
+  const old = counsel.querySelector(".cActs"); if (old) old.remove();
+}
 const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
 
 function showCounsel(a){
@@ -1427,6 +1653,7 @@ function showCounsel(a){
   cTone.style.background = hollow ? desat(a.tone[0]) : a.tone[0];
   cTitle.textContent = hollow ? "Hollowed" : "Adventurer";
   cSub.textContent = hollow ? "Nothing left to spend" : "Rests at your fire";
+  const stale = counsel.querySelector(".cActs"); if (stale) stale.remove();
   cGear.hidden = hollow;
   if (hollow) cGear.innerHTML = "";
   else if (a.choice) renderChoice(a);
@@ -1434,15 +1661,30 @@ function showCounsel(a){
   else renderGear(a);
 
   if (hollow){
-    cOdds.innerHTML = "Holds a slot at the fire. Pays <b>nothing</b>, ever.<br>"
-                    + plural(a.deaths, "death") + ", and no more expeditions.";
-    const c = rekCost();
-    cAct.textContent = "Rite of Rekindling — " + fmt(c);
-    cAct.className = "cAct warm";
-    cAct.disabled = S.souls < c;
-    cAct.onclick = () => { if (rekindle(a)) closeCounsel(); };
-    cNote.textContent = "Back to the pool at depth 0, their deaths forgiven.";
+    const c = rekCost(a), free = vlv("ossu") >= 3 && !S.freeRiteUsed;
+    cOdds.innerHTML = (a.name ? "<b>" + a.name + "</b>. " : "") + "Got as far as depth "
+      + peakOf(a) + ". " + plural(a.deaths, "death") + ".<br>"
+      + "Carrying " + gearSummary(a) + ".<br>Holds a seat, and pays <b>nothing</b>.";
+    cGear.hidden = false; cGear.className = "cPick"; cGear.innerHTML = "";
+    const rite = document.createElement("button");
+    rite.innerHTML = "<b>Rite of Rekindling — " + (free ? "free" : fmt(c)) + "</b><br><em>"
+      + "They come back at depth 0 with their deaths forgiven, and they keep what they carry."
+      + "</em>";
+    rite.disabled = !free && S.souls < c;
+    rite.onclick = () => { if (rekindle(a)) closeCounsel(); };
+    cGear.appendChild(rite);
+    const go = document.createElement("button");
+    go.innerHTML = "<b>Let Them Go — " + fmt(letGoCost()) + "</b><br><em>"
+      + "The seat comes back. Their things go on the shelf. They are written down and that is "
+      + "all that is left of them. <span>+" + letGoAsh(a) + " ash</span></em>";
+    go.disabled = S.souls < letGoCost();
+    go.onclick = () => { if (vlv("ossu")) startGesture("vigil", () => { letThemGo(a); closeCounsel(); });
+                         else { letThemGo(a); closeCounsel(); } };
+    cGear.appendChild(go);
+    cAct.style.display = "none";
+    cNote.textContent = "One of them costs souls you may not have. The other costs less than that.";
   } else {
+    cAct.style.display = "";
     const d = runDepth(a), odds = Math.round(survival(d, a.deaths, a) * 100);
     const mult = (1 + d * T.DEPTH_PAY).toFixed(1).replace(/\.0$/, "");
     const left = hollowAt() - a.deaths;
@@ -1498,20 +1740,28 @@ function renderChoice(a){
 
 function craftOffers(g){
   const out = [];
-  if (S.smithLv >= 2 && g.rarity === "common") out.push(["forge", "fine", T.FORGE_COST.fine]);
-  if (S.smithLv >= 3 && g.rarity === "fine")   out.push(["forge", "rare", T.FORGE_COST.rare]);
-  if (g.cursed && S.herbLv >= 3) out.push(["cleanse", "clean", T.CLEANSE_COST.clean]);
-  else if (g.cursed && S.herbLv >= 2 && g.rarity !== "common") out.push(["cleanse", "rough", T.CLEANSE_COST.rough]);
+  if (vlv("smith") >= 2 && g.rarity === "common") out.push(["forge", "fine", T.FORGE_COST.fine]);
+  if (vlv("smith") >= 3 && g.rarity === "fine")   out.push(["forge", "rare", T.FORGE_COST.rare]);
+  if (g.cursed && vlv("herb") >= 3) out.push(["cleanse", "clean", T.CLEANSE_COST.clean]);
+  else if (g.cursed && vlv("herb") >= 2 && g.rarity !== "common") out.push(["cleanse", "rough", T.CLEANSE_COST.rough]);
   return out;
 }
 
 function startCraft(a, slot, kind, grade, cost){
   const g = gearIn(a, slot);
-  if (!g || g.craft || S.souls < cost[0] || S.mat < cost[1]) return;
-  S.souls -= cost[0]; S.mat -= cost[1];
-  g.craft = { kind, grade, left:T.CRAFT_SECONDS };
-  keeperGoTo(kind === "forge" ? Math.min(fx + 70, W - 70) : Math.max(fx - 74, 60), fy + 24, "attend");
-  showCounsel(a);
+  if (!g || g.craft) return;
+  let scrap = cost[1];
+  if (kind === "forge" && slot === "weapon" && adjActive("smith", "quart")) scrap = Math.ceil(scrap * 0.65);
+  if (S.souls < cost[0] || S.mat < scrap) return;
+  S.souls -= cost[0]; S.mat -= scrap;
+  const key = kind === "forge" ? "smith" : "herb";
+  startGesture(VMAP[key].verb, q => {
+    g.craft = { kind, grade, left: T.CRAFT_SECONDS * vSlow(key) * (q >= 0.7 ? 0.6 : 1) };
+    if (q >= 0.7) S.floats.push({ x:fx, y:fy - 40, t:0, txt:"good work", col:"#ffd06b" });
+    showCounsel(a);
+  });
+  const pi = plotOf(kind === "forge" ? "smith" : "herb");
+  if (pi >= 0){ const pp = plotPos(pi); keeperGoTo(pp.x, pp.y, "attend"); }
 }
 
 function tickCraft(dt){
@@ -1543,11 +1793,66 @@ function gearButton(a, slot){
   return b;
 }
 
+function vendorActions(a){
+  const out = [];
+  if (vlv("carto") >= 1) out.push({
+    label:"Send them somewhere else",
+    sub: a.route != null ? "Bound for " + LOC[a.route].name + "." : "They go as deep as they can.",
+    go: () => openRoute(a) });
+  if (vlv("quart") >= 1 && !a.packed) out.push({
+    label:"Pack them off", sub:"Supplies for the road. Shorter trip.",
+    go: () => startGesture("pack", q => { a.packed = true; a.packQ = q; showCounsel(a); }) });
+  if (vlv("tink") >= 1) out.push({
+    label:"Break something down", sub:"Whatever they carry, into scrap.",
+    go: () => openBreak(a) });
+  return out;
+}
+
+function openRoute(a){
+  const rows = LOC.slice(0, S.unlocked + 1).map((L, i) => ({
+    html:"<b>" + L.name + "</b><br><em>Depths " + locFloor(i) + " and " + (locFloor(i)+1) +
+         (i === locOf(a.depth) ? ". Where they would go anyway." : ". Shallower than they have been.") +
+         "</em>" + (S.marked === i ? "<br><span>Marked. Better things come up.</span>" : ""),
+    onClick: () => startGesture("route", () => { a.route = i; closeSheet(); showCounsel(a); })
+  }));
+  rows.push({ html:"Let them go as deep as they can", onClick: () => { a.route = null; closeSheet(); showCounsel(a); } });
+  openSheet("Where to?", (a.name || "They") + " will be told the way.", rows);
+}
+
+function openBreak(a){
+  const rows = A_SLOTS.filter(k => gearIn(a, k)).map(k => {
+    const g = gearIn(a, k);
+    return { html:"<b>" + artTitle(g) + "</b><br><em>" + effectLine(g) + "</em>",
+      onClick: () => startGesture("break", q => {
+        let n = MAT_VALUE[g.rarity] * 2 + Math.round(q * 3);
+        if (adjActive("smith", "tink")) n = Math.round(n * 1.5);
+        S.mat += n; S.seen.material = true; a.gear[k] = null;
+        S.notice = { txt:"Broken down. " + n + " scrap.", t:0 };
+        closeSheet(); showCounsel(a);
+      }) };
+  });
+  if (!rows.length) rows.push({ html:"They are carrying nothing to break.", onClick:null });
+  openSheet("Break it down", "The Tinker takes anything.", rows);
+}
+
 function renderGear(a){
   cGear.innerHTML = "";
   if (!picking){
     cGear.className = "cGear";
     A_SLOTS.forEach(slot => cGear.appendChild(gearButton(a, slot)));
+    const acts = vendorActions(a);
+    if (acts.length){
+      const bar = document.createElement("div"); bar.className = "cActs";
+      for (const act of acts){
+        const b = document.createElement("button");
+        b.innerHTML = act.label + "<i>" + act.sub + "</i>";
+        b.onclick = act.go; bar.appendChild(b);
+      }
+      cGear.parentNode.insertBefore(bar, cGear.nextSibling);
+      if (cGear.nextSibling && cGear.nextSibling.nextSibling &&
+          cGear.nextSibling.nextSibling.className === "cActs")
+        cGear.nextSibling.nextSibling.remove();
+    }
     return;
   }
   cGear.className = "cPick";
@@ -1584,10 +1889,36 @@ function renderGear(a){
   add("Back", () => { picking = null; showCounsel(a); });
 }
 
+function letThemGo(a){
+  if (!a || a.state !== "hollow" || S.souls < letGoCost()) return false;
+  S.souls -= letGoCost();
+  const ash = letGoAsh(a);
+  S.meta.ash += ash;
+  if (a.gear) for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (g) toReliquary(g, peakOf(a), a.deaths, a.name);
+  }
+  a.gear = null;
+  releaseSlot(a);
+  S.pool.splice(S.pool.indexOf(a), 1);
+  S.notice = { txt:(a.name ? a.name + " is not at the fire any more." : "One of them is gone."), t:0 };
+  if (vlv("herb") && vlv("ossu") && adjacent("herb", "ossuary")){   // the grove eases one of the living
+    const scarred = living().filter(o => o.deaths > 0);
+    if (scarred.length){
+      const o = scarred[(Math.random() * scarred.length) | 0];
+      o.deaths--; say(o, "Something lifted off them.");
+    }
+  }
+  S.floats.push({ x:fx, y:fy - 50, t:0, txt:"+" + ash + " ash", col:"#c9bfd6" });
+  render(); saveGame(); return true;
+}
+
 function rekindle(a){
-  const c = rekCost();
+  const c = rekCost(a);
   if (!a || a.state !== "hollow" || S.souls < c) return false;
-  S.souls -= c; S.rekindles++;
+  const free = vlv("ossu") >= 3 && !S.freeRiteUsed;
+  if (free) S.freeRiteUsed = true; else S.souls -= c;
+  S.rekindles++;
   releaseSlot(a); a.deaths = 0; a.depth = 0; a.shallow = false;
   edgeSpawn(a); a.state = "walkin";
   for (let k = 0; k < 14; k++) sparks(a.x, a.y - 10, 1.1);
@@ -1617,8 +1948,10 @@ function openArtifact(a){
     } else { grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); }
   }
   artDust.hidden = false;
+  a.clean = a.clean || CLEAN[a.loc != null ? a.loc : 0];
   document.querySelector(".artTitle").textContent = "Filthy";
-  document.querySelector(".artSub").textContent = "Brought up from depth " + a.depth + ".";
+  document.querySelector(".artSub").textContent = (a.loc != null ? LOC[a.loc].name + ". " : "")
+    + CLEAN_HINT[a.clean];
   drawArt();
 }
 function closeArtifact(){ open_ = null; artEl.hidden = true; }
@@ -1691,7 +2024,26 @@ function wipe(e){
   const a = open_; if (!a || a.dusted) return;
   const r = artCv.getBoundingClientRect();
   const x = (e.clientX - r.left) * AW / r.width, y = (e.clientY - r.top) * AH / r.height;
-  const R = 24;
+  const mode = a.clean || "wipe";
+  let R = 24;
+  if (mode === "scrape"){                              // one direction only
+    const going = a.lastX != null ? x - a.lastX : 0;
+    a.lastX = x;
+    if (going <= 0.5) return;
+    R = 20;
+  } else if (mode === "press"){                        // reward staying still
+    const still = a.lastX != null && Math.hypot(x - a.lastX, y - (a.lastY || y)) < 3;
+    a.dwell = still ? (a.dwell || 0) + 1 : 0;
+    a.lastX = x; a.lastY = y;
+    R = 12 + Math.min(22, (a.dwell || 0) * 1.6);
+  } else if (mode === "cut"){                          // only along the roots
+    const vine = Math.abs(Math.sin((y / AH) * 6.2832) * (AW * 0.3) + AW / 2 - x);
+    if (vine > 34) return;
+    R = 18;
+  } else if (mode === "thaw"){
+    R = 30;
+  }
+  a.lastX = x; a.lastY = y;
   gctx.globalCompositeOperation = "destination-out";
   const grad = gctx.createRadialGradient(x, y, 0, x, y, R);   // soft edges, not a hard hole
   grad.addColorStop(0, "rgba(0,0,0,1)"); grad.addColorStop(0.65, "rgba(0,0,0,0.9)");
@@ -1784,6 +2136,19 @@ function showEnd(){
   saveGame();
 }
 
+function openTrade(){
+  const rate = 6, back = 12;
+  openSheet("The Tinker's rate", "Both directions are bad. That is the trade.", [
+    { html:"<b>Sell 10 scrap</b><br><em>" + (10 * rate) + " souls, which is not what it is worth.</em>",
+      onClick: S.mat < 10 ? null : () => { S.mat -= 10; S.souls += 10 * rate;
+        S.notice = { txt:"Sold, badly.", t:0 }; openTrade(); } },
+    { html:"<b>Buy 5 scrap</b><br><em>" + (5 * back) + " souls, which is worse.</em>",
+      onClick: S.souls < 5 * back ? null : () => { S.souls -= 5 * back; S.mat += 5;
+        S.seen.material = true; openTrade(); } },
+    { html:"Leave it", onClick: closeSheet }
+  ]);
+}
+
 function openAshes(){
   const rows = UNLOCKS.map(u => {
     const owned = has(u.key), afford = S.meta.ash >= u.cost;
@@ -1801,7 +2166,10 @@ function openAshes(){
 
 function newCycle(){
   S.souls = 0; S.mat = 0; S.lv = { flame:0, word:0, echo:0, circle:0 };
-  S.smithLv = has("forge") ? 1 : 0; S.herbLv = has("grove") ? 1 : 0;
+  S.v = { smith:has("forge")?1:0, herb:has("grove")?1:0, quart:0, carto:0, ossu:0, tink:0 };
+  S.plots = [null,null,null,null,null,null,null]; S.spent = {}; S.marked = null; S.freeRiteUsed = false;
+  if (S.v.smith) S.plots[0] = "smith";
+  if (S.v.herb) S.plots[1] = "herb";
   S.rekindles = 0; S.bells = 0; S.embers = T.MAX_EMBERS; S.emberT = 0;
   S.pool = []; S.relic = []; S.lost = []; S.arriveT = 0;
   S.flameMax = has("deep") ? 120 : T.FLAME_MAX; S.flame = S.flameMax;
@@ -1817,6 +2185,149 @@ function newCycle(){
     S.notice = { txt:(a.name || "Someone") + " came back. Not the same one, but the name is.", t:0 };
   }
   render(); saveGame();
+}
+
+/* ==================== gestures ====================
+   Six verbs, one per vendor. None runs past five seconds and none can fail
+   destructively: sloppy work gets the base result, good work gets a little more. */
+
+const GEST = {
+  hammer:{ title:"Strike it", hint:"Tap when the metal is bright.", rounds:4 },
+  stir:  { title:"Stir it",   hint:"Hold, and keep going round.",   rounds:2 },
+  pack:  { title:"Pack it",   hint:"Drag each thing into the pack.", rounds:3 },
+  route: { title:"Trace it",  hint:"Draw the way down.",            rounds:3 },
+  vigil: { title:"Sit with them", hint:"Hold. It takes as long as it takes.", rounds:1 },
+  break: { title:"Break it",  hint:"Left, right, left. Keep at it.", rounds:8 }
+};
+
+const gEl = document.getElementById("gest");
+const gCv = document.getElementById("gestCv");
+const gctx2 = gCv.getContext("2d");
+const GW = 260, GH = 190;
+let G = null;
+
+function startGesture(kind, done){
+  const spec = GEST[kind];
+  G = { kind, spec, done, hits:0, miss:0, t:0, phase:0, ang:0, held:0, last:null, items:[0,1,2], side:1 };
+  document.getElementById("gestTitle").textContent = spec.title;
+  document.getElementById("gestHint").textContent = spec.hint;
+  gEl.hidden = false;
+}
+function endGesture(){
+  if (!G) return;
+  const quality = Math.max(0, Math.min(1, G.hits / (G.spec.rounds || 1)));
+  const cb = G.done; G = null; gEl.hidden = true;
+  if (cb) cb(quality);
+}
+document.getElementById("gestX").addEventListener("click", () => {
+  if (!G) return;                                   // walking away still finishes the job, plainly
+  const cb = G.done; G = null; gEl.hidden = true; if (cb) cb(0);
+});
+
+function gestPoint(e){
+  const r = gCv.getBoundingClientRect();
+  return { x:(e.clientX - r.left) * GW / r.width, y:(e.clientY - r.top) * GH / r.height };
+}
+gCv.addEventListener("pointerdown", e => {
+  if (!G) return;
+  gCv.setPointerCapture(e.pointerId);
+  const p = gestPoint(e);
+  if (G.kind === "hammer"){
+    const bright = Math.abs(Math.sin(G.t * 2.4)) > 0.82;
+    if (bright) G.hits++; else G.miss++;
+    G.phase++;
+    for (let i = 0; i < 8; i++) S.sparks.push({ x:fx, y:fy - 16, vx:(Math.random()-0.5)*40, vy:-30, t:0, life:0.5 });
+    if (G.phase >= G.spec.rounds) endGesture();
+  } else if (G.kind === "break"){
+    const wantLeft = G.side > 0;
+    if ((p.x < GW/2) === wantLeft){ G.hits++; G.side *= -1; } else G.miss++;
+    G.phase++;
+    if (G.phase >= G.spec.rounds) endGesture();
+  } else if (G.kind === "pack" || G.kind === "route"){
+    G.drag = true; G.last = p;
+  } else if (G.kind === "vigil" || G.kind === "stir"){
+    G.holding = true; G.last = p;
+  }
+});
+gCv.addEventListener("pointermove", e => {
+  if (!G) return;
+  const p = gestPoint(e);
+  if (G.kind === "stir" && G.holding){
+    const a = Math.atan2(p.y - GH/2, p.x - GW/2);
+    if (G.ang !== 0 || G.lastAng != null){
+      let d = a - (G.lastAng == null ? a : G.lastAng);
+      while (d > Math.PI) d -= 6.2832;
+      while (d < -Math.PI) d += 6.2832;
+      G.ang += Math.abs(d) > 1 ? 0 : d;
+    }
+    G.lastAng = a;
+    if (Math.abs(G.ang) > 6.2832 * G.spec.rounds){ G.hits = G.spec.rounds; endGesture(); }
+  } else if (G.kind === "pack" && G.drag){
+    const idx = G.items.findIndex(i => i >= 0 && Math.hypot(p.x - (30 + i*40), p.y - 40) < 26);
+    if (idx >= 0 && p.y > 100){ G.items[idx] = -1; G.hits++;
+      if (G.items.every(i => i < 0)) endGesture(); }
+    if (G) G.last = p;                      // the last move can finish it; do not write to nothing
+  } else if (G.kind === "route" && G.drag){
+    const y = GH * (0.2 + 0.3 * G.phase);
+    if (Math.abs(p.y - y) < 30 && Math.abs(p.x - GW/2) < 100){ G.phase++; G.hits++;
+      if (G.phase >= G.spec.rounds) endGesture(); }
+    if (G) G.last = p;
+  }
+});
+const gestUp = () => { if (!G) return; G.drag = false; G.holding = false; G.lastAng = null; };
+gCv.addEventListener("pointerup", gestUp);
+gCv.addEventListener("pointercancel", gestUp);
+
+function drawGesture(dt){
+  if (!G) return;
+  G.t += dt;
+  if (G.kind === "vigil" && G.holding){
+    G.held += dt;
+    if (G.held >= 4){ G.hits = 1; endGesture(); return; }
+  } else if (G.kind === "vigil") G.held = Math.max(0, G.held - dt * 0.6);
+  if (G.t > 12) endGesture();                       // never trap anybody in here
+  gctx2.clearRect(0, 0, GW, GH);
+  gctx2.fillStyle = "#1b1526"; gctx2.fillRect(0, 0, GW, GH);
+  const box = (x, y, w, h, r, fill, line) => {
+    gctx2.beginPath();
+    gctx2.moveTo(x-w/2+r, y-h/2);
+    gctx2.arcTo(x+w/2,y-h/2,x+w/2,y+h/2,r); gctx2.arcTo(x+w/2,y+h/2,x-w/2,y+h/2,r);
+    gctx2.arcTo(x-w/2,y+h/2,x-w/2,y-h/2,r); gctx2.arcTo(x-w/2,y-h/2,x+w/2,y-h/2,r);
+    gctx2.closePath(); gctx2.fillStyle = fill; gctx2.fill();
+    gctx2.lineWidth = 3; gctx2.strokeStyle = line || "#0c0812"; gctx2.stroke();
+  };
+  if (G.kind === "hammer"){
+    const bright = Math.abs(Math.sin(G.t * 2.4));
+    box(GW/2, GH/2, 120, 34, 8, mix("#5c5468", "#ff9d3d", bright), bright > 0.82 ? "#ffd06b" : "#0c0812");
+    gctx2.fillStyle = "#9a8aa8"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    gctx2.textAlign = "center"; gctx2.fillText(G.phase + " / " + G.spec.rounds, GW/2, GH - 20);
+  } else if (G.kind === "stir"){
+    gctx2.strokeStyle = "#3a2c4a"; gctx2.lineWidth = 16;
+    gctx2.beginPath(); gctx2.arc(GW/2, GH/2, 52, 0, 6.2832); gctx2.stroke();
+    gctx2.strokeStyle = "#7fbf8a"; gctx2.lineWidth = 12;
+    gctx2.beginPath();
+    gctx2.arc(GW/2, GH/2, 52, -1.57, -1.57 + Math.min(6.2832, Math.abs(G.ang) / G.spec.rounds));
+    gctx2.stroke();
+  } else if (G.kind === "pack"){
+    box(GW/2, GH - 42, 150, 56, 10, "#3a2c4a");
+    G.items.forEach((v, i) => { if (v >= 0) box(30 + i*40, 40, 34, 34, 8, "#c9a45c"); });
+  } else if (G.kind === "route"){
+    for (let i = 0; i < G.spec.rounds; i++){
+      const y = GH * (0.2 + 0.3 * i);
+      box(GW/2, y, 150, 18, 8, i < G.phase ? "#6f8fd6" : "#2c2038");
+    }
+  } else if (G.kind === "vigil"){
+    box(GW/2, GH/2, 150, 40, 10, "#2c2038");
+    box(GW/2 - 75 + Math.min(150, 150 * G.held / 4) / 2, GH/2,
+        Math.max(2, Math.min(150, 150 * G.held / 4)), 40, 10, "#6a6270");
+    gctx2.fillStyle = "#c9bfd6"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    gctx2.textAlign = "center"; gctx2.fillText("hold", GW/2, GH/2 + 4);
+  } else if (G.kind === "break"){
+    box(GW/4, GH/2, 90, 70, 10, G.side > 0 ? "#c9a45c" : "#2c2038");
+    box(3*GW/4, GH/2, 90, 70, 10, G.side < 0 ? "#c9a45c" : "#2c2038");
+    gctx2.fillStyle = "#9a8aa8"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    gctx2.textAlign = "center"; gctx2.fillText(G.hits + " / " + G.spec.rounds, GW/2, GH - 12);
+  }
 }
 
 /* ==================== sheets ==================== */
@@ -1873,18 +2384,46 @@ function openLocation(i){
 }
 
 function openMap(){
-  openSheet("The road below", "Seven places, and a gate between each.", LOC.map((L, i) => {
+  const rows = LOC.map((L, i) => {
     const inside = away().filter(a => locOf(a.depth) === i).length;
     const open = i <= S.unlocked;
     return {
       html:"<b>" + L.name + "</b>" + (open ? "" : " — shut") +
            "<br><em>" + (open ? (inside ? inside + " down there now." : "Empty.")
-             : L.gate + " holds it. It wants about " + gateDifficulty(i).toFixed(1)
-               + "; the best of them is worth " + bestGateScore().toFixed(1) + ".") + "</em>" +
+             : L.gate + " holds it." + (vlv("carto") >= 2
+                 ? " It wants about " + gateDifficulty(i).toFixed(1)
+                   + "; the best of them is worth " + bestGateScore().toFixed(1) + "."
+                 : " Nobody has measured it.")) + "</em>" +
            (open ? "<br><span>Depths " + locFloor(i) + "+</span>" : ""),
       onClick: open ? () => openLocation(i) : null
     };
-  }));
+  });
+  if (vlv("carto") >= 3 && S.marked == null)
+    rows.push({ html:"<b>Mark a place for this fire</b><br><em>Better things come out of it. Once.</em>",
+      onClick: () => openSheet("Mark which?", "It holds until the fire goes out.",
+        LOC.slice(0, S.unlocked + 1).map((L, i) => ({ html:"<b>" + L.name + "</b>",
+          onClick: () => startGesture("route", () => { S.marked = i; closeSheet(); }) }))) });
+  if (vlv("tink") >= 2)
+    rows.push({ html:"<b>The Tinker's rate</b><br><em>Scrap for souls, souls for scrap, badly both ways.</em>",
+      onClick: openTrade });
+  openSheet("The road below", "Seven places, and a gate between each.", rows);
+}
+
+function openBuild(plot){
+  const free = VENDORS.filter(v => !built(v.key));
+  const lit = inLight(plot);
+  openSheet("Empty ground", lit ? "Inside the light. A seat goes with it."
+                                : "Outside the light. Slower, but it costs no seat.",
+    free.length ? free.map(v => ({
+      html:"<b>" + v.glyph + " " + v.name + "</b><br><em>" + v.blurb[0] + "</em><br><span>"
+           + fmt(v.cost[1]) + " souls</span>",
+      onClick: S.souls < v.cost[1] ? null : () => {
+        S.souls -= v.cost[1]; S.v[v.key] = 1; S.plots[plot] = v.key;
+        S.spent[v.key] = (S.spent[v.key] || 0) + v.cost[1];
+        const pp = plotPos(plot); keeperGoTo(pp.x, pp.y, "attend");
+        evictReserved(); closeSheet(); render();
+      }
+    })) : [{ html:"They are all here already.", onClick:null }]);
 }
 
 function openShelf(){
@@ -1910,6 +2449,40 @@ function openShelf(){
         })));
     }
   })) : [{ html:"Nothing yet. Nobody has hollowed.", onClick:null }]);
+  if (vlv("tink") >= 1 && S.relic.length){
+    const b = document.createElement("button");
+    b.innerHTML = "<b>Have the Tinker break one down</b><br><em>Scrap, and the shelf gets some room.</em>";
+    b.onclick = () => {
+      openSheet("Break down which?", "It does not come back.", S.relic.map(r => ({
+        html:"<b>" + artTitle(r.art) + "</b><br><em>" + effectLine(r.art) + "</em>",
+        onClick: () => startGesture("break", q => {
+          let n = MAT_VALUE[r.art.rarity] * 2 + Math.round(q * 3);
+          if (adjActive("smith", "tink")) n = Math.round(n * 1.5);
+          S.mat += n; S.seen.material = true;
+          S.relic.splice(S.relic.indexOf(r), 1);
+          S.notice = { txt:"Beaten flat. " + n + " scrap.", t:0 };
+          closeSheet(); render();
+        })
+      })));
+    };
+    sheetList.appendChild(b);
+  }
+  if (vlv("tink") >= 3 && S.relic.length && !S.reforgedThisCycle){
+    const b = document.createElement("button");
+    b.innerHTML = "<b>Beat one into another shape</b><br><em>Same quality, different use. Once a fire.</em>";
+    b.onclick = () => openSheet("Reshape which?", "It keeps its grade and loses its purpose.",
+      S.relic.map(r => ({ html:"<b>" + artTitle(r.art) + "</b>", onClick: () => {
+        const others = A_SLOTS.filter(k => k !== r.art.slot);
+        openSheet("Into what?", artTitle(r.art) + " becomes:", others.map(k => ({
+          html:"<b>" + RARITY_NAME[r.art.rarity] + " " + SLOT_NAME[k] + "</b>",
+          onClick: () => startGesture("hammer", () => {
+            r.art.slot = k; r.art.line = "Beaten into a shape it was never meant to hold.";
+            S.reforgedThisCycle = true; closeSheet(); render();
+          })
+        })));
+      } })));
+    sheetList.appendChild(b);
+  }
 }
 
 /* ==================== persistence ==================== */
@@ -1925,15 +2498,18 @@ const stripArt = g => g && { id:g.id, slot:g.slot, rarity:g.rarity, cursed:g.cur
 function serialize(){
   return {
     version: SAVE_VERSION, at: Date.now(),
-    souls:S.souls, mat:S.mat, lv:S.lv, smithLv:S.smithLv, herbLv:S.herbLv,
+    souls:S.souls, mat:S.mat, lv:S.lv, smithLv:vlv("smith"), herbLv:vlv("herb"),
     rekindles:S.rekindles, bells:S.bells, embers:S.embers, taps:S.taps,
     seen:S.seen, tipSeen:S.tipSeen, nextId:S.nextId, nextArt:S.nextArt,
     flame:S.flame, flameMax:S.flameMax, peakDepth:S.peakDepth, runEarned:S.runEarned,
     unlocked:S.unlocked, log:S.log.slice(-30),
+    v:S.v, plots:S.plots, spent:S.spent, marked:S.marked,
+    freeRiteUsed:S.freeRiteUsed, reforgedThisCycle:S.reforgedThisCycle,
     everHollowed:S.everHollowed, elapsed:S.elapsed,
     pool: S.pool.map(a => ({
       id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
-      slot:a.slot, tone:a.tone,
+      slot:a.slot, tone:a.tone, peak:a.peak || 0, route:a.route == null ? null : a.route,
+      packed:!!a.packed,
       gear: a.gear ? { weapon:stripArt(a.gear.weapon), armour:stripArt(a.gear.armour),
                        trinket:stripArt(a.gear.trinket) } : null,
       find: stripArt(a.find), choice: stripArt(a.choice), recalled:a.recalled || false
@@ -1964,7 +2540,6 @@ function saveGame(){
 function restore(save){
   S.souls = save.souls || 0; S.mat = save.mat || 0;
   S.lv = Object.assign(S.lv, save.lv || {});
-  S.smithLv = save.smithLv || 0; S.herbLv = save.herbLv || 0;
   S.rekindles = save.rekindles || 0; S.bells = save.bells || 0;
   S.embers = save.embers != null ? save.embers : T.MAX_EMBERS;
   S.taps = save.taps || 0; S.tipSeen = !!save.tipSeen;
@@ -1973,6 +2548,15 @@ function restore(save){
   S.flame = save.flame != null ? save.flame : S.flameMax;
   S.peakDepth = save.peakDepth || 0; S.runEarned = save.runEarned || 0;
   S.unlocked = save.unlocked || 0; S.log = save.log || [];
+  S.v = Object.assign({ smith:0, herb:0, quart:0, carto:0, ossu:0, tink:0 },
+                      save.v || { smith:save.smithLv || 0, herb:save.herbLv || 0 });
+  S.plots = save.plots && save.plots.length ? save.plots : [null,null,null,null,null,null,null];
+  if (!save.plots){                                   // an older save had two vendors and no ground
+    if (S.v.smith) S.plots[0] = "smith";
+    if (S.v.herb) S.plots[1] = "herb";
+  }
+  S.spent = save.spent || {}; S.marked = save.marked == null ? null : save.marked;
+  S.freeRiteUsed = !!save.freeRiteUsed; S.reforgedThisCycle = !!save.reforgedThisCycle;
   S.seen = Object.assign(S.seen, save.seen || {});
   S.nextId = save.nextId || 1; S.nextArt = save.nextArt || 1;
   S.meta = Object.assign(S.meta, save.meta || {});
@@ -2118,59 +2702,69 @@ function render(){
     card({
       glyph:"✨", tint:"#4a3c2c", name:"Rite of Rekindling", level:S.rekindles, level2:()=>S.rekindles,
       desc:()=> hollows().length
-        ? "Clears one hollow and returns them to the pool, depth 0, deaths forgiven."
+        ? "Brings the shallowest of them back at depth 0, deaths forgiven. Tap a hollow to choose "
+          + "which one, and to weigh it against letting them go."
         : "The way back from hollowing. Nothing to rekindle yet — no one has gone.",
-      label:()=>fmt(rekCost()),
-      enabled:()=> hollows().length > 0 && S.souls >= rekCost(),
+      label:()=> hollows().length ? fmt(rekCost(hollows()[0])) : "—",
+      enabled:()=> hollows().length > 0 && S.souls >= rekCost(hollows()[0]),
       onBuy(){ rekindle(hollows()[0]); }
     });
     noteEl.textContent = "Skills grow the take. Vendors keep them alive.";
   } else {
-    const VENDORS = [
-      { key:"smithLv", glyph:"🔨", tint:"#5a3f2c", name:"The Blacksmith",
-        souls:T.SMITH_LV, mats:T.SMITH_MAT, slots:2,
-        blurb:[ "Pays for repairs at your fire: +2 souls a rest, +12% survival. Holds 2 places.",
-                "He will reforge a common piece into a fine one, on the wearer, without taking it off them.",
-                "He will reforge a fine piece into a rare one. This is the last thing he learns.",
-                "Reforges common to fine, and fine to rare, on the wearer." ] },
-      { key:"herbLv", glyph:"🌿", tint:"#3f5a3e", name:"The Herbalist",
-        souls:T.HERB_LV, mats:T.HERB_MAT, slots:1,
-        blurb:[ "+8% survival, and a fourth death before anyone hollows. Holds 1 place.",
-                "She will lift a curse, though the piece comes back a grade poorer for it.",
-                "She will lift a curse and leave the piece exactly as strong as it was.",
-                "Lifts curses cleanly, and buys everyone a fourth death." ] }
-    ];
-    VENDORS.forEach(v => {
-      const lv = () => S[v.key], next = () => Math.min(3, lv() + 1);
-      const priceS = () => v.souls[next()], priceM = () => v.mats[next()];
+    for (let i = 0; i < plotCount(); i++){
+      const idx = i, key = S.plots[i], v = key ? VMAP[key] : null;
+      const lit = () => inLight(idx);
       card({
-        glyph:v.glyph, tint:v.tint, name:v.name, level:lv(), level2:lv,
-        desc:()=> lv() >= 3 ? v.blurb[3]
-                : v.blurb[lv()] + "  Next: " + fmt(priceS()) + " souls" +
-                  (priceM() ? " and " + priceM() + " scrap." : "."),
-        label:()=> lv() >= 3 ? "Built" : fmt(priceS()),
-        enabled:()=> lv() < 3 && S.souls >= priceS() && S.mat >= priceM(),
-        done:()=> lv() >= 3,
+        glyph: v ? v.glyph : "▢", tint: v ? v.tint : "#2a1f30",
+        name: v ? v.name : "Empty ground", level: v ? vlv(key) : null, level2:()=> v ? vlv(key) : 0,
+        desc:()=> {
+          if (!v) return (lit() ? "Inside the light. Whoever stands here works quickly and takes a seat."
+                                : "Outside the light. Slower work, but nobody gives up a seat for it.")
+                   + " Tap to raise something.";
+          const nxt = Math.min(3, vlv(key) + 1);
+          const adj = ADJACENCIES.filter(x => adjActive(x[0], x[1]) && (x[0] === key || x[1] === key));
+          return v.blurb[vlv(key)] + (vlv(key) < 3 ? "  Next: " + fmt(v.cost[nxt]) + " souls"
+                 + (v.mat[nxt] ? " and " + v.mat[nxt] + " scrap." : ".") : "")
+                 + (lit() ? "" : "  Out in the dark: weaker, slower, and holding no seat.")
+                 + (adj.length ? "  Beside it: " + adj.map(x => x[2]).join(" ") : "");
+        },
+        label:()=> !v ? "Build" : vlv(key) >= 3 ? "Done" : fmt(v.cost[Math.min(3, vlv(key) + 1)]),
+        enabled:()=> !v ? true
+                   : vlv(key) < 3 && S.souls >= v.cost[vlv(key)+1] && S.mat >= v.mat[vlv(key)+1],
+        done:()=> !!v && vlv(key) >= 3,
         onBuy(){
-          if (lv() >= 3 || S.souls < priceS() || S.mat < priceM()) return;
-          S.souls -= priceS(); S.mat -= priceM(); S[v.key] = next();
-          if (S[v.key] === 1){
-            evictReserved();
-            keeperGoTo(v.key === "smithLv" ? Math.min(fx + 70, W - 70) : Math.max(fx - 74, 60), fy + 24, "attend");
-          }
+          if (!v){ openBuild(idx); return; }
+          const nxt = Math.min(3, vlv(key) + 1);
+          if (vlv(key) >= 3 || S.souls < v.cost[nxt] || S.mat < v.mat[nxt]) return;
+          S.souls -= v.cost[nxt]; S.mat -= v.mat[nxt];
+          S.spent[key] = (S.spent[key] || 0) + v.cost[nxt];
+          S.v[key] = nxt;
+          const pp = plotPos(idx); keeperGoTo(pp.x, pp.y, "attend");
           render();
         }
       });
-    });
-    noteEl.textContent = "Vendors take room at the fire. That is the whole cost of them.";
+      if (v){
+        const el = listEl.lastChild, b = document.createElement("button");
+        b.className = "razeBtn"; b.textContent = "Raze";
+        b.onclick = () => {
+          const back = Math.floor((S.spent[key] || 0) * 0.5);
+          S.souls += back; S.v[key] = 0; S.plots[idx] = null; S.spent[key] = 0;
+          S.notice = { txt:"Pulled down. " + fmt(back) + " souls back, and the ground is clear.", t:0 };
+          evictReserved(); render();
+        };
+        el.appendChild(b);
+      }
+    }
+    noteEl.textContent = plotCount() + " plots. Kindled Flame clears more ground, to seven.";
   }
   refresh();
 }
 
-function evictReserved(){                 // a new vendor turns guests out of its slots
-  for (let i = 0; i < T.SLOTS; i++){
+function evictReserved(){                 // a vendor taking a seat turns whoever had it out
+  const seats = usableSeats();
+  for (let i = 0; i < slotUsed.length; i++){
     const a = slotUsed[i];
-    if (!a || !reserved(i)) continue;
+    if (!a || i < seats) continue;
     releaseSlot(a);
     if (a.state === "hollow") continue;   // a hollow re-squats elsewhere on the next tick
     a.state = a.state === "rest" ? "walkout" : "walkin";   // never pays twice for one rest

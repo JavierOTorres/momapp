@@ -1,4 +1,4 @@
-# Sanctuary — v4
+# Sanctuary — v4.1
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -58,6 +58,28 @@ localStorage every five seconds and on page hide.
   The smith reforges common to fine and fine to rare, on the wearer, without
   taking it off them. The herbalist lifts curses — roughly at first, costing
   the piece a grade, and cleanly once fully paid for.
+- **Letting go.** A hollow can be rekindled — priced by the deepest they ever
+  got, `120 + depth x 45`, so a veteran costs and a stranger doesn't — or let
+  go for a flat 40 souls: the seat comes back, their things go on the shelf,
+  they are written down, and a little ash comes back mid-run. Both prices sit
+  on the same card, because the comparison is the decision.
+- **Six vendors, four plots.** Blacksmith, Herbalist, Quartermaster,
+  Cartographer, Ossuary and Tinker, each with three levels. The ground holds
+  four to start and one more per three levels of Kindled Flame, to seven, so
+  you cannot have them all. Anything can be pulled down for half its souls.
+- **Placement.** A plot inside the light works at full strength and takes a
+  seat from the ring; one outside works at 70% and takes no seat. The light
+  moves as the fire grows and dies, so the same plot is not always the same
+  bargain — a dying fire pulls every vendor out into the dark with it.
+  Neighbouring plots pair up, and the pairs are written in the notes.
+- **Routing.** With the Cartographer you choose where each rester goes: a
+  fragile veteran farmed shallow, a geared newcomer thrown at the next gate.
+- **A verb per vendor.** Hammer on the beat, stir a circle, pack a bag, trace
+  a route, hold a vigil, break something apart. Each finishes inside five
+  seconds; sloppy work gets the base result and good work a small bonus.
+  Walking away mid-gesture still completes the job. Cleaning a find uses the
+  verb of the place it came from: wipe, scrape, press, cut, thaw, or wipe
+  against ash that creeps back at the edges.
 - **The Archive.** The keeper's notes, in the book in the top bar. Plain
   entries for every mechanic, locked to their names until it has happened.
 - **The road.** Seven named places, two depths each, every one shut behind a
@@ -119,6 +141,16 @@ ends at 35 minutes instead of 38 — burns brighter, dies sooner, as specced.
 Gates are set against what is reachable at each cap: gate 1 falls to one fine
 weapon, gate 5 needs more than two rare pieces at depth 9, gate 6 needs ash
 unlocks behind it.
+
+**v4.1: the Ossuary needed the spec's own fallback.** At level 2 the spec has
+hollows stop pulling at the flame entirely. Simulated, that stretched runs from
+38 minutes to **136** — the fire effectively stops dying, which is not a run any
+more. The spec anticipated this and named the remedy, so the Ossuary halves the
+pull instead of removing it: **48.9 minutes**, inside the 35-50 window.
+
+**Let Them Go stays small**, 1 to 2 ash by depth, against roughly 113 for a full
+run — under the 15% ceiling even used on every hollow, and doubled by the
+Ossuary because that is what the Ossuary is for.
 
 **Blacksmith 3 is not reachable, and the reason matters.** At 2500 souls it
 was hit in 0 of 20 simulated hours under greedy play, 2 of 20 when chasing it
