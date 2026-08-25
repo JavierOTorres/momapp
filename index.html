@@ -45,6 +45,20 @@
     flex:0 0 auto;margin-left:12px;width:38px;height:38px;border-radius:11px;
     border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
   }
+  #sheet{
+    position:fixed;inset:0;z-index:22;background:#15101c;
+    display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  #sheet[hidden]{display:none}
+  #sheetList{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+  #sheetList button{
+    text-align:left;padding:10px 12px;border:3px solid var(--line);border-radius:14px;
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:12px;line-height:1.45;
+  }
+  #sheetList button b{font-size:13px}
+  #sheetList button span{color:var(--gold);font-weight:700}
+  #sheetList button em{color:var(--dim);font-style:italic}
+  #sheetList button:disabled{opacity:.7}
   #book{
     position:fixed;inset:0;z-index:20;background:#15101c;
     display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -256,6 +270,14 @@
     </div>
   </div>
 
+  <div id="sheet" hidden>
+    <div class="bookTop">
+      <div><h3 id="sheetTitle"></h3><p id="sheetSub"></p></div>
+      <button class="cClose" id="sheetX" style="margin-left:auto">✕</button>
+    </div>
+    <div id="sheetList"></div>
+  </div>
+
   <div id="book" hidden>
     <div class="bookTop">
       <div><h3>The keeper's notes</h3><p>Kept because no one else was going to.</p></div>
@@ -318,6 +340,8 @@ const S = {
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
   seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false, material:false, relic:false },
   mat:0, relic:[], lost:[], nextArt:1, smithLv:0, herbLv:0,
+  offline:null, ending:false, flameOn:false, everHollowed:false,
+  meta:{ ash:0, unlocks:[], dead:[], cycles:0 },
   earnLog:[], floats:[], sparks:[], says:[]
 };
 
@@ -414,6 +438,7 @@ const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
 const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindles));
 const bellCost  = () => Math.floor(T.BELL_BASE * Math.pow(T.BELL_GROWTH, S.bells));
 const away      = () => S.pool.filter(a => a.state === "away");
+const poolCap   = () => T.POOL;                     // grows in pass two
 const hollowAt  = () => S.herbLv ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
 const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay) * mods(a).payMul));
 const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
@@ -479,10 +504,12 @@ const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d5
                 ["#5fbec4","#2f7d82"], ["#e0904a","#9c5a22"], ["#b96fc4","#7a3f85"],
                 ["#a8c95c","#6c8a30"], ["#8894b0","#525b74"], ["#c45f5f","#832f2f"] ];
 const slotUsed = new Array(T.SLOTS).fill(null);
+const FIRE_TAP_R = 78;                    // nobody may sit inside this
+let RING_R = 108;                         // seats live outside the fire's own space
 
 function slotPos(i){
   const a = -Math.PI/2 + (i / T.SLOTS) * Math.PI * 2 + 0.4;
-  return { x: fx + Math.cos(a) * 96, y: fy + Math.sin(a) * 44 + 6 };
+  return { x: fx + Math.cos(a) * RING_R, y: fy + Math.sin(a) * (RING_R * 0.46) + 6 };
 }
 const reserved = i => (S.smithLv && SMITH_SLOTS.indexOf(i) >= 0) || (S.herbLv && i === HERB_SLOT);
 function claimSlot(a){
@@ -509,6 +536,7 @@ function recruit(){
 function earn(n, x, y, doubled){
   S.souls += n;
   S.earnLog.push({ t:S.elapsed, n });
+  if (S.offline) return;
   S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffd06b" : "#f2e6d8" });
 }
 
@@ -552,12 +580,16 @@ function goHollow(a){                     // the thing the whole system exists t
   a.state = "hollow"; a.t = 0; S.seen.hollow = true;
   if (a.gear) for (const slot of A_SLOTS){     // what they carried outlives them
     const g = a.gear[slot];
-    if (g) toReliquary(g, a.depth, a.deaths);
+    if (g) toReliquary(g, a.depth, a.deaths, a.name);
   }
   a.gear = null; a.find = null; a.choice = null;
   releaseSlot(a);
   if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
   else { a.x = fx; a.y = fy + 78; }
+  S.meta.dead.push({ name:a.name || null, depth:a.depth, deaths:a.deaths, tone:a.tone[0],
+                     carried: A_SLOTS.map(k => a.gear && a.gear[k] ? artTitle(a.gear[k]) : null).filter(Boolean),
+                     cycle: S.meta.cycles + 1 });
+  if (S.offline) S.offline.hollowed.push({ name:a.name || null, depth:a.depth, tone:a.tone[0] });
   const first = !S.everHollowed; S.everHollowed = true;
   say(a, oneOf(first ? LINES.firstHollow : LINES.hollow));
   S.notice = { txt:"Someone has gone hollow.", t:0 };
@@ -583,7 +615,7 @@ function updatePool(dt){
     if (a.state === "walkin"){
       if (a.slot < 0 && !claimSlot(a)){ a.state = "wait"; a.t = 0.4; continue; }
       const p = slotPos(a.slot), dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
-      if (d < 3) sitDown(a);
+      if (d <= Math.max(3, speed * dt)) sitDown(a);      // a coarse step must not overshoot the seat
       else { a.x += dx/d * speed * dt; a.y += dy/d * speed * dt; a.dir = dx >= 0 ? 1 : -1; }
     } else if (a.state === "wait"){
       const qi = S.pool.filter(o => o.state === "wait").indexOf(a);
@@ -596,9 +628,9 @@ function updatePool(dt){
       if (a.t <= 0){ releaseSlot(a); a.state = "walkout"; if (S.sel === a.id) closeCounsel(); }
     } else if (a.state === "walkout"){
       a.x += Math.sign(a.exit - a.x) * speed * dt;
-      a.y += (fy + 46 - a.y) * dt;
+      a.y += (fy + 46 - a.y) * Math.min(1, dt);
       a.dir = Math.sign(a.exit - a.x);
-      if (Math.abs(a.x - a.exit) < 6){
+      if (Math.abs(a.x - a.exit) <= Math.max(6, speed * dt)){
         a.state = "away"; a.t = T.AWAY;
         a.events = [0.22 + Math.random()*0.12, 0.5 + Math.random()*0.12, 0.74 + Math.random()*0.12]
           .slice(0, 2 + (Math.random() < 0.5 ? 1 : 0))
@@ -683,6 +715,7 @@ function dropFor(a){
   }
   a.find = art; art.owner = a.id;
   S.seen.artifact = true;
+  if (S.offline){ S.offline.found++; return; }
   S.notice = { txt:"Something came up with them.", t:0 };
 }
 
@@ -724,9 +757,9 @@ function recoverGear(a, depth){               // a deep enough run finds what th
   S.notice = { txt:"Brought up someone else's " + SLOT_NAME[found.art.slot].toLowerCase() + ".", t:0 };
 }
 
-function toReliquary(art, depth, deaths){
+function toReliquary(art, depth, deaths, name){
   art.owner = null; art.craft = null;
-  S.relic.push({ art, depth, deaths });
+  S.relic.push({ art, depth, deaths, name:name || null });
   S.seen.relic = true;
   while (S.relic.length > T.RELIC_CAP) S.relic.shift();   // oldest goes, quietly
 }
@@ -750,6 +783,7 @@ const LINES = {
 const oneOf = arr => arr[(Math.random() * arr.length) | 0];
 
 function say(a, txt){
+  if (S.offline) return;
   S.says.push({ id:a.id, x:a.x, y:a.y - 44, txt, t:0 });
   if (S.says.length > 4) S.says.shift();
 }
@@ -1004,12 +1038,13 @@ function drawKeeper(time){
 }
 
 function relicPos(i){ return { x: fx + 92 + i * 30, y: fy + 76 }; }
+function relicBounds(){ return { x0: fx + 74, x1: fx + 172, y: fy + 76 }; }
 
 function drawReliquary(time){
   if (!S.relic.length && !S.seen.relic) return;
   const x0 = fx + 78, y = fy + 76;
   ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "left";
-  ctx.fillStyle = "#5a4f6b"; ctx.fillText("RELIQUARY", x0, y - 20);
+  ctx.fillStyle = "#5a4f6b"; ctx.fillText("LEFT BEHIND", x0, y - 20);
   rrect(x0 + 46, y + 12, 108, 7, 3, "#3a2c4a", 3);            // the shelf itself
   S.relic.forEach((r, i) => {
     const p = relicPos(i), g = r.art;
@@ -1088,7 +1123,7 @@ function frame(now){
   let guard = 0;
   while (S.arriveT >= iv && guard++ < 20){
     S.arriveT -= iv;
-    if (living().length < T.POOL) recruit();
+    if (living().length < poolCap()) recruit();
   }
 
   S.emberT += dt;
@@ -1145,22 +1180,27 @@ cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
 
+  const rb = relicBounds();                     // the shelf opens when tapped
+  if (S.relic.length && Math.abs(y - rb.y) < 26 && x > rb.x0 - 14 && x < rb.x1){ openShelf(); return; }
+
   const list = away();                          // the strip owns its own taps
   for (let i = 0; i < list.length; i++){
     const p = markerPos(list[i], i);
     if (Math.hypot(x - p.x, y - p.y) < 20){ ringBell(list[i]); keeperGoTo(fx - 78, fy - 6, "attend"); return; }
   }
 
-  let hit = null, best = 34;                    // a guest is worth more than the fire behind them
-  for (const a of S.pool){
-    if (a.state !== "rest" && a.state !== "hollow") continue;
-    const d = Math.hypot(x - a.x, y - (a.y - 14));
-    if (d < best){ best = d; hit = a; }
+  const onFire = Math.hypot(x - fx, (y - fy + 14) * 0.85) < FIRE_TAP_R;
+  if (!onFire){                                // guests only own taps outside the fire
+    let hit = null, best = 34;
+    for (const a of S.pool){
+      if (a.state !== "rest" && a.state !== "hollow") continue;
+      const d = Math.hypot(x - a.x, y - (a.y - 14));
+      if (d < best){ best = d; hit = a; }
+    }
+    if (hit){ S.sel = hit.id; showCounsel(hit);
+              keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
+    closeCounsel(); return;
   }
-  if (hit){ S.sel = hit.id; showCounsel(hit);
-            keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
-
-  if (Math.hypot(x - fx, (y - fy + 14) * 0.85) > 84){ closeCounsel(); return; }
   S.taps++;
   if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" }); return; }
   keeperGoTo(fx - 52, fy + 26, "tend");
@@ -1487,6 +1527,145 @@ artToFire.addEventListener("click", () => {
   showCounsel(a);
 });
 
+/* ==================== sheets ==================== */
+
+const sheetEl = document.getElementById("sheet");
+const sheetList = document.getElementById("sheetList");
+document.getElementById("sheetX").addEventListener("click", ()=>{ sheetEl.hidden = true; });
+
+function openSheet(title, sub, rows){
+  document.getElementById("sheetTitle").textContent = title;
+  document.getElementById("sheetSub").textContent = sub;
+  sheetList.innerHTML = "";
+  for (const r of rows){
+    const b = document.createElement("button");
+    b.innerHTML = r.html; b.disabled = !r.onClick;
+    if (r.onClick) b.onclick = () => { r.onClick(); };
+    sheetList.appendChild(b);
+  }
+  sheetEl.hidden = false;
+}
+const closeSheet = () => { sheetEl.hidden = true; };
+
+function openShelf(){
+  const living = S.pool.filter(a => a.state !== "hollow");
+  openSheet("Left Behind", "What outlived the people carrying it.", S.relic.length ? S.relic.map(r => ({
+    html: "<b>" + artTitle(r.art) + (r.art.cursed ? " ✦" : "") + "</b><br><span>" + effectLine(r.art) +
+          "</span><br><em>" + (r.name ? r.name + " carried it to depth " + r.depth
+                                      : "Carried to depth " + r.depth) +
+          ", and died " + r.deaths + " times.</em><br>Tap to give it to someone.",
+    onClick: () => {
+      const takers = living.filter(a => !gearIn(a, r.art.slot));
+      if (!takers.length){ openSheet("Left Behind", "Every one of them already carries " +
+        SLOT_NAME[r.art.slot].toLowerCase() + ".", [{ html:"Nobody has a free hand.", onClick:null }]); return; }
+      openSheet("Give it to", artTitle(r.art) + ". Once given, it stays with them.",
+        takers.map(a => ({
+          html: "<b>" + (a.name || "Someone") + "</b><br><em>Depth " + a.depth + ", " +
+                plural(a.deaths, "death") + ".</em>",
+          onClick: () => {
+            S.relic.splice(S.relic.indexOf(r), 1);
+            a.gear = a.gear || {}; a.gear[r.art.slot] = r.art; r.art.owner = a.id;
+            closeSheet(); saveGame();
+          }
+        })));
+    }
+  })) : [{ html:"Nothing yet. Nobody has hollowed.", onClick:null }]);
+}
+
+/* ==================== persistence ==================== */
+
+const SAVE_KEY = "sanctuary.save";
+const SAVE_VERSION = 4;
+const OFFLINE_CAP = 8 * 3600;
+
+const stripArt = g => g && { id:g.id, slot:g.slot, rarity:g.rarity, cursed:g.cursed, depth:g.depth,
+                             dusted:g.dusted, line:g.line, curseLine:g.curseLine, owner:g.owner,
+                             craft:g.craft, cleared:g.cleared };
+
+function serialize(){
+  return {
+    version: SAVE_VERSION, at: Date.now(),
+    souls:S.souls, mat:S.mat, lv:S.lv, smithLv:S.smithLv, herbLv:S.herbLv,
+    rekindles:S.rekindles, bells:S.bells, embers:S.embers, taps:S.taps,
+    seen:S.seen, tipSeen:S.tipSeen, nextId:S.nextId, nextArt:S.nextArt,
+    everHollowed:S.everHollowed, elapsed:S.elapsed,
+    pool: S.pool.map(a => ({
+      id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t,
+      slot:a.slot, tone:a.tone, name:a.name || null,
+      gear: a.gear ? { weapon:stripArt(a.gear.weapon), armour:stripArt(a.gear.armour),
+                       trinket:stripArt(a.gear.trinket) } : null,
+      find: stripArt(a.find), choice: stripArt(a.choice), recalled:a.recalled || false
+    })),
+    relic: S.relic.map(r => ({ art:stripArt(r.art), depth:r.depth, deaths:r.deaths, name:r.name || null })),
+    lost:  S.lost.map(l => ({ art:stripArt(l.art), depth:l.depth, deaths:l.deaths })),
+    meta:  S.meta
+  };
+}
+
+function migrate(save){
+  if (!save || typeof save !== "object") return null;
+  let v = save.version | 0;
+  if (v > SAVE_VERSION) return null;          // a newer build wrote this; leave it alone
+  if (v < SAVE_VERSION){
+    save.meta = save.meta || { ash:0, unlocks:[], dead:[], cycles:0 };
+    save.version = SAVE_VERSION;
+  }
+  return save;
+}
+
+function saveGame(){
+  if (S.ending) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(serialize())); }
+  catch (e){ /* a full or blocked store is not worth crashing the fire over */ }
+}
+
+function restore(save){
+  S.souls = save.souls || 0; S.mat = save.mat || 0;
+  S.lv = Object.assign(S.lv, save.lv || {});
+  S.smithLv = save.smithLv || 0; S.herbLv = save.herbLv || 0;
+  S.rekindles = save.rekindles || 0; S.bells = save.bells || 0;
+  S.embers = save.embers != null ? save.embers : T.MAX_EMBERS;
+  S.taps = save.taps || 0; S.tipSeen = !!save.tipSeen;
+  S.everHollowed = !!save.everHollowed; S.elapsed = save.elapsed || 0;
+  S.seen = Object.assign(S.seen, save.seen || {});
+  S.nextId = save.nextId || 1; S.nextArt = save.nextArt || 1;
+  S.meta = Object.assign(S.meta, save.meta || {});
+  const rehydrate = g => g ? Object.assign({ grid:null, sites:{}, grimeCv:null }, g) : null;
+  S.pool = (save.pool || []).map(p => {
+    const a = Object.assign({ x:0, y:0, dir:1, exit:0, bob:0, events:null, flash:null,
+                              pending:null, find:null, choice:null, gear:null }, p);
+    a.find = rehydrate(p.find); a.choice = rehydrate(p.choice);
+    if (p.gear){ a.gear = {}; for (const k of A_SLOTS) if (p.gear[k]) a.gear[k] = rehydrate(p.gear[k]); }
+    edgeSpawn(a);
+    if (a.state === "rest" || a.state === "wait" || a.state === "walkin"){ a.slot = -1; a.state = "walkin"; }
+    return a;
+  });
+  for (let i = 0; i < T.SLOTS; i++) slotUsed[i] = null;
+  S.relic = (save.relic || []).map(r => ({ art:rehydrate(r.art), depth:r.depth, deaths:r.deaths, name:r.name }));
+  S.lost  = (save.lost  || []).map(l => ({ art:rehydrate(l.art), depth:l.depth, deaths:l.deaths }));
+}
+
+/* The offline pass runs the real rules at a coarse step, so nothing drifts. */
+function runOffline(seconds){
+  const report = { seconds, souls:0, hollowed:[], found:0, scrap:0, deaths:0 };
+  S.offline = report;
+  const step = 0.5;
+  const before = S.souls, beforeMat = S.mat;
+  for (let t = 0; t < seconds; t += step){
+    S.arriveT += step;
+    const iv = interval();
+    while (S.arriveT >= iv){ S.arriveT -= iv; if (living().length < poolCap()) recruit(); }
+    updatePool(step);
+    tickCraft(step);
+    if (S.flameOn) tickFlame(step);
+  }
+  report.souls = S.souls - before;
+  report.scrap = S.mat - beforeMat;
+  S.offline = null;
+  S.floats.length = 0; S.sparks.length = 0; S.says.length = 0; S.notice = null;
+  return report;
+}
+
 /* ============================ ui ============================ */
 
 const listEl  = document.getElementById("list");
@@ -1633,9 +1812,62 @@ document.querySelectorAll(".tab").forEach(t => {
 
 /* ============================ start ============================ */
 
-resize();
-render();
-requestAnimationFrame(frame);
+function timeGone(sec){
+  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  if (h >= 1) return h + (h === 1 ? " hour" : " hours") + (m ? " and " + m + " minutes" : "");
+  if (m >= 1) return m + (m === 1 ? " minute" : " minutes");
+  return "a few moments";
+}
+
+function showReturn(rep){
+  const rows = [];
+  rows.push({ html:"<em>The fire burned without me for " + timeGone(rep.seconds) + ".</em>", onClick:null });
+  rows.push({ html: rep.souls > 0
+    ? "They kept paying while I was gone. <span>" + fmt(rep.souls) + " souls</span> in the tin."
+    : "Nobody paid. The tin is where I left it.", onClick:null });
+  if (rep.found) rows.push({ html: rep.found === 1 ? "One of them came up carrying something."
+    : rep.found + " of them came up carrying something.", onClick:null });
+  if (rep.scrap) rows.push({ html:"<span>" + rep.scrap + " scrap</span> in the pile, most of it bent.", onClick:null });
+  if (rep.hollowed.length){
+    rows.push({ html:"<b>" + (rep.hollowed.length === 1 ? "One did not come back."
+      : rep.hollowed.length + " did not come back.") + "</b>", onClick:null });
+    for (const h of rep.hollowed.filter(h => h.name))
+      rows.push({ html:"<em>" + h.name + ", who got as far as depth " + h.depth +
+        ". Sitting by the fire now, and not paying.</em>", onClick:null });
+    const nameless = rep.hollowed.filter(h => !h.name);
+    if (nameless.length){
+      const deepest = Math.max.apply(null, nameless.map(h => h.depth));
+      rows.push({ html:"<em>" + (nameless.length === 1 ? "One of the unnamed, at depth " + deepest
+        : nameless.length + " of the unnamed, none of them deeper than " + deepest) +
+        ". I never learned which was which.</em>", onClick:null });
+    }
+  } else rows.push({ html:"<em>Everyone who went down came back up. That happens.</em>", onClick:null });
+  if (S.flameOn) rows.push({ html:"The flame is at <span>" + Math.round(S.flame) + "</span>.", onClick:null });
+  rows.push({ html:"<b>Take up the tongs</b>", onClick: () => { closeSheet(); saveGame(); } });
+  openSheet("While you were gone", "Nothing waits for anybody here.", rows);
+}
+
+function boot(){
+  let save = null;
+  try { save = migrate(JSON.parse(localStorage.getItem(SAVE_KEY))); }
+  catch (e){ save = null; }
+  resize();
+  if (save){
+    restore(save);
+    const gone = Math.max(0, Math.min(OFFLINE_CAP, (Date.now() - (save.at || Date.now())) / 1000));
+    if (gone > 60){
+      const rep = runOffline(gone);
+      render();
+      showReturn(rep);
+    } else render();
+  } else render();
+  setInterval(saveGame, 5000);
+  window.addEventListener("pagehide", saveGame);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) saveGame(); });
+  requestAnimationFrame(frame);
+}
+
+boot();
 
 })();
 </script>
