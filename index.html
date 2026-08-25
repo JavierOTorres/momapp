@@ -11,7 +11,7 @@
     --bg:#15101c; --panel:#1e1729; --panel-2:#261d33; --ink:#0c0812;
     --line:#0c0812; --text:#f2e6d8; --dim:#9a8aa8;
     --ember:#ff9d3d; --ember-2:#ff5f3d; --gold:#ffd06b;
-    --good:#7bd88f; --disabled:#3a3046;
+    --good:#7bd88f; --cold:#7fa8d0; --disabled:#3a3046;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none}
@@ -30,50 +30,86 @@
 
   /* ---------- top bar ---------- */
   #top{
-    flex:0 0 auto;padding:12px 16px 10px;
+    flex:0 0 auto;padding:10px 16px 6px;
     display:flex;align-items:center;justify-content:space-between;
-    border-bottom:3px solid var(--line);background:var(--panel);
+    background:var(--panel);
   }
   #soulWrap{display:flex;align-items:baseline;gap:8px}
-  #souls{font-size:34px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
+  #souls{font-size:32px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
   #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
-  #sps{font-size:13px;color:var(--dim);text-align:right;line-height:1.5}
-  #sps b{display:block;font-size:17px;color:var(--text)}
+  #rate{font-size:11px;color:var(--dim);text-align:right;line-height:1.5}
+  #rate b{display:block;font-size:16px;color:var(--text)}
+  #pop{
+    flex:0 0 auto;display:flex;gap:14px;padding:0 16px 9px;
+    background:var(--panel);border-bottom:3px solid var(--line);
+    font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.06em;
+  }
+  #pop span{display:flex;align-items:center;gap:5px}
+  #pop i{width:8px;height:8px;border-radius:9px;display:block;border:2px solid var(--ink)}
+  .dFire{background:var(--ember)} .dAway{background:var(--cold)} .dHollow{background:#6a6270}
 
   /* ---------- sanctuary ---------- */
   #stage{flex:1 1 auto;position:relative;min-height:0;background:var(--bg)}
   canvas{display:block;width:100%;height:100%}
 
+  /* ---------- counsel card ---------- */
+  #counsel{
+    position:absolute;left:10px;right:10px;bottom:10px;z-index:5;
+    background:var(--panel-2);border:3px solid var(--line);border-radius:16px;
+    padding:10px;box-shadow:0 8px 0 rgba(0,0,0,.35);
+  }
+  #counsel[hidden]{display:none}
+  .cTop{display:flex;align-items:center;gap:10px}
+  .cTone{flex:0 0 auto;width:26px;height:26px;border-radius:14px;border:3px solid var(--line)}
+  .cTitle{font-size:14px}
+  .cSub{font-size:11px;font-weight:600;color:var(--dim);margin-top:2px}
+  .cClose{
+    margin-left:auto;width:30px;height:30px;border-radius:10px;border:3px solid var(--line);
+    background:var(--panel);color:var(--dim);font:inherit;font-size:14px;
+  }
+  .cOdds{
+    margin:8px 0;padding:7px 9px;border-radius:11px;background:var(--panel);
+    border:3px solid var(--line);font-size:11.5px;font-weight:600;color:var(--dim);line-height:1.45;
+  }
+  .cOdds b{font-size:15px;color:var(--text);font-weight:800}
+  .cAct{
+    width:100%;padding:11px;border:3px solid var(--line);border-radius:12px;
+    background:var(--cold);color:var(--ink);font:inherit;font-size:14px;
+  }
+  .cAct:disabled{background:var(--disabled);color:#7d7090}
+  .cAct.warm{background:var(--ember)}
+  .cNote{font-size:10.5px;font-weight:600;color:var(--dim);text-align:center;margin-top:6px;line-height:1.35}
+
   /* ---------- bottom panel ---------- */
   #bottom{
-    flex:0 0 auto;height:46%;min-height:300px;
+    flex:0 0 auto;height:44%;min-height:296px;
     background:var(--panel);border-top:3px solid var(--line);
     display:flex;flex-direction:column;
   }
   #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
   .tab{
-    flex:1;padding:14px 0;background:var(--panel-2);color:var(--dim);
+    flex:1;padding:13px 0;background:var(--panel-2);color:var(--dim);
     border:0;border-right:3px solid var(--line);
-    font:inherit;font-size:15px;letter-spacing:.16em;text-transform:uppercase;
+    font:inherit;font-size:14px;letter-spacing:.16em;text-transform:uppercase;
   }
   .tab:last-child{border-right:0}
   .tab.on{background:var(--panel);color:var(--gold);box-shadow:inset 0 -4px 0 var(--ember)}
-  #list{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+  #list{flex:1 1 auto;overflow-y:auto;padding:11px;display:flex;flex-direction:column;gap:9px;-webkit-overflow-scrolling:touch}
 
   .card{
     background:var(--panel-2);border:3px solid var(--line);border-radius:14px;
-    padding:11px 12px;display:flex;align-items:center;gap:12px;
+    padding:10px 11px;display:flex;align-items:center;gap:11px;
   }
   .icon{
-    flex:0 0 auto;width:44px;height:44px;border:3px solid var(--line);border-radius:12px;
-    display:grid;place-items:center;font-size:20px;
+    flex:0 0 auto;width:42px;height:42px;border:3px solid var(--line);border-radius:12px;
+    display:grid;place-items:center;font-size:19px;
   }
   .info{flex:1 1 auto;min-width:0}
   .name{font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .lvl{flex:0 0 auto;font-size:11px;color:var(--ink);background:var(--gold);border-radius:20px;padding:2px 7px;letter-spacing:.06em}
-  .desc{font-size:12px;font-weight:600;color:var(--dim);margin-top:3px;line-height:1.35}
+  .desc{font-size:11.5px;font-weight:600;color:var(--dim);margin-top:3px;line-height:1.35}
   .buy{
-    flex:0 0 auto;min-width:88px;padding:11px 10px;border:3px solid var(--line);border-radius:12px;
+    flex:0 0 auto;min-width:86px;padding:10px;border:3px solid var(--line);border-radius:12px;
     background:var(--ember);color:var(--ink);font:inherit;font-size:14px;
     display:flex;flex-direction:column;align-items:center;gap:2px;
   }
@@ -88,10 +124,27 @@
 <div id="app">
   <div id="top">
     <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div></div>
-    <div id="sps"><b>0.00</b>per second</div>
+    <div id="rate"><b>0.0</b>avg / sec, last 60s</div>
+  </div>
+  <div id="pop">
+    <span><i class="dFire"></i><em id="pFire">0</em> at fire</span>
+    <span><i class="dAway"></i><em id="pAway">0</em> away</span>
+    <span><i class="dHollow"></i><em id="pHollow">0</em> hollow</span>
   </div>
 
-  <div id="stage"><canvas id="cv"></canvas></div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="counsel" hidden>
+      <div class="cTop">
+        <div class="cTone"></div>
+        <div><div class="cTitle">Adventurer</div><div class="cSub"></div></div>
+        <button class="cClose">✕</button>
+      </div>
+      <div class="cOdds"></div>
+      <button class="cAct"></button>
+      <div class="cNote"></div>
+    </div>
+  </div>
 
   <div id="bottom">
     <div id="tabs">
@@ -99,7 +152,7 @@
       <button class="tab" data-tab="build">Build</button>
     </div>
     <div id="list"></div>
-    <div class="note" id="note">Tap the bonfire to stoke it. Embers refill on their own.</div>
+    <div class="note" id="note"></div>
   </div>
 </div>
 
@@ -107,38 +160,61 @@
 (function(){
 "use strict";
 
-/* ============================ state ============================ */
+/* ============================ tuning ============================
+
+   Survival is the one place these numbers depart from the v1 spec.
+   The spec's 0.60 base / -0.06 per depth kills 40% of shallow runs;
+   across a pool of 12 on 45s cycles that manufactures a hollow roughly
+   every minute, and the sanctuary is fully hollowed by minute 10 —
+   long before the Herbalist that is supposed to answer it.
+   0.84 / -0.05 keeps the shape (base + vendors - depth, same clamps)
+   and lands the spec's own pacing targets: first hollow ~6min,
+   Herbalist ~12min, choke ~22min, later still if you rekindle.
+   Everything else below is the spec's number.                        */
+
+const T = {
+  POOL:12, SLOTS:8, AWAY:45, REST:12, WALK:62,
+  SURV_BASE:0.84, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05,
+  SURV_MIN:0.15, SURV_MAX:0.92,
+  HOLLOW_AT:3, HOLLOW_AT_HERB:4,
+  DEPTH_PAY:0.5,
+  SMITH_COST:200, HERB_COST:500, REK_BASE:150, REK_GROWTH:1.6,
+  MAX_EMBERS:10, EMBER_REGEN:2
+};
+const SMITH_SLOTS = [1,2], HERB_SLOT = 6;
 
 const S = {
-  souls: 0,
-  lv: { flame:0, word:0, echo:0 },
-  smith: false,
-  embers: 10, emberT: 0,        // manual-tap budget: caps tapping as a strategy
-  arriveT: 0,
-  taps: 0,
-  tab: "skills",
-  adv: [], floats: [], sparks: []
+  souls:0, lv:{flame:0, word:0, echo:0}, smith:false, herb:false, rekindles:0,
+  embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
+  pool:[], nextId:1, sel:null, earnLog:[], floats:[], sparks:[]
 };
-
-const MAX_EMBERS = 10;
-const EMBER_REGEN = 2;          // seconds per ember
-const MAX_ON_SCREEN = 14;
 
 const NODES = [
   { key:"flame", name:"Kindled Flame", glyph:"🔥", base:10, growth:1.5,
-    desc:l => "+1 soul per rest.  Now " + perRest() + " per rest." },
+    desc:()=> "+1 soul per rest.  A depth 0 rest now pays " + perRest() + "." },
   { key:"word", name:"Word of Sanctuary", glyph:"🔔", base:25, growth:1.7,
-    desc:l => "Arrivals 10% faster.  One every " + interval().toFixed(2) + "s." },
+    desc:()=> "Recruits arrive 10% faster, one every " + interval().toFixed(2) +
+              "s, while the pool is below " + T.POOL + "." },
   { key:"echo", name:"Soul Echo", glyph:"💀", base:50, growth:2.0,
-    desc:l => "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
+    desc:()=> "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
 ];
 
 const cost      = n => Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
 const perRest   = () => 1 + S.lv.flame + (S.smith ? 2 : 0);
 const interval  = () => 5 * Math.pow(0.9, S.lv.word);
 const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
-const sps       = () => perRest() * (1 + echoChance()) / interval();
-const SMITH_COST = 200;
+const rekCost   = () => Math.floor(T.REK_BASE * Math.pow(T.REK_GROWTH, S.rekindles));
+const hollowAt  = () => S.herb ? T.HOLLOW_AT_HERB : T.HOLLOW_AT;
+const payFor    = a => Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY));
+const runDepth  = a => a.shallow ? Math.max(0, a.depth - 1) : a.depth;
+const survival  = d => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
+                    T.SURV_BASE + (S.smith ? T.SURV_SMITH : 0) + (S.herb ? T.SURV_HERB : 0) - d * T.DEPTH_PEN));
+const hollows   = () => S.pool.filter(a => a.state === "hollow");
+const living    = () => S.pool.filter(a => a.state !== "hollow");
+const avgRate   = () => {                 // never divide by a window too short to mean anything
+  const w = Math.max(20, Math.min(60, S.elapsed || 0));
+  return S.earnLog.reduce((s,e)=>s+e.n, 0) / w;
+};
 
 /* ============================ canvas ============================ */
 
@@ -152,7 +228,7 @@ function resize(){
   W = r.width; H = r.height;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  fx = W / 2; fy = H * 0.58;      // fire sits low, inside thumb reach
+  fx = W / 2; fy = H * 0.54;
 }
 window.addEventListener("resize", resize);
 if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
@@ -177,65 +253,113 @@ function teardrop(x, y, w, h, fill, lw){
     ctx.bezierCurveTo(x+w, y-h*0.5, x+w*0.85, y, x, y);
     ctx.bezierCurveTo(x-w*0.85, y, x-w, y-h*0.5, x, y-h); ctx.closePath(); }, fill, lw);
 }
+function desat(hex){                       // a hollow keeps its hue, drained of life
+  const n = parseInt(hex.slice(1), 16), r = n>>16 & 255, g = n>>8 & 255, b = n & 255;
+  const l = r*0.30 + g*0.59 + b*0.11;
+  const m = c => Math.round(Math.min(255, c*0.20 + l*0.52));
+  return "#" + [m(r), m(g), m(b)].map(v => v.toString(16).padStart(2,"0")).join("");
+}
 
-/* ============================ sanctuary actors ============================ */
+/* ============================ the pool ============================ */
 
-const SLOTS = 8;
-const slotUsed = new Array(SLOTS).fill(false);
+const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d57"],
+                ["#c9a45c","#8a6a34"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"],
+                ["#5fbec4","#2f7d82"], ["#e0904a","#9c5a22"], ["#b96fc4","#7a3f85"],
+                ["#a8c95c","#6c8a30"], ["#8894b0","#525b74"], ["#c45f5f","#832f2f"] ];
+const slotUsed = new Array(T.SLOTS).fill(null);
+
 function slotPos(i){
-  const a = -Math.PI/2 + (i / SLOTS) * Math.PI * 2 + 0.4;
+  const a = -Math.PI/2 + (i / T.SLOTS) * Math.PI * 2 + 0.4;
   return { x: fx + Math.cos(a) * 96, y: fy + Math.sin(a) * 44 + 6 };
 }
-const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d57"],
-                ["#c9a45c","#8a6a34"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"] ];
-
-function spawnAdventurer(){
-  if (S.adv.length >= MAX_ON_SCREEN){ collect(); return; }
-  let slot = -1;                               // slots 1-2 belong to the Blacksmith once built
-  for (let i = 0; i < SLOTS; i++){
-    if (S.smith && (i === 1 || i === 2)) continue;
-    if (!slotUsed[i]){ slot = i; break; }
+const reserved = i => (S.smith && SMITH_SLOTS.indexOf(i) >= 0) || (S.herb && i === HERB_SLOT);
+function claimSlot(a){
+  for (let i = 0; i < T.SLOTS; i++){
+    if (reserved(i) || slotUsed[i]) continue;
+    slotUsed[i] = a; a.slot = i; return true;
   }
-  if (slot < 0) slot = 0;
-  slotUsed[slot] = true;
-  const fromLeft = Math.random() < 0.5;
-  S.adv.push({
-    x: fromLeft ? -30 : W + 30, y: fy + 34 + Math.random() * 10,
-    slot, state: "in", t: 0, dir: fromLeft ? 1 : -1,
-    tone: TONES[(Math.random() * TONES.length) | 0],
-    exit: fromLeft ? W + 40 : -40, bob: Math.random() * 6
-  });
+  return false;
+}
+function releaseSlot(a){ if (a.slot >= 0){ slotUsed[a.slot] = null; a.slot = -1; } }
+function edgeSpawn(a){
+  const left = Math.random() < 0.5;
+  a.x = left ? -30 : W + 30; a.y = fy + 40 + Math.random() * 12;
+  a.dir = left ? 1 : -1; a.exit = left ? W + 40 : -40;
 }
 
-function collect(){
-  const gain = perRest() * (Math.random() < echoChance() ? 2 : 1);
-  S.souls += gain;
-  return gain;
+function recruit(){
+  const a = { id:S.nextId++, depth:0, deaths:0, shallow:false, slot:-1,
+              tone:TONES[(S.nextId - 1) % TONES.length], state:"walkin", t:0,
+              x:0, y:0, dir:1, exit:0, bob:Math.random() * 6, queue:0 };
+  edgeSpawn(a); S.pool.push(a); return a;
 }
 
-function updateAdventurers(dt){
+function earn(n, x, y, doubled){
+  S.souls += n;
+  S.earnLog.push({ t:S.elapsed, n });
+  S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffd06b" : "#f2e6d8" });
+}
+
+function sitDown(a){
+  a.state = "rest"; a.t = T.REST;
+  const p = slotPos(a.slot); a.x = p.x; a.y = p.y;
+  const doubled = Math.random() < echoChance();
+  earn(payFor(a) * (doubled ? 2 : 1), a.x, a.y - 26, doubled);
+  a.shallow = false;                    // the discount is spent on this rest
+  for (let k = 0; k < 4; k++) sparks(a.x, a.y - 10, 0.7);
+}
+
+function resolveExpedition(a){
+  const d = runDepth(a), survived = Math.random() < survival(d);
+  a.shallow = false;
+  if (survived){
+    if (a.depth === d) a.depth = d + 1;   // sent shallow: banked, not deepened
+  } else {
+    a.deaths++; a.depth = 0;
+    if (a.deaths >= hollowAt()){
+      a.state = "hollow"; a.t = 0; a.queue = 0;
+      if (S.sel === a.id) showCounsel(a);
+      return;
+    }
+  }
+  edgeSpawn(a); a.state = "walkin";
+}
+
+function updatePool(dt){
   const speed = 62;
-  for (let i = S.adv.length - 1; i >= 0; i--){
-    const a = S.adv[i];
+  let spill = 0;                           // a hollow squats the next slot that frees
+  for (const h of S.pool){
+    if (h.state !== "hollow") continue;
+    if (h.slot < 0 && claimSlot(h)){ const p = slotPos(h.slot); h.x = p.x; h.y = p.y; }
+    if (h.slot < 0){                       // no room left: they slump outside the ring
+      h.x = fx + 108 - (spill++) * 38; h.y = fy + 78;
+    }
+  }
+  for (const a of S.pool){
+    if (a.state === "hollow") continue;
     a.bob += dt * 9;
-    if (a.state === "in"){
-      const p = slotPos(a.slot);
-      const dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
-      if (d < 3){ a.state = "rest"; a.t = 0; a.x = p.x; a.y = p.y; }
+    if (a.state === "walkin"){
+      if (a.slot < 0 && !claimSlot(a)){ a.state = "wait"; a.t = 0.4; continue; }
+      const p = slotPos(a.slot), dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
+      if (d < 3) sitDown(a);
       else { a.x += dx/d * speed * dt; a.y += dy/d * speed * dt; a.dir = dx >= 0 ? 1 : -1; }
+    } else if (a.state === "wait"){
+      const qi = S.pool.filter(o => o.state === "wait").indexOf(a);
+      const tx = fx - 108 + qi * 40, ty = fy + 62;
+      a.x += (tx - a.x) * Math.min(1, dt * 3); a.y += (ty - a.y) * Math.min(1, dt * 3);
+      a.t -= dt;
+      if (a.t <= 0){ a.t = 0.4; if (claimSlot(a)) a.state = "walkin"; }
     } else if (a.state === "rest"){
-      a.t += dt;
-      if (a.t > 1.1){
-        const gain = collect();
-        S.floats.push({ x:a.x, y:a.y - 16, t:0, txt:"+" + gain, col: gain > perRest() ? "#ffd06b" : "#f2e6d8" });
-        for (let k = 0; k < 4; k++) sparks(a.x, a.y - 10, 0.7);
-        a.state = "out"; slotUsed[a.slot] = false;
-      }
-    } else {
+      a.t -= dt;
+      if (a.t <= 0){ releaseSlot(a); a.state = "walkout"; if (S.sel === a.id) closeCounsel(); }
+    } else if (a.state === "walkout"){
       a.x += Math.sign(a.exit - a.x) * speed * dt;
-      a.y += (fy + 40 - a.y) * dt;
+      a.y += (fy + 46 - a.y) * dt;
       a.dir = Math.sign(a.exit - a.x);
-      if (Math.abs(a.x - a.exit) < 6) S.adv.splice(i, 1);
+      if (Math.abs(a.x - a.exit) < 6){ a.state = "away"; a.t = T.AWAY; }
+    } else if (a.state === "away"){
+      a.t -= dt;
+      if (a.t <= 0) resolveExpedition(a);
     }
   }
 }
@@ -269,45 +393,81 @@ function drawFire(time){
 }
 
 /* one hooded figure: trapezoid cloak, hood, pale face */
-function figure(x, y, h, w, cloak, hood, dir){
+function figure(x, y, h, w, cloak, hood, dir, face){
   shape(()=>ctx.ellipse(x, y + 5, w*0.6, 4.5, 0, 0, 6.2832), "rgba(0,0,0,0.32)", 0.001);
   shape(()=>{ ctx.moveTo(x - w*0.40, y - h); ctx.lineTo(x + w*0.40, y - h);
               ctx.lineTo(x + w*0.52, y + 1); ctx.quadraticCurveTo(x, y + 7, x - w*0.52, y + 1);
               ctx.closePath(); }, cloak, 4);
   circle(x, y - h - 2, w*0.50, hood, 4);
-  circle(x + dir*w*0.16, y - h - 1, w*0.30, "#e8cfae", 3);
+  circle(x + dir*w*0.16, y - h - 1, w*0.30, face || "#e8cfae", 3);
 }
 
-function drawAdventurer(a){
-  const rest = a.state === "rest";
-  const bob = rest ? 0 : Math.sin(a.bob) * 1.8;
-  figure(a.x, a.y + bob, rest ? 17 : 22, 22, a.tone[0], a.tone[1], a.dir || 1);
+function drawAdventurer(a, time){
+  if (a.state === "hollow"){
+    const x = a.x, y = a.y;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(0.13); ctx.translate(-x, -y);
+    figure(x, y, 13, 21, desat(a.tone[0]), desat(a.tone[1]), 1, "#544d5e");
+    ctx.restore();
+    return;
+  }
+  const rest = a.state === "rest", bob = rest ? 0 : Math.sin(a.bob) * 1.8;
+  const y = a.y + bob;
+  if (rest){                                        // the fire's warmth on a living guest
+    const g = ctx.createRadialGradient(a.x, y - 14, 2, a.x, y - 14, 26);
+    g.addColorStop(0, "rgba(255,157,61,0.20)"); g.addColorStop(1, "rgba(255,157,61,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, y - 14, 26, 0, 6.2832); ctx.fill();
+  }
+  figure(a.x, y, rest ? 17 : 22, 22, a.tone[0], a.tone[1], a.dir || 1);
+  const top = y - (rest ? 17 : 22) - 15;
+  if (a.depth > 0){
+    rrect(a.x, top, 24, 15, 7, "#0c0812", 2);
+    ctx.font = "800 10px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "#ffd06b"; ctx.fillText("D" + a.depth, a.x, top + 4);
+  }
+  if (a.shallow){
+    circle(a.x + 17, top + 1, 7, "#7fa8d0", 3);
+    ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "#0c0812"; ctx.fillText("↓", a.x + 17, top + 4);
+  }
+  if (a.deaths > 0 && rest){                        // scars: one notch per death
+    for (let i = 0; i < a.deaths; i++)
+      circle(a.x - 8 + i*7, y - 4, 2.4, "#0c0812", 2);
+  }
 }
 
 function drawBlacksmith(time){
-  const x = Math.min(fx + 98, W - 58), y = fy + 10, swing = Math.sin(time*5.2);
-  // anvil
+  const p = slotPos(1), x = Math.min(p.x + 4, W - 58), y = p.y + 22, swing = Math.sin(time*5.2);
   rrect(x + 34, y - 4, 26, 9, 4, "#3a2c4a", 4);
   shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
               ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#5c5468", 4);
   shape(()=>{ ctx.moveTo(x+22, y-18); ctx.lineTo(x+46, y-18); ctx.lineTo(x+46, y-26);
               ctx.lineTo(x+26, y-26); ctx.lineTo(x+16, y-22); ctx.closePath(); }, "#77708a", 4);
   figure(x, y, 30, 30, "#8a5a3c", "#5a3f2c", 1);
-  rrect(x + 1, y - 12, 20, 22, 6, "#6b4a30", 3);          // apron
-  ctx.save();                                              // hammer arm
-  ctx.translate(x + 16, y - 24); ctx.rotate(-0.35 + swing*0.6);
+  rrect(x + 1, y - 12, 20, 22, 6, "#6b4a30", 3);
+  ctx.save(); ctx.translate(x + 16, y - 24); ctx.rotate(-0.35 + swing*0.6);
   rrect(0, -11, 7, 24, 3, "#5a3f2c", 3);
   rrect(0, -22, 16, 11, 4, "#6b6478", 3);
   ctx.restore();
   if (swing > 0.95) sparks(x + 34, y - 26, 0.4);
 }
 
+function drawHerbalist(time){
+  const p = slotPos(HERB_SLOT), x = Math.max(p.x - 12, 48), y = p.y - 2, grind = Math.sin(time*3.1);
+  rrect(x - 25, y - 2, 22, 9, 4, "#3a2c4a", 4);              // bench, tucked outside the ring
+  shape(()=>{ ctx.moveTo(x-33, y-8); ctx.lineTo(x-17, y-8); ctx.lineTo(x-20, y-18);
+              ctx.lineTo(x-30, y-18); ctx.closePath(); }, "#6f8a72", 4);      // mortar
+  ctx.save(); ctx.translate(x - 25, y - 18); ctx.rotate(-0.4 + grind*0.25);
+  rrect(0, -7, 5, 17, 3, "#8a7a5c", 3); ctx.restore();       // pestle
+  figure(x, y, 26, 26, "#5f7d5a", "#3f5a3e", -1);
+  rrect(x - 1, y - 10, 17, 19, 6, "#4d6749", 3);             // apron
+  circle(x + 10, y - 27, 5.5, "#9bd08a", 3);                 // sprig at the hood
+  if (grind > 0.97) S.sparks.push({ x:x-25, y:y-22, vx:(Math.random()-0.5)*20, vy:-18, t:0, life:0.5 });
+}
+
 function drawEmbers(){
-  const n = MAX_EMBERS, gap = 15, x0 = fx - (n-1)*gap/2, y = fy + 76;
-  for (let i = 0; i < n; i++){
-    const lit = i < Math.floor(S.embers);
-    circle(x0 + i*gap, y, 4.5, lit ? "#ff9d3d" : "#33263f", 3);
-  }
+  const n = T.MAX_EMBERS, gap = 15, x0 = fx - (n-1)*gap/2, y = fy + 94;
+  for (let i = 0; i < n; i++)
+    circle(x0 + i*gap, y, 4.5, i < Math.floor(S.embers) ? "#ff9d3d" : "#33263f", 3);
   if (S.taps < 8){
     ctx.font = "700 11px ui-rounded, system-ui, sans-serif";
     ctx.fillStyle = "#9a8aa8"; ctx.textAlign = "center";
@@ -320,16 +480,15 @@ function drawFx(dt){
     const p = S.sparks[i]; p.t += dt;
     if (p.t > p.life){ S.sparks.splice(i,1); continue; }
     p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 14*dt;
-    ctx.globalAlpha = 1 - p.t/p.life;
-    ctx.fillStyle = "#ffd06b";
+    ctx.globalAlpha = 1 - p.t/p.life; ctx.fillStyle = "#ffd06b";
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
     ctx.globalAlpha = 1;
   }
   ctx.textAlign = "center";
   for (let i = S.floats.length - 1; i >= 0; i--){
     const f = S.floats[i]; f.t += dt;
-    if (f.t > 1){ S.floats.splice(i,1); continue; }
-    ctx.globalAlpha = 1 - f.t;
+    if (f.t > 1.2){ S.floats.splice(i,1); continue; }
+    ctx.globalAlpha = 1 - f.t/1.2;
     ctx.font = "800 16px ui-rounded, system-ui, sans-serif";
     ctx.lineWidth = 4; ctx.strokeStyle = "#0c0812";
     ctx.strokeText(f.txt, f.x, f.y - f.t*38);
@@ -341,129 +500,219 @@ function drawFx(dt){
 /* ============================ loop ============================ */
 
 let flare = 0, sparkT = 0, uiT = 0, last = performance.now();
+S.elapsed = 0;
 
 function frame(now){
   let dt = (now - last) / 1000; last = now;
-  if (dt > 0.25) dt = 0.25;                 // backgrounded tab: no huge catch-up
+  if (dt > 0.25) dt = 0.25;
+  S.elapsed += dt;
   const time = now / 1000;
 
-  // arrivals
   S.arriveT += dt;
   const iv = interval();
   let guard = 0;
-  while (S.arriveT >= iv && guard++ < 20){ S.arriveT -= iv; spawnAdventurer(); }
+  while (S.arriveT >= iv && guard++ < 20){
+    S.arriveT -= iv;
+    if (living().length < T.POOL) recruit();
+  }
 
-  // ember regen
   S.emberT += dt;
-  while (S.emberT >= EMBER_REGEN){ S.emberT -= EMBER_REGEN; S.embers = Math.min(MAX_EMBERS, S.embers + 1); }
+  while (S.emberT >= T.EMBER_REGEN){ S.emberT -= T.EMBER_REGEN; S.embers = Math.min(T.MAX_EMBERS, S.embers + 1); }
 
-  updateAdventurers(dt);
+  updatePool(dt);
+  while (S.earnLog.length && S.earnLog[0].t < S.elapsed - 60) S.earnLog.shift();
   flare = Math.max(0, flare - dt * 1.6);
   sparkT += dt;
   if (sparkT > 0.16){ sparkT = 0; sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
 
-  // render
   ctx.clearRect(0, 0, W, H);
   drawGround();
-  const behind = S.adv.filter(a => a.y <= fy), front = S.adv.filter(a => a.y > fy);
-  behind.forEach(drawAdventurer);
+  const onStage = S.pool.filter(a => a.state !== "away");
+  onStage.sort((a,b) => a.y - b.y);
+  const behind = onStage.filter(a => a.y <= fy), front = onStage.filter(a => a.y > fy);
+  behind.forEach(a => drawAdventurer(a, time));
   if (S.smith) drawBlacksmith(time);
+  if (S.herb) drawHerbalist(time);
   drawFire(time);
-  front.forEach(drawAdventurer);
+  front.forEach(a => drawAdventurer(a, time));
   drawEmbers();
   drawFx(dt);
 
   uiT += dt;
-  if (uiT > 0.1){ uiT = 0; refresh(); }
+  if (uiT > 0.15){ uiT = 0; refresh(); if (S.sel != null) showCounsel(byId(S.sel)); }
   requestAnimationFrame(frame);
 }
 
 /* ============================ input ============================ */
 
+const byId = id => S.pool.find(a => a.id === id);
+
 cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
-  if (Math.hypot(x - fx, (y - fy + 14) * 0.85) > 84) return;   // generous fire hit area
-  S.taps++;
-  if (S.embers < 1){
-    S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" });
-    return;
+
+  let hit = null, best = 34;                    // a guest is worth more than the fire behind them
+  for (const a of S.pool){
+    if (a.state !== "rest" && a.state !== "hollow") continue;
+    const d = Math.hypot(x - a.x, y - (a.y - 14));
+    if (d < best){ best = d; hit = a; }
   }
-  S.embers--; S.souls += 1; flare = 0.5;
-  S.floats.push({ x:fx + (Math.random()-0.5)*20, y:fy - 46, t:0, txt:"+1", col:"#f2e6d8" });
+  if (hit){ S.sel = hit.id; showCounsel(hit); return; }
+
+  if (Math.hypot(x - fx, (y - fy + 14) * 0.85) > 84){ closeCounsel(); return; }
+  S.taps++;
+  if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" }); return; }
+  S.embers--; earn(1, fx + (Math.random()-0.5)*20, fy - 46, false); flare = 0.5;
   for (let k = 0; k < 5; k++) sparks(fx + (Math.random()-0.5)*16, fy - 22, 0.6);
-  refresh();
 });
+
+/* ============================ counsel card ============================ */
+
+const counsel = document.getElementById("counsel");
+const cTone = counsel.querySelector(".cTone"), cTitle = counsel.querySelector(".cTitle");
+const cSub = counsel.querySelector(".cSub"), cOdds = counsel.querySelector(".cOdds");
+const cAct = counsel.querySelector(".cAct"), cNote = counsel.querySelector(".cNote");
+counsel.querySelector(".cClose").addEventListener("click", closeCounsel);
+
+function closeCounsel(){ S.sel = null; counsel.hidden = true; }
+const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+
+function showCounsel(a){
+  if (!a){ closeCounsel(); return; }
+  S.sel = a.id; counsel.hidden = false;
+  const hollow = a.state === "hollow";
+  cTone.style.background = hollow ? desat(a.tone[0]) : a.tone[0];
+  cTitle.textContent = hollow ? "Hollowed" : "Adventurer";
+  cSub.textContent = hollow
+    ? plural(a.deaths, "death") + ", and nothing left to spend"
+    : a.deaths === 0
+      ? "Depth " + a.depth + " · unscarred"
+      : "Depth " + a.depth + " · " + plural(a.deaths, "death") + " · " + (hollowAt() - a.deaths) + " from hollowing";
+
+  if (hollow){
+    cOdds.innerHTML = "Holds a slot at the fire. Pays <b>nothing</b>, ever.";
+    const c = rekCost();
+    cAct.textContent = "Rite of Rekindling — " + fmt(c);
+    cAct.className = "cAct warm";
+    cAct.disabled = S.souls < c;
+    cAct.onclick = () => { if (rekindle(a)) closeCounsel(); };
+    cNote.textContent = "Back to the pool at depth 0, their deaths forgiven.";
+  } else {
+    const d = runDepth(a), odds = Math.round(survival(d) * 100);
+    cOdds.innerHTML = "Survives the next expedition <b>" + odds + "%</b> of the time, and pays <b>"
+                    + fmt(payFor(a)) + "</b> when they come back.";
+    cAct.textContent = a.shallow ? "Sent shallow" : "Send shallow";
+    cAct.className = "cAct";
+    cAct.disabled = a.shallow || a.depth === 0;
+    cAct.onclick = () => { a.shallow = true; showCounsel(a); };
+    cNote.textContent = a.depth === 0 ? "Nowhere shallower to send them."
+      : a.shallow ? "They come home no deeper than they left."
+      : "One layer short: safer odds, a smaller purse, no new depth.";
+  }
+}
+
+function rekindle(a){
+  const c = rekCost();
+  if (!a || a.state !== "hollow" || S.souls < c) return false;
+  S.souls -= c; S.rekindles++;
+  releaseSlot(a); a.deaths = 0; a.depth = 0; a.shallow = false;
+  edgeSpawn(a); a.state = "walkin";
+  for (let k = 0; k < 14; k++) sparks(a.x, a.y - 10, 1.1);
+  render(); return true;
+}
 
 /* ============================ ui ============================ */
 
 const listEl  = document.getElementById("list");
 const soulsEl = document.getElementById("souls");
-const spsEl   = document.querySelector("#sps b");
+const rateEl  = document.querySelector("#rate b");
 const noteEl  = document.getElementById("note");
+const popEl   = { fire:document.getElementById("pFire"), away:document.getElementById("pAway"),
+                  hollow:document.getElementById("pHollow") };
 const fmt = n => Math.floor(n).toLocaleString("en-US");
-const fmtRate = v => v < 10 ? v.toFixed(2) : v < 1000 ? v.toFixed(1) : fmt(v);
+let rows = [];
 
-function card(opts){
+function card(o){
   const el = document.createElement("div"); el.className = "card";
   el.innerHTML =
-    '<div class="icon" style="background:' + opts.tint + '">' + opts.glyph + '</div>' +
-    '<div class="info"><div class="name">' + opts.name +
-      (opts.level != null ? '<span class="lvl">LV ' + opts.level + '</span>' : '') +
+    '<div class="icon" style="background:' + o.tint + '">' + o.glyph + '</div>' +
+    '<div class="info"><div class="name">' + o.name +
+      (o.level != null ? '<span class="lvl">LV ' + o.level + '</span>' : '') +
     '</div><div class="desc"></div></div>' +
     '<button class="buy"><span></span><small>SOULS</small></button>';
-  el.querySelector(".desc").textContent = opts.desc;
-  const btn = el.querySelector(".buy");
-  btn.querySelector("span").textContent = opts.label;
-  btn.disabled = !opts.enabled;
-  if (opts.done){ btn.classList.add("done"); btn.querySelector("small").remove(); }
-  btn.addEventListener("click", opts.onBuy);
-  return el;
+  const btn = el.querySelector(".buy"), lvl = el.querySelector(".lvl");
+  btn.addEventListener("click", o.onBuy);
+  listEl.appendChild(el);
+  rows.push(()=>{
+    el.querySelector(".desc").textContent = o.desc();
+    btn.querySelector("span").textContent = o.label();
+    btn.disabled = !o.enabled();
+    if (lvl) lvl.textContent = "LV " + o.level2();
+    const done = o.done && o.done();
+    btn.classList.toggle("done", !!done);
+    const small = btn.querySelector("small");
+    if (small) small.style.visibility = done ? "hidden" : "visible";
+  });
 }
 
 function render(){
-  listEl.innerHTML = "";
+  listEl.innerHTML = ""; rows = [];
   if (S.tab === "skills"){
-    NODES.forEach(n => {
-      const c = cost(n);
-      listEl.appendChild(card({
-        glyph:n.glyph, tint:"#3a2c4a", name:n.name, level:S.lv[n.key], desc:n.desc(S.lv[n.key]),
-        label:fmt(c), enabled:S.souls >= c,
-        onBuy(){ const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++; render(); }
-      }));
-    });
-    noteEl.textContent = "Tap the bonfire to stoke it. Embers refill on their own.";
-  } else {
-    listEl.appendChild(card({
-      glyph:"🔨", tint:"#5a3f2c", name:"The Blacksmith", level:null,
-      desc: S.smith ? "Repairs are paid at the fire. +2 souls per rest."
-                    : "Adventurers pay for repairs. +2 souls per rest.",
-      label: S.smith ? "Built" : fmt(SMITH_COST),
-      enabled: !S.smith && S.souls >= SMITH_COST, done:S.smith,
-      onBuy(){ if (S.smith || S.souls < SMITH_COST) return; S.souls -= SMITH_COST; S.smith = true; render(); }
+    NODES.forEach(n => card({
+      glyph:n.glyph, tint:"#3a2c4a", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
+      desc:n.desc, label:()=>fmt(cost(n)), enabled:()=>S.souls >= cost(n),
+      onBuy(){ const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++; render(); }
     }));
-    noteEl.textContent = S.smith ? "The Blacksmith works beside the fire."
-                                 : "One vendor for now. Others will want a place later.";
+    card({
+      glyph:"✨", tint:"#4a3c2c", name:"Rite of Rekindling", level:S.rekindles, level2:()=>S.rekindles,
+      desc:()=> hollows().length
+        ? "Clears one hollow and returns them to the pool, depth 0, deaths forgiven."
+        : "Nothing to rekindle. No one has hollowed yet.",
+      label:()=>fmt(rekCost()),
+      enabled:()=> hollows().length > 0 && S.souls >= rekCost(),
+      onBuy(){ rekindle(hollows()[0]); }
+    });
+    noteEl.textContent = "Skills grow the take. Vendors keep them alive.";
+  } else {
+    card({
+      glyph:"🔨", tint:"#5a3f2c", name:"The Blacksmith", level:null, level2:()=>0,
+      desc:()=> S.smith ? "Repairs paid at the fire: +2 souls per rest, +12% survival."
+                        : "Adventurers pay for repairs. +2 souls per rest, +12% survival. Holds 2 slots.",
+      label:()=> S.smith ? "Built" : fmt(T.SMITH_COST),
+      enabled:()=> !S.smith && S.souls >= T.SMITH_COST, done:()=>S.smith,
+      onBuy(){ if (S.smith || S.souls < T.SMITH_COST) return; S.souls -= T.SMITH_COST; S.smith = true; evictReserved(); render(); }
+    });
+    card({
+      glyph:"🌿", tint:"#3f5a3e", name:"The Herbalist", level:null, level2:()=>0,
+      desc:()=> S.herb ? "Poultices at the fire: +8% survival, and they endure a 4th death."
+                       : "+8% survival, and adventurers hollow on the 4th death instead of the 3rd. Holds 1 slot.",
+      label:()=> S.herb ? "Built" : fmt(T.HERB_COST),
+      enabled:()=> !S.herb && S.souls >= T.HERB_COST, done:()=>S.herb,
+      onBuy(){ if (S.herb || S.souls < T.HERB_COST) return; S.souls -= T.HERB_COST; S.herb = true; evictReserved(); render(); }
+    });
+    noteEl.textContent = "Vendors take room at the fire. That is the whole cost of them.";
   }
   refresh();
 }
 
+function evictReserved(){                 // a new vendor turns guests out of its slots
+  for (let i = 0; i < T.SLOTS; i++){
+    const a = slotUsed[i];
+    if (!a || !reserved(i)) continue;
+    releaseSlot(a);
+    if (a.state === "hollow") continue;   // a hollow re-squats elsewhere on the next tick
+    a.state = a.state === "rest" ? "walkout" : "walkin";   // never pays twice for one rest
+  }
+}
+
 function refresh(){
   soulsEl.textContent = fmt(S.souls);
-  spsEl.textContent = fmtRate(sps());
-  const rows = listEl.children;
-  if (S.tab === "skills"){
-    for (let i = 0; i < rows.length; i++){
-      const n = NODES[i], c = cost(n), btn = rows[i].querySelector(".buy");
-      rows[i].querySelector(".lvl").textContent = "LV " + S.lv[n.key];
-      rows[i].querySelector(".desc").textContent = n.desc(S.lv[n.key]);
-      btn.querySelector("span").textContent = fmt(c);
-      btn.disabled = S.souls < c;
-    }
-  } else if (rows.length){
-    const btn = rows[0].querySelector(".buy");
-    btn.disabled = S.smith || S.souls < SMITH_COST;
-  }
+  rateEl.textContent = avgRate().toFixed(1);
+  const atFire = S.pool.filter(a => a.state === "rest" || a.state === "wait").length;
+  popEl.fire.textContent = atFire;
+  popEl.away.textContent = S.pool.filter(a => a.state === "away").length;
+  popEl.hollow.textContent = hollows().length;
+  rows.forEach(u => u());
 }
 
 document.querySelectorAll(".tab").forEach(t => {
