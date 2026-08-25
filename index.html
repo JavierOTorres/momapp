@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#15101c">
+<title>Sanctuary</title>
+<style>
+  :root{
+    --bg:#15101c; --panel:#1e1729; --panel-2:#261d33; --ink:#0c0812;
+    --line:#0c0812; --text:#f2e6d8; --dim:#9a8aa8;
+    --ember:#ff9d3d; --ember-2:#ff5f3d; --gold:#ffd06b;
+    --good:#7bd88f; --disabled:#3a3046;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:ui-rounded,"Avenir Next Rounded","Trebuchet MS",Verdana,system-ui,sans-serif;
+    font-weight:700;letter-spacing:.02em;
+    display:flex;justify-content:center;
+    touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  }
+  #app{
+    width:100%;max-width:430px;height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+
+  /* ---------- top bar ---------- */
+  #top{
+    flex:0 0 auto;padding:12px 16px 10px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:3px solid var(--line);background:var(--panel);
+  }
+  #soulWrap{display:flex;align-items:baseline;gap:8px}
+  #souls{font-size:34px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
+  #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
+  #sps{font-size:13px;color:var(--dim);text-align:right;line-height:1.5}
+  #sps b{display:block;font-size:17px;color:var(--text)}
+
+  /* ---------- sanctuary ---------- */
+  #stage{flex:1 1 auto;position:relative;min-height:0;background:var(--bg)}
+  canvas{display:block;width:100%;height:100%}
+
+  /* ---------- bottom panel ---------- */
+  #bottom{
+    flex:0 0 auto;height:46%;min-height:300px;
+    background:var(--panel);border-top:3px solid var(--line);
+    display:flex;flex-direction:column;
+  }
+  #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
+  .tab{
+    flex:1;padding:14px 0;background:var(--panel-2);color:var(--dim);
+    border:0;border-right:3px solid var(--line);
+    font:inherit;font-size:15px;letter-spacing:.16em;text-transform:uppercase;
+  }
+  .tab:last-child{border-right:0}
+  .tab.on{background:var(--panel);color:var(--gold);box-shadow:inset 0 -4px 0 var(--ember)}
+  #list{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+
+  .card{
+    background:var(--panel-2);border:3px solid var(--line);border-radius:14px;
+    padding:11px 12px;display:flex;align-items:center;gap:12px;
+  }
+  .icon{
+    flex:0 0 auto;width:44px;height:44px;border:3px solid var(--line);border-radius:12px;
+    display:grid;place-items:center;font-size:20px;
+  }
+  .info{flex:1 1 auto;min-width:0}
+  .name{font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .lvl{flex:0 0 auto;font-size:11px;color:var(--ink);background:var(--gold);border-radius:20px;padding:2px 7px;letter-spacing:.06em}
+  .desc{font-size:12px;font-weight:600;color:var(--dim);margin-top:3px;line-height:1.35}
+  .buy{
+    flex:0 0 auto;min-width:88px;padding:11px 10px;border:3px solid var(--line);border-radius:12px;
+    background:var(--ember);color:var(--ink);font:inherit;font-size:14px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .buy small{font-size:10px;font-weight:700;opacity:.72;letter-spacing:.1em}
+  .buy:active{transform:translateY(2px)}
+  .buy:disabled{background:var(--disabled);color:#7d7090;transform:none}
+  .buy.done{background:var(--good);color:var(--ink)}
+  .note{font-size:11px;font-weight:600;color:var(--dim);text-align:center;padding:2px 6px 6px;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div></div>
+    <div id="sps"><b>0.00</b>per second</div>
+  </div>
+
+  <div id="stage"><canvas id="cv"></canvas></div>
+
+  <div id="bottom">
+    <div id="tabs">
+      <button class="tab on" data-tab="skills">Skills</button>
+      <button class="tab" data-tab="build">Build</button>
+    </div>
+    <div id="list"></div>
+    <div class="note" id="note">Tap the bonfire to stoke it. Embers refill on their own.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================ state ============================ */
+
+const S = {
+  souls: 0,
+  lv: { flame:0, word:0, echo:0 },
+  smith: false,
+  embers: 10, emberT: 0,        // manual-tap budget: caps tapping as a strategy
+  arriveT: 0,
+  taps: 0,
+  tab: "skills",
+  adv: [], floats: [], sparks: []
+};
+
+const MAX_EMBERS = 10;
+const EMBER_REGEN = 2;          // seconds per ember
+const MAX_ON_SCREEN = 14;
+
+const NODES = [
+  { key:"flame", name:"Kindled Flame", glyph:"🔥", base:10, growth:1.5,
+    desc:l => "+1 soul per rest.  Now " + perRest() + " per rest." },
+  { key:"word", name:"Word of Sanctuary", glyph:"🔔", base:25, growth:1.7,
+    desc:l => "Arrivals 10% faster.  One every " + interval().toFixed(2) + "s." },
+  { key:"echo", name:"Soul Echo", glyph:"💀", base:50, growth:2.0,
+    desc:l => "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
+];
+
+const cost      = n => Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
+const perRest   = () => 1 + S.lv.flame + (S.smith ? 2 : 0);
+const interval  = () => 5 * Math.pow(0.9, S.lv.word);
+const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
+const sps       = () => perRest() * (1 + echoChance()) / interval();
+const SMITH_COST = 200;
+
+/* ============================ canvas ============================ */
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0, fx = 0, fy = 0;
+
+function resize(){
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  W = r.width; H = r.height;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fx = W / 2; fy = H * 0.58;      // fire sits low, inside thumb reach
+}
+window.addEventListener("resize", resize);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
+
+/* thick-outline shape helpers (flat vector look) */
+function shape(path, fill, lw){
+  ctx.beginPath(); path();
+  if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+  ctx.lineWidth = lw || 4; ctx.strokeStyle = "#0c0812";
+  ctx.lineJoin = "round"; ctx.stroke();
+}
+function circle(x, y, r, fill, lw){ shape(()=>ctx.arc(x, y, r, 0, 6.2832), fill, lw); }
+function rrect(x, y, w, h, rad, fill, lw){
+  shape(()=>{ ctx.moveTo(x-w/2+rad, y-h/2);
+    ctx.arcTo(x+w/2, y-h/2, x+w/2, y+h/2, rad);
+    ctx.arcTo(x+w/2, y+h/2, x-w/2, y+h/2, rad);
+    ctx.arcTo(x-w/2, y+h/2, x-w/2, y-h/2, rad);
+    ctx.arcTo(x-w/2, y-h/2, x+w/2, y-h/2, rad); ctx.closePath(); }, fill, lw);
+}
+function teardrop(x, y, w, h, fill, lw){
+  shape(()=>{ ctx.moveTo(x, y-h);
+    ctx.bezierCurveTo(x+w, y-h*0.5, x+w*0.85, y, x, y);
+    ctx.bezierCurveTo(x-w*0.85, y, x-w, y-h*0.5, x, y-h); ctx.closePath(); }, fill, lw);
+}
+
+/* ============================ sanctuary actors ============================ */
+
+const SLOTS = 8;
+const slotUsed = new Array(SLOTS).fill(false);
+function slotPos(i){
+  const a = -Math.PI/2 + (i / SLOTS) * Math.PI * 2 + 0.4;
+  return { x: fx + Math.cos(a) * 96, y: fy + Math.sin(a) * 44 + 6 };
+}
+const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d57"],
+                ["#c9a45c","#8a6a34"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"] ];
+
+function spawnAdventurer(){
+  if (S.adv.length >= MAX_ON_SCREEN){ collect(); return; }
+  let slot = -1;                               // slots 1-2 belong to the Blacksmith once built
+  for (let i = 0; i < SLOTS; i++){
+    if (S.smith && (i === 1 || i === 2)) continue;
+    if (!slotUsed[i]){ slot = i; break; }
+  }
+  if (slot < 0) slot = 0;
+  slotUsed[slot] = true;
+  const fromLeft = Math.random() < 0.5;
+  S.adv.push({
+    x: fromLeft ? -30 : W + 30, y: fy + 34 + Math.random() * 10,
+    slot, state: "in", t: 0, dir: fromLeft ? 1 : -1,
+    tone: TONES[(Math.random() * TONES.length) | 0],
+    exit: fromLeft ? W + 40 : -40, bob: Math.random() * 6
+  });
+}
+
+function collect(){
+  const gain = perRest() * (Math.random() < echoChance() ? 2 : 1);
+  S.souls += gain;
+  return gain;
+}
+
+function updateAdventurers(dt){
+  const speed = 62;
+  for (let i = S.adv.length - 1; i >= 0; i--){
+    const a = S.adv[i];
+    a.bob += dt * 9;
+    if (a.state === "in"){
+      const p = slotPos(a.slot);
+      const dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
+      if (d < 3){ a.state = "rest"; a.t = 0; a.x = p.x; a.y = p.y; }
+      else { a.x += dx/d * speed * dt; a.y += dy/d * speed * dt; a.dir = dx >= 0 ? 1 : -1; }
+    } else if (a.state === "rest"){
+      a.t += dt;
+      if (a.t > 1.1){
+        const gain = collect();
+        S.floats.push({ x:a.x, y:a.y - 16, t:0, txt:"+" + gain, col: gain > perRest() ? "#ffd06b" : "#f2e6d8" });
+        for (let k = 0; k < 4; k++) sparks(a.x, a.y - 10, 0.7);
+        a.state = "out"; slotUsed[a.slot] = false;
+      }
+    } else {
+      a.x += Math.sign(a.exit - a.x) * speed * dt;
+      a.y += (fy + 40 - a.y) * dt;
+      a.dir = Math.sign(a.exit - a.x);
+      if (Math.abs(a.x - a.exit) < 6) S.adv.splice(i, 1);
+    }
+  }
+}
+
+function sparks(x, y, life){
+  S.sparks.push({ x, y, vx:(Math.random()-0.5)*26, vy:-24-Math.random()*30, t:0, life: life + Math.random()*0.6 });
+}
+
+/* ============================ drawing ============================ */
+
+function drawGround(){
+  shape(()=>ctx.ellipse(fx, fy + 24, Math.min(W*0.46, 178), 74, 0, 0, 6.2832), "#241a30", 5);
+  shape(()=>ctx.ellipse(fx, fy + 18, Math.min(W*0.30, 116), 46, 0, 0, 6.2832), "#2c2038", 4);
+}
+
+function drawFire(time){
+  const pulse = 1 + Math.sin(time*3.4)*0.06 + flare;
+  const g = ctx.createRadialGradient(fx, fy - 12, 4, fx, fy - 12, 126*pulse);
+  g.addColorStop(0, "rgba(255,157,61,0.34)"); g.addColorStop(1, "rgba(255,157,61,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy - 12, 126*pulse, 0, 6.2832); ctx.fill();
+
+  ctx.save(); ctx.translate(fx, fy + 8);
+  ctx.rotate(-0.42); rrect(0, 0, 56, 13, 6, "#4a3324", 4);
+  ctx.rotate(0.84);  rrect(0, 0, 56, 13, 6, "#5a3f2c", 4);
+  ctx.restore();
+
+  const w1 = 26*pulse, h1 = 62*pulse + Math.sin(time*5.1)*4;
+  teardrop(fx + Math.sin(time*2.2)*2, fy - 2, w1, h1, "#ff5f3d", 5);
+  teardrop(fx + Math.sin(time*3.7)*3, fy - 4, w1*0.62, h1*0.66, "#ff9d3d", 4);
+  teardrop(fx + Math.sin(time*4.9)*2, fy - 5, w1*0.30, h1*0.36, "#ffd06b", 3);
+}
+
+/* one hooded figure: trapezoid cloak, hood, pale face */
+function figure(x, y, h, w, cloak, hood, dir){
+  shape(()=>ctx.ellipse(x, y + 5, w*0.6, 4.5, 0, 0, 6.2832), "rgba(0,0,0,0.32)", 0.001);
+  shape(()=>{ ctx.moveTo(x - w*0.40, y - h); ctx.lineTo(x + w*0.40, y - h);
+              ctx.lineTo(x + w*0.52, y + 1); ctx.quadraticCurveTo(x, y + 7, x - w*0.52, y + 1);
+              ctx.closePath(); }, cloak, 4);
+  circle(x, y - h - 2, w*0.50, hood, 4);
+  circle(x + dir*w*0.16, y - h - 1, w*0.30, "#e8cfae", 3);
+}
+
+function drawAdventurer(a){
+  const rest = a.state === "rest";
+  const bob = rest ? 0 : Math.sin(a.bob) * 1.8;
+  figure(a.x, a.y + bob, rest ? 17 : 22, 22, a.tone[0], a.tone[1], a.dir || 1);
+}
+
+function drawBlacksmith(time){
+  const x = Math.min(fx + 98, W - 58), y = fy + 10, swing = Math.sin(time*5.2);
+  // anvil
+  rrect(x + 34, y - 4, 26, 9, 4, "#3a2c4a", 4);
+  shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
+              ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#5c5468", 4);
+  shape(()=>{ ctx.moveTo(x+22, y-18); ctx.lineTo(x+46, y-18); ctx.lineTo(x+46, y-26);
+              ctx.lineTo(x+26, y-26); ctx.lineTo(x+16, y-22); ctx.closePath(); }, "#77708a", 4);
+  figure(x, y, 30, 30, "#8a5a3c", "#5a3f2c", 1);
+  rrect(x + 1, y - 12, 20, 22, 6, "#6b4a30", 3);          // apron
+  ctx.save();                                              // hammer arm
+  ctx.translate(x + 16, y - 24); ctx.rotate(-0.35 + swing*0.6);
+  rrect(0, -11, 7, 24, 3, "#5a3f2c", 3);
+  rrect(0, -22, 16, 11, 4, "#6b6478", 3);
+  ctx.restore();
+  if (swing > 0.95) sparks(x + 34, y - 26, 0.4);
+}
+
+function drawEmbers(){
+  const n = MAX_EMBERS, gap = 15, x0 = fx - (n-1)*gap/2, y = fy + 76;
+  for (let i = 0; i < n; i++){
+    const lit = i < Math.floor(S.embers);
+    circle(x0 + i*gap, y, 4.5, lit ? "#ff9d3d" : "#33263f", 3);
+  }
+  if (S.taps < 8){
+    ctx.font = "700 11px ui-rounded, system-ui, sans-serif";
+    ctx.fillStyle = "#9a8aa8"; ctx.textAlign = "center";
+    ctx.fillText("TAP THE FIRE", fx, y + 22);
+  }
+}
+
+function drawFx(dt){
+  for (let i = S.sparks.length - 1; i >= 0; i--){
+    const p = S.sparks[i]; p.t += dt;
+    if (p.t > p.life){ S.sparks.splice(i,1); continue; }
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 14*dt;
+    ctx.globalAlpha = 1 - p.t/p.life;
+    ctx.fillStyle = "#ffd06b";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = "center";
+  for (let i = S.floats.length - 1; i >= 0; i--){
+    const f = S.floats[i]; f.t += dt;
+    if (f.t > 1){ S.floats.splice(i,1); continue; }
+    ctx.globalAlpha = 1 - f.t;
+    ctx.font = "800 16px ui-rounded, system-ui, sans-serif";
+    ctx.lineWidth = 4; ctx.strokeStyle = "#0c0812";
+    ctx.strokeText(f.txt, f.x, f.y - f.t*38);
+    ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - f.t*38);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ============================ loop ============================ */
+
+let flare = 0, sparkT = 0, uiT = 0, last = performance.now();
+
+function frame(now){
+  let dt = (now - last) / 1000; last = now;
+  if (dt > 0.25) dt = 0.25;                 // backgrounded tab: no huge catch-up
+  const time = now / 1000;
+
+  // arrivals
+  S.arriveT += dt;
+  const iv = interval();
+  let guard = 0;
+  while (S.arriveT >= iv && guard++ < 20){ S.arriveT -= iv; spawnAdventurer(); }
+
+  // ember regen
+  S.emberT += dt;
+  while (S.emberT >= EMBER_REGEN){ S.emberT -= EMBER_REGEN; S.embers = Math.min(MAX_EMBERS, S.embers + 1); }
+
+  updateAdventurers(dt);
+  flare = Math.max(0, flare - dt * 1.6);
+  sparkT += dt;
+  if (sparkT > 0.16){ sparkT = 0; sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
+
+  // render
+  ctx.clearRect(0, 0, W, H);
+  drawGround();
+  const behind = S.adv.filter(a => a.y <= fy), front = S.adv.filter(a => a.y > fy);
+  behind.forEach(drawAdventurer);
+  if (S.smith) drawBlacksmith(time);
+  drawFire(time);
+  front.forEach(drawAdventurer);
+  drawEmbers();
+  drawFx(dt);
+
+  uiT += dt;
+  if (uiT > 0.1){ uiT = 0; refresh(); }
+  requestAnimationFrame(frame);
+}
+
+/* ============================ input ============================ */
+
+cv.addEventListener("pointerdown", e => {
+  const r = cv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  if (Math.hypot(x - fx, (y - fy + 14) * 0.85) > 84) return;   // generous fire hit area
+  S.taps++;
+  if (S.embers < 1){
+    S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#9a8aa8" });
+    return;
+  }
+  S.embers--; S.souls += 1; flare = 0.5;
+  S.floats.push({ x:fx + (Math.random()-0.5)*20, y:fy - 46, t:0, txt:"+1", col:"#f2e6d8" });
+  for (let k = 0; k < 5; k++) sparks(fx + (Math.random()-0.5)*16, fy - 22, 0.6);
+  refresh();
+});
+
+/* ============================ ui ============================ */
+
+const listEl  = document.getElementById("list");
+const soulsEl = document.getElementById("souls");
+const spsEl   = document.querySelector("#sps b");
+const noteEl  = document.getElementById("note");
+const fmt = n => Math.floor(n).toLocaleString("en-US");
+const fmtRate = v => v < 10 ? v.toFixed(2) : v < 1000 ? v.toFixed(1) : fmt(v);
+
+function card(opts){
+  const el = document.createElement("div"); el.className = "card";
+  el.innerHTML =
+    '<div class="icon" style="background:' + opts.tint + '">' + opts.glyph + '</div>' +
+    '<div class="info"><div class="name">' + opts.name +
+      (opts.level != null ? '<span class="lvl">LV ' + opts.level + '</span>' : '') +
+    '</div><div class="desc"></div></div>' +
+    '<button class="buy"><span></span><small>SOULS</small></button>';
+  el.querySelector(".desc").textContent = opts.desc;
+  const btn = el.querySelector(".buy");
+  btn.querySelector("span").textContent = opts.label;
+  btn.disabled = !opts.enabled;
+  if (opts.done){ btn.classList.add("done"); btn.querySelector("small").remove(); }
+  btn.addEventListener("click", opts.onBuy);
+  return el;
+}
+
+function render(){
+  listEl.innerHTML = "";
+  if (S.tab === "skills"){
+    NODES.forEach(n => {
+      const c = cost(n);
+      listEl.appendChild(card({
+        glyph:n.glyph, tint:"#3a2c4a", name:n.name, level:S.lv[n.key], desc:n.desc(S.lv[n.key]),
+        label:fmt(c), enabled:S.souls >= c,
+        onBuy(){ const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++; render(); }
+      }));
+    });
+    noteEl.textContent = "Tap the bonfire to stoke it. Embers refill on their own.";
+  } else {
+    listEl.appendChild(card({
+      glyph:"🔨", tint:"#5a3f2c", name:"The Blacksmith", level:null,
+      desc: S.smith ? "Repairs are paid at the fire. +2 souls per rest."
+                    : "Adventurers pay for repairs. +2 souls per rest.",
+      label: S.smith ? "Built" : fmt(SMITH_COST),
+      enabled: !S.smith && S.souls >= SMITH_COST, done:S.smith,
+      onBuy(){ if (S.smith || S.souls < SMITH_COST) return; S.souls -= SMITH_COST; S.smith = true; render(); }
+    }));
+    noteEl.textContent = S.smith ? "The Blacksmith works beside the fire."
+                                 : "One vendor for now. Others will want a place later.";
+  }
+  refresh();
+}
+
+function refresh(){
+  soulsEl.textContent = fmt(S.souls);
+  spsEl.textContent = fmtRate(sps());
+  const rows = listEl.children;
+  if (S.tab === "skills"){
+    for (let i = 0; i < rows.length; i++){
+      const n = NODES[i], c = cost(n), btn = rows[i].querySelector(".buy");
+      rows[i].querySelector(".lvl").textContent = "LV " + S.lv[n.key];
+      rows[i].querySelector(".desc").textContent = n.desc(S.lv[n.key]);
+      btn.querySelector("span").textContent = fmt(c);
+      btn.disabled = S.souls < c;
+    }
+  } else if (rows.length){
+    const btn = rows[0].querySelector(".buy");
+    btn.disabled = S.smith || S.souls < SMITH_COST;
+  }
+}
+
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
+    S.tab = t.dataset.tab; render();
+  });
+});
+
+/* ============================ start ============================ */
+
+resize();
+render();
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
