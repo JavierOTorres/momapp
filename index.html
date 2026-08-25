@@ -39,7 +39,7 @@
   #matWrap{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-left:2px}
   #matWrap span{color:#9bd0c4;font-size:14px}
   #soulLabel{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em}
-  #rate{font-size:11px;color:var(--dim);text-align:right;line-height:1.5}
+  #rate{font-size:10px;color:var(--dim);text-align:right;line-height:1.4;white-space:nowrap}
   #rate b{display:block;font-size:16px;color:var(--text)}
   #flameWrap{flex:0 0 auto;margin-left:10px;text-align:center}
   #flameBar{
@@ -229,7 +229,7 @@
   <div id="top">
     <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div>
       <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
-    <div id="rate"><b>0.0</b>avg / sec, last 60s</div>
+    <div id="rate"><b>0.0</b>souls/sec</div>
     <div id="flameWrap"><div id="flameBar"><i></i></div><span id="flameNum">100</span></div>
     <button id="bookBtn" title="The keeper's notes">📕</button>
   </div>
@@ -351,6 +351,7 @@ const S = {
   mat:0, relic:[], lost:[], nextArt:1, smithLv:0, herbLv:0,
   offline:null, ending:false, flameOn:true, everHollowed:false,
   flame:100, flameMax:100, runStart:0, peakDepth:0, runEarned:0,
+  unlocked:0, log:[],
   meta:{ ash:0, unlocks:[], dead:[], cycles:0 },
   earnLog:[], floats:[], sparks:[], says:[]
 };
@@ -393,6 +394,17 @@ const ARCHIVE = [
     "The smith takes two places and gives back two souls a rest and twelve points of survival. "
     + "The herbalist takes one place, gives eight points, and buys everyone a fourth death. They "
     + "are worth their room. Everything at this fire costs room." },
+  { name:"The road", open:()=>true, body:
+    "Seven places, each one two layers deep, each one shut behind a gate until somebody gets "
+    + "through it. A gate is tried once a fire, against what the one trying it is carrying and how "
+    + "far they have already been. Get through and the place below opens and they come back with "
+    + "something out of the gate itself. Fail and they are thrown back, take a death, and drop "
+    + "what they had. Tap the head of the strip to see the whole road." },
+  { name:"The flame", open:()=>true, body:
+    "It burns down on its own and the circle holds it up: everyone living feeds it, everyone grey "
+    + "eats it, and only those who can reach a seat feed it fully. A full circle roughly holds. "
+    + "Two hollows and it starts going. When it reaches nothing the fire is out and the run is "
+    + "finished, and what the run was worth comes back as ash." },
   { name:"Counsel", open:()=>S.seen.depth, body:
     "Sitting with one of them tells me what they are worth and how close they are. Sending them "
     + "shallow means one layer short of where they have been: better odds, a thinner purse, and "
@@ -591,7 +603,13 @@ function resolveExpedition(a){
   const d = runDepth(a), survived = Math.random() < survival(d, a.deaths, a);
   a.shallow = false;
   if (survived){
-    if (a.depth === d) a.depth = d + 1;   // sent shallow: banked, not deepened
+    if (a.depth === d){
+      const wouldBe = d + 1;
+      if (wouldBe > deepestAllowed() && S.unlocked < LOC.length - 1){
+        if (!attemptGate(a, S.unlocked + 1)){ edgeSpawn(a); a.state = "walkin"; return; }
+      }
+      a.depth = Math.min(wouldBe, deepestAllowed());
+    }
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
     if (a.depth >= T.NAME_AT_DEPTH && !a.name){
       giveName(a);
@@ -682,7 +700,11 @@ function updatePool(dt){
       a.t -= dt;
       const prog = 1 - a.t / T.AWAY;
       if (a.events) for (const e of a.events)
-        if (!e.fired && prog >= e.at){ e.fired = true; a.flash = { icon:e.icon, t:0 }; }
+        if (!e.fired && prog >= e.at){
+          e.fired = true; a.flash = { icon:e.icon, t:0 };
+          const L = LOC[locOf(a.depth)];
+          logEvent(locOf(a.depth), oneOf(L.events).replace("{n}", a.name || "Someone"));
+        }
       if (a.flash && (a.flash.t += dt) > 2) a.flash = null;
       if (a.t <= 0) resolveExpedition(a);
     }
@@ -867,6 +889,89 @@ const ART_LINES = {
 const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn.",
                       "The last owner is still paying.", "It takes the difference back." ];
 
+/* ==================== the road ==================== */
+
+const LOC = [
+  { name:"The Cinder Steps", code:"CS", tint:"#c9a45c", gate:"The Turnstile",
+    events:["{n} found the steps swept. Somebody sweeps them.",
+            "Something followed {n} down and lost interest.",
+            "{n} passed a boot with the foot still in it."],
+    gateLine:"Taken off the thing at the turnstile." },
+  { name:"The Old Road", code:"OR", tint:"#8a8494", gate:"The Weighing Stone",
+    events:["{n} walked the road all day and it did not turn.",
+            "Milestones down here count up, not down. {n} stopped reading them.",
+            "{n} heard carts. There are no carts."],
+    gateLine:"Prised out of the weighing stone." },
+  { name:"The Drowned Vault", code:"DV", tint:"#5fbec4", gate:"The Sluice",
+    events:["{n} came up for air twice and only needed to once.",
+            "The water in the vault is warm. {n} did not say more than that.",
+            "{n} found the ledgers. All the entries are the same name."],
+    gateLine:"Pulled dripping out of the sluice." },
+  { name:"The Rookery", code:"RK", tint:"#b96fc4", gate:"The Roost",
+    events:["Something was counting {n}'s steps back at them.",
+            "{n} kept their light low. It helped, or it did not.",
+            "The nests here are made of belts and straps. {n} left them alone."],
+    gateLine:"Cut down from the roost." },
+  { name:"The Long Dark", code:"LD", tint:"#6f8fd6", gate:"The Held Breath",
+    events:["{n} walked without a wall for three hours.",
+            "There was no floor sound. {n} kept walking anyway.",
+            "{n} says the dark has a grain to it, like wood."],
+    gateLine:"Carried out of the held breath." },
+  { name:"The Salt Cathedral", code:"SC", tint:"#e8dcc0", gate:"The Chancel",
+    events:["{n} found the pews full and every one of them empty.",
+            "The salt takes the sound out of everything. {n} liked it.",
+            "Something in the cathedral knew {n} by name."],
+    gateLine:"Taken from the chancel floor." },
+  { name:"Where It Ends", code:"WE", tint:"#c45f5f", gate:"The Last Door",
+    events:["{n} would not say what was down there.",
+            "{n} came back up counting, and would not stop.",
+            "There is a door. {n} says it is not locked."],
+    gateLine:"Brought back through the last door." }
+];
+const DEPTHS_PER_LOC = 2;
+const locOf = d => Math.min(LOC.length - 1, Math.floor(d / DEPTHS_PER_LOC));
+const locFloor = i => i * DEPTHS_PER_LOC;                    // first depth of a place
+const deepestAllowed = () => (S.unlocked + 1) * DEPTHS_PER_LOC - 1;
+/* A gate is set against what is reachable at the cap below it: depth climbs 2 a place,
+   and gear has to make up the rest. Gate 1 falls to a decent weapon; gate 6 needs a kit. */
+const gateDifficulty = i => 2.5 + (i - 1) * 3.1;
+const bestGateScore = () => living().reduce((m, a) => Math.max(m, gateScore(a)), 0);
+
+function gateScore(a){                                       // gear, depth and scars, not a coin flip
+  const m = mods(a);
+  return a.depth + m.surv * 22 + (-m.scar) * 30 + m.pay * 3 - a.deaths * 1.4;
+}
+
+function logEvent(loc, txt){
+  S.log.push({ loc, txt, t:S.elapsed });
+  if (S.log.length > 60) S.log.shift();
+}
+
+function attemptGate(a, next){
+  const need = gateDifficulty(next), got = gateScore(a);
+  const where = LOC[next];
+  if (got >= need){
+    S.unlocked = next;
+    logEvent(next, (a.name || "Someone") + " got through " + where.gate + ".");
+    S.notice = { txt:where.gate + " is open. " + where.name + " is below.", t:0 };
+    const g = makeArtifact(a.depth);
+    g.rarity = "rare"; g.origin = next; g.line = where.gateLine;
+    g.dusted = true; g.owner = a.id;
+    a.gear = a.gear || {};
+    if (!a.gear[g.slot]) a.gear[g.slot] = g; else a.choice = g;
+    S.seen.artifact = true; S.seen.ident = true;
+    if (!S.offline) say(a, "Through, and carrying something.");
+    return true;
+  }
+  logEvent(next, where.gate + " threw " + (a.name || "someone") + " back.");
+  a.deaths++; S.seen.death = true;
+  loseGear(a, a.depth, false);
+  a.depth = Math.floor(a.depth / 2);
+  if (!S.offline) say(a, oneOf(["The gate did not open.", "Thrown back, and lighter for it."]));
+  if (a.deaths >= hollowAt()){ goHollow(a); return false; }
+  return false;
+}
+
 const NAMES = ("Aldric Bryn Calla Doon Ester Fenn Garrow Hesk Ilva Joss Kettle Lorn Mave Nyle "
   + "Orrin Pell Quill Rooke Sabel Tolm Ulf Vesper Wick Yarrow Ash Brenna Corvin Dell Ewen Fray "
   + "Gost Hallow Iris Jarr Kelda Lem Moss Ninn Osric Prue Rell Sedge Thane Vane Wren Ysolde").split(" ");
@@ -886,7 +991,7 @@ const EVENTS = ["!", "✦", "~"];           // ambush, discovery, narrow escape
 function stripGeom(){ return { x:26, top:58, bottom: H - 76 }; }
 function markerPos(a, i){
   const g = stripGeom(), p = Math.min(1, Math.max(0, 1 - a.t / T.AWAY));
-  return { x: g.x + (i % 2 ? 9 : -9), y: g.top + p * (g.bottom - g.top) };
+  return { x: g.x + 8 + (i % 2 ? 6 : -6), y: g.top + p * (g.bottom - g.top) };
 }
 
 function ringBell(a){
@@ -999,9 +1104,10 @@ function drawAdventurer(a, time){
   figure(a.x, y, rest ? 17 : 22, 22, a.tone[0], a.tone[1], a.dir || 1);
   const top = y - (rest ? 17 : 22) - 15;
   if (a.depth > 0){
-    rrect(a.x, top, 24, 15, 7, "#0c0812", 2);
+    rrect(a.x, top, 26, 15, 7, "#0c0812", 2);
     ctx.font = "800 10px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#ffd06b"; ctx.fillText("D" + a.depth, a.x, top + 4);
+    ctx.fillStyle = LOC[locOf(a.depth)].tint;
+    ctx.fillText(LOC[locOf(a.depth)].code, a.x, top + 4);
   }
   if (a.find || a.choice){
     circle(a.x - 17, top + 1, 8, "#c9a45c", 3);
@@ -1050,16 +1156,20 @@ function drawStrip(time){
   rrect(g.x, (g.top + g.bottom)/2 - 16, 46, h + 56, 22, "rgba(20,15,28,0.82)", 3);
 
   ctx.font = "800 9px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-  ctx.fillStyle = "#9a8aa8"; ctx.fillText("BELOW", g.x, g.top - 26);
+  ctx.fillStyle = "#9a8aa8"; ctx.fillText("THE ROAD", g.x, g.top - 26);
   const c = bellCost(), can = S.souls >= c;
   ctx.font = "800 11px ui-rounded, system-ui, sans-serif";
   ctx.fillStyle = can ? "#ffd06b" : "#5a4f6b";
   ctx.fillText("🔔 " + fmt(c), g.x, g.top - 11);
 
-  shape(()=>{ ctx.moveTo(g.x, g.top); ctx.lineTo(g.x, g.bottom); }, null, 3);
-  for (let i = 0; i <= 4; i++){                       // depth stages down the track
-    const y = g.top + (i/4) * h;
-    shape(()=>{ ctx.moveTo(g.x - 7, y); ctx.lineTo(g.x + 7, y); }, null, 2.5);
+  shape(()=>{ ctx.moveTo(g.x + 4, g.top); ctx.lineTo(g.x + 4, g.bottom); }, null, 3);
+  for (let i = 0; i < LOC.length; i++){              // one tick per place on the road
+    const y = g.top + (i / (LOC.length - 1)) * h;
+    const open = i <= S.unlocked;
+    shape(()=>{ ctx.moveTo(g.x - 2, y); ctx.lineTo(g.x + 10, y); }, null, open ? 2.5 : 1.5);
+    ctx.font = "800 7px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "right";
+    ctx.fillStyle = open ? LOC[i].tint : "#3a3046";
+    ctx.fillText(LOC[i].code, g.x - 6, y + 2);
   }
   if (!list.length){
     ctx.font = "700 9px ui-rounded, system-ui, sans-serif"; ctx.fillStyle = "#5a4f6b";
@@ -1268,13 +1378,16 @@ cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
 
+  const sg = stripGeom();                       // the strip's head opens the road
+  if (x < sg.x + 26 && y < sg.top - 4){ openMap(); return; }
+
   const rb = relicBounds();                     // the shelf opens when tapped
   if (S.relic.length && Math.abs(y - rb.y) < 26 && x > rb.x0 - 14 && x < rb.x1){ openShelf(); return; }
 
   const list = away();                          // the strip owns its own taps
   for (let i = 0; i < list.length; i++){
     const p = markerPos(list[i], i);
-    if (Math.hypot(x - p.x, y - p.y) < 20){ ringBell(list[i]); keeperGoTo(fx - 78, fy - 6, "attend"); return; }
+    if (Math.hypot(x - p.x, y - p.y) < 20){ openLocation(locOf(list[i].depth)); return; }
   }
 
   const onFire = Math.hypot(x - fx, (y - fy + 14) * 0.85) < FIRE_TAP_R;
@@ -1334,7 +1447,8 @@ function showCounsel(a){
     const mult = (1 + d * T.DEPTH_PAY).toFixed(1).replace(/\.0$/, "");
     const left = hollowAt() - a.deaths;
     cOdds.innerHTML =
-      "Depth " + d + ". Pays <b>" + mult + "x</b>, or " + plural(payFor(a), "soul") + ".<br>" +
+      (a.name ? "<b>" + a.name + "</b>. " : "") + LOC[locOf(d)].name + ", depth " + d +
+      ". Pays <b>" + mult + "x</b>, or " + plural(payFor(a), "soul") + ".<br>" +
       "Deaths " + a.deaths + " of " + hollowAt() + ". " +
       (left === 1 ? "One more and they hollow." : left === 2 ? "Two more and they hollow." : "Unscarred.") + "<br>" +
       "Survival <b>" + odds + "%</b>.";
@@ -1444,7 +1558,8 @@ function renderGear(a){
     cGear.appendChild(b); return b;
   };
   if (worn){
-    add("<b>" + artTitle(worn) + (worn.cursed ? " ✦" : "") + "</b><br><span>" + effectLine(worn) +
+    add("<b>" + artTitle(worn) + (worn.cursed ? " ✦" : "") +
+        (worn.origin != null ? " — " + LOC[worn.origin].name : "") + "</b><br><span>" + effectLine(worn) +
         "</span><br><em>" + worn.line + (worn.curseLine ? " " + worn.curseLine : "") + "</em>", null, true);
     if (worn.craft) add("At the " + (worn.craft.kind === "forge" ? "forge" : "herbalist") + ", " +
                         Math.ceil(worn.craft.left) + "s", null, true);
@@ -1524,7 +1639,8 @@ function paintGrime(){
 function drawArt(){
   const a = open_; if (!a) return;
   actx.clearRect(0, 0, AW, AH);
-  const mat = { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[a.rarity];
+  const mat = a.origin != null ? LOC[a.origin].tint
+            : { common:"#8a8494", fine:"#c9a45c", rare:"#9bd0c4" }[a.rarity];
   const dark = { common:"#5e5868", fine:"#8a6a34", rare:"#5f8f86" }[a.rarity];
   const cx = AW/2, cy = AH/2;
   actx.lineWidth = 4; actx.strokeStyle = "#0c0812"; actx.lineJoin = "round";
@@ -1689,6 +1805,7 @@ function newCycle(){
   S.rekindles = 0; S.bells = 0; S.embers = T.MAX_EMBERS; S.emberT = 0;
   S.pool = []; S.relic = []; S.lost = []; S.arriveT = 0;
   S.flameMax = has("deep") ? 120 : T.FLAME_MAX; S.flame = S.flameMax;
+  S.unlocked = has("road") ? 1 : 0; S.log = [];
   S.peakDepth = 0; S.runEarned = 0; S.elapsed = 0; S.earnLog = [];
   S.floats = []; S.sparks = []; S.says = []; S.notice = null;
   S.sel = null; S.ending = false; S.endInfo = null;
@@ -1722,6 +1839,54 @@ function openSheet(title, sub, rows){
 }
 const closeSheet = () => { sheetEl.hidden = true; };
 
+function gearSummary(a){
+  const bits = A_SLOTS.map(k => {
+    const g = gearIn(a, k);
+    if (!g) return null;
+    return RARITY_NAME[g.rarity].toLowerCase() + " " + k + (g.cursed ? " ✦" : "")
+         + (g.origin != null ? " (" + LOC[g.origin].code + ")" : "");
+  }).filter(Boolean);
+  return bits.length ? bits.join(", ") : "nothing but their own skin";
+}
+
+function openLocation(i){
+  const where = LOC[i];
+  const inside = away().filter(a => locOf(a.depth) === i);
+  const rows = [];
+  if (!inside.length) rows.push({ html:"<em>Nobody is down there right now.</em>", onClick:null });
+  for (const a of inside){
+    const prog = Math.round((1 - a.t / T.AWAY) * 100);
+    const c = bellCost();
+    rows.push({
+      html:"<b>" + (a.name || "One of the unnamed") + "</b> · depth " + a.depth +
+           "<br><em>Carrying " + gearSummary(a) + ".</em>" +
+           "<br><span>" + prog + "% of the way through</span> · tap to ring them back for " + fmt(c),
+      onClick: () => { if (ringBell(a)) closeSheet(); else openLocation(i); }
+    });
+  }
+  const lines = S.log.filter(l => l.loc === i).slice(-8).reverse();
+  if (lines.length) rows.push({ html:"<b>What came back up</b>", onClick:null });
+  for (const l of lines) rows.push({ html:"<em>" + l.txt + "</em>", onClick:null });
+  const locked = i > S.unlocked;
+  openSheet(where.name, locked ? "Not open. " + where.gate + " is in the way."
+    : "Depths " + locFloor(i) + " to " + (i === LOC.length-1 ? "as far as it goes" : locFloor(i)+1) + ".", rows);
+}
+
+function openMap(){
+  openSheet("The road below", "Seven places, and a gate between each.", LOC.map((L, i) => {
+    const inside = away().filter(a => locOf(a.depth) === i).length;
+    const open = i <= S.unlocked;
+    return {
+      html:"<b>" + L.name + "</b>" + (open ? "" : " — shut") +
+           "<br><em>" + (open ? (inside ? inside + " down there now." : "Empty.")
+             : L.gate + " holds it. It wants about " + gateDifficulty(i).toFixed(1)
+               + "; the best of them is worth " + bestGateScore().toFixed(1) + ".") + "</em>" +
+           (open ? "<br><span>Depths " + locFloor(i) + "+</span>" : ""),
+      onClick: open ? () => openLocation(i) : null
+    };
+  }));
+}
+
 function openShelf(){
   const living = S.pool.filter(a => a.state !== "hollow");
   openSheet("Left Behind", "What outlived the people carrying it.", S.relic.length ? S.relic.map(r => ({
@@ -1753,7 +1918,7 @@ const SAVE_KEY = "sanctuary.save";
 const SAVE_VERSION = 4;
 const OFFLINE_CAP = 8 * 3600;
 
-const stripArt = g => g && { id:g.id, slot:g.slot, rarity:g.rarity, cursed:g.cursed, depth:g.depth,
+const stripArt = g => g && { id:g.id, slot:g.slot, rarity:g.rarity, cursed:g.cursed, depth:g.depth, origin:g.origin,
                              dusted:g.dusted, line:g.line, curseLine:g.curseLine, owner:g.owner,
                              craft:g.craft, cleared:g.cleared };
 
@@ -1764,6 +1929,7 @@ function serialize(){
     rekindles:S.rekindles, bells:S.bells, embers:S.embers, taps:S.taps,
     seen:S.seen, tipSeen:S.tipSeen, nextId:S.nextId, nextArt:S.nextArt,
     flame:S.flame, flameMax:S.flameMax, peakDepth:S.peakDepth, runEarned:S.runEarned,
+    unlocked:S.unlocked, log:S.log.slice(-30),
     everHollowed:S.everHollowed, elapsed:S.elapsed,
     pool: S.pool.map(a => ({
       id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
@@ -1806,6 +1972,7 @@ function restore(save){
   S.flameMax = save.flameMax || T.FLAME_MAX;
   S.flame = save.flame != null ? save.flame : S.flameMax;
   S.peakDepth = save.peakDepth || 0; S.runEarned = save.runEarned || 0;
+  S.unlocked = save.unlocked || 0; S.log = save.log || [];
   S.seen = Object.assign(S.seen, save.seen || {});
   S.nextId = save.nextId || 1; S.nextArt = save.nextArt || 1;
   S.meta = Object.assign(S.meta, save.meta || {});

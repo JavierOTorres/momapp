@@ -1,4 +1,4 @@
-# Sanctuary — vertical slice v3
+# Sanctuary — v4
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -8,7 +8,8 @@ home richer, poorer, or not really at all. You never fight, you never leave.
 
 Open `index.html` in a browser. One file, no build step, no dependencies, no
 network. Design target is a 390x844 portrait viewport (mobile first); it stays
-a static single file so it can be wrapped with Capacitor later.
+a static single file so it can be wrapped with Capacitor later. It saves to
+localStorage every five seconds and on page hide.
 
 ## The loop
 
@@ -57,8 +58,26 @@ a static single file so it can be wrapped with Capacitor later.
   The smith reforges common to fine and fine to rare, on the wearer, without
   taking it off them. The herbalist lifts curses — roughly at first, costing
   the piece a grade, and cleanly once fully paid for.
-- **The Archive.** A third tab. Plain-language entries for every mechanic,
-  locked to their names until the thing has happened to you.
+- **The Archive.** The keeper's notes, in the book in the top bar. Plain
+  entries for every mechanic, locked to their names until it has happened.
+- **The road.** Seven named places, two depths each, every one shut behind a
+  gate. A gate is tried once per fire against the attempting adventurer's
+  gear, depth and scars — not a coin flip. Through it, the place below opens
+  and they come back carrying something out of the gate itself. Fail and they
+  are thrown back, take a death, and drop what they had. The strip on the left
+  is the road; its head opens the map, its markers open the place.
+- **The flame.** 0 to 100, decaying always. The living circle feeds it, hollows
+  eat it, and only those who can reach a seat feed it fully. At zero the fire
+  is out and the run is over.
+- **The cycle.** Runs end — at zero, or when you choose from the notes — and
+  pay ash scaled by depth reached, souls earned and who is still standing. Ash
+  buys structural unlocks that change how the next fire starts. No multipliers.
+- **The kept dead.** Anyone who reaches depth 3 gets a name. Everyone who
+  hollows is recorded permanently, across every cycle: name, depth, deaths,
+  what they were carrying.
+- **Offline.** Close it and the fire keeps burning without you, capped at eight
+  hours, simulated through the real rules. The return report tells you what it
+  cost.
 - **Vendors are survival, skills are economy.** Blacksmith 200 (+2/rest, +12%
   survival). Herbalist 500 (+8% survival, and they endure a fourth death).
 
@@ -90,6 +109,16 @@ is 48%, measured over a minute of real play.
 **Cursed gear is a real trade.** Simulated, wearing every cursed find earns
 about 2% less than burning them all and pushes the choke from 23.4 to 27.1
 minutes. Tempting, neither obviously right nor wrong.
+
+**v4 tuning.** The flame is calibrated so an empty sanctuary dies in 45
+minutes, a full circle holds it at -0.0004/s (measured live, not just
+simulated), and two hollows tip it into decline. A simulated played run ends at
+**38 minutes**, inside the 35-50 target; a run where the player buys nothing
+ends at 26. Widening the circle to 20 earns 810 souls/minute against 500 and
+ends at 35 minutes instead of 38 — burns brighter, dies sooner, as specced.
+Gates are set against what is reachable at each cap: gate 1 falls to one fine
+weapon, gate 5 needs more than two rare pieces at depth 9, gate 6 needs ash
+unlocks behind it.
 
 **Blacksmith 3 is not reachable, and the reason matters.** At 2500 souls it
 was hit in 0 of 20 simulated hours under greedy play, 2 of 20 when chasing it
