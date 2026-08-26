@@ -150,6 +150,13 @@ overrides stand and sit with `weary`. Hollows have no art yet and are derived
 from the sit pose — drained to the hollow colour, sockets over the eyes, tilted
 a few degrees, no bob. Real hollow sprites will be a manifest change.
 
+The art is drawn facing right, and anything travelling left is mirrored, about
+the figure's own centre line so the feet stay anchored. The overlays are cut
+from the unmirrored art, so a mirrored figure takes its rim crescent from the
+opposite side — otherwise the firelight lands on the edge turned away from the
+flame. Gear already followed `dir`, so it flips with the figure. Hollows are
+drawn with `dir` pinned to 1 and never mirror.
+
 Sprites come out of image generation framed inconsistently, which in game reads
 as the figure changing size and hopping every time it changes pose.
 `tools/normalize_sprites.py` fixes that: it finds the alpha bounding box,

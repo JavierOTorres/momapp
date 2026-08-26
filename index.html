@@ -1851,29 +1851,49 @@ function sprRect(x, y, b){
   return { dx: x - (n / 2) * sx, dy: y - SPR_GEO.baseline * sy, dw: n * sx, dh: n * sy };
 }
 
-function drawSpriteFigure(art, x, y, b, hollow){
+/* The art is drawn facing right, so anything travelling left is mirrored. Mirroring
+   happens about the figure's own centre line, never the world origin, so the feet
+   stay on the same pixel they were anchored to. */
+function mirrored(x, draw){
+  ctx.save();
+  ctx.translate(2 * x, 0); ctx.scale(-1, 1);
+  draw();
+  ctx.restore();
+}
+
+function drawSpriteFigure(art, x, y, b, hollow, flip){
   const r = sprRect(x, y, b);
-  if (hollow){                                    // slumped, leaning toward the fire it lost
-    ctx.save();
-    ctx.translate(x, y); ctx.rotate((x > fx ? 1 : -1) * 0.06); ctx.translate(-x, -y);
+  const paint = () => {
+    if (hollow){                                  // slumped, leaning toward the fire it lost
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate((x > fx ? 1 : -1) * 0.06); ctx.translate(-x, -y);
+      ctx.drawImage(art.base, r.dx, r.dy, r.dw, r.dh);
+      ctx.restore();
+      return;
+    }
     ctx.drawImage(art.base, r.dx, r.dy, r.dw, r.dh);
-    ctx.restore();
-    return;
-  }
-  ctx.drawImage(art.base, r.dx, r.dy, r.dw, r.dh);
+  };
+  if (flip) mirrored(x, paint); else paint();
 }
 
 /* The same proximity and flame terms the code-drawn rim uses, at the same strengths,
    so a sprite sitting beside a code figure is lit by the same fire. */
-function spriteRim(art, x, y, b, cy){
+function spriteRim(art, x, y, b, cy, flip){
   const f = firePull(x, cy);
   if (!f || !art.lit) return;
-  const r = sprRect(x, y, b), i = f.side > 0 ? 1 : 0, k = f.near * f.life;
-  ctx.globalAlpha = 0.04 + 0.14 * k;
-  ctx.drawImage(art.lit[i], r.dx, r.dy, r.dw, r.dh);
-  ctx.globalAlpha = 0.10 + 0.20 * k;
-  ctx.drawImage(art.rim[i], r.dx, r.dy, r.dw, r.dh);
-  ctx.globalAlpha = 1;
+  /* The overlays are cut from the unmirrored art, so under a mirror the crescent
+     has to be taken from the other side to still come out on the side facing the
+     fire. Get this wrong and the rim lights the edge turned away from the flame. */
+  const i = ((f.side > 0) !== !!flip) ? 1 : 0;
+  const r = sprRect(x, y, b), k = f.near * f.life;
+  const paint = () => {
+    ctx.globalAlpha = 0.04 + 0.14 * k;
+    ctx.drawImage(art.lit[i], r.dx, r.dy, r.dw, r.dh);
+    ctx.globalAlpha = 0.10 + 0.20 * k;
+    ctx.drawImage(art.rim[i], r.dx, r.dy, r.dw, r.dh);
+    ctx.globalAlpha = 1;
+  };
+  if (flip) mirrored(x, paint); else paint();
 }
 
 function drawAnimal(a, x, y, opts){
@@ -1909,10 +1929,11 @@ function drawAnimal(a, x, y, opts){
   };
 
   if (art){
+    const flip = dir < 0;                           // they face the way they are going
     pack();                                         // behind them, so it reads as carried
-    drawSpriteFigure(art, x, y, b, hollow);
+    drawSpriteFigure(art, x, y, b, hollow, flip);
     armour();
-    if (!hollow) spriteRim(art, x, y, b, hy);
+    if (!hollow) spriteRim(art, x, y, b, hy, flip);
     drawGear(x, y, dir, hw, bh, bodyY, gear);
     return;
   }
