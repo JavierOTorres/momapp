@@ -203,16 +203,23 @@ pieces of stone sit at the very bottom edge, closer to the camera than the ring
 and cropped by the frame. Those are drawn near-silhouette and cold, because they
 are outside the firelight: dark foreground, warm lit middle, dark backdrop.
 
-The fire **spreads rather than climbs**. Width and height grow at different rates
-on purpose; at the same rate it stayed a spike however much fuel went in. Measured
-across the flame's own silhouette:
+The fire **spreads rather than climbs**, and its aspect is stated outright rather
+than falling out of a stack of multipliers. It used to: a spread term widened the
+tongues, and since neither the spread nor the tongue offsets knew anything about
+flame life, a **dying fire kept its full width while its height collapsed** and went
+out as a flat lens. It also fattened each tongue instead of moving them apart, and
+`teardrop` takes a half-width, so the widening counted twice. Now the aspect rises
+with Kindled Flame, falls away with the flame, and the tongues are placed inside
+that envelope rather than sized into it:
 
-| Kindled Flame | 0 | 2 | 4 | 8 |
-|---|---|---|---|---|
-| width / height | 0.50 | 0.79 | **1.05** | **1.52** |
+| Kindled Flame | 0 | 2 | 4 | 6 | 8 |
+|---|---|---|---|---|---|
+| at full flame | 0.84 | 1.03 | **1.22** | **1.41** | **1.46** |
 
 Wider than tall from 4, which is what the spec asked for, over three or more
-visible logs.
+visible logs. And it narrows as it dies rather than flattening — at Kindled Flame
+8 it goes 1.46 at full, 1.06 at intensity 45, 0.88 at 12, 0.85 at 4, shrinking the
+whole way. `0.84` at the bottom is the shape the fire had before any of this.
 
 `prop_relief` is **out of the rotation**. Free-standing it read as a billboard in
 open space and competed with the backdrop wall, which carries carved figures of
