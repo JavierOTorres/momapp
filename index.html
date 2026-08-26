@@ -1798,7 +1798,16 @@ function loadSprites(){
     for (const pose of POSES){
       const im = new Image();
       im.onload  = () => { img[pose] = im; settle(); };
-      im.onerror = () => { ok = false; settle(); };
+      im.onerror = () => {
+        /* Falling back is correct, but doing it silently makes "why is my species
+           still code art" undiagnosable. Say it once, and name the usual cause. */
+        if (ok) console.warn("sprites: " + key + " stays on code art, could not load " + set[pose]
+          + (location.protocol === "file:"
+             ? " — this page was opened over file://, which blocks local assets in some"
+               + " browsers. Serve the folder instead: python3 -m http.server"
+             : ""));
+        ok = false; settle();
+      };
       im.src = set[pose];
     }
   }
