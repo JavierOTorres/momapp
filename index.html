@@ -1934,19 +1934,23 @@ const PROP_H = {
    easy to aim at; angles kept flinging the columns off-screen. */
 const PROP_RING = [
   // behind the seats, standing against the wall
-  { k:"statue_headless", rx: 0.48, ry:-0.70 },
-  { k:"relief",          rx:-0.72, ry:-0.66 },
-  { k:"statue_slab",     rx:-1.15, ry:-0.52 },
+  { k:"statue_headless", rx: 0.52, ry:-0.74 },
+  { k:"relief",          rx:-0.68, ry:-0.72 },
+  { k:"statue_slab",     rx:-1.45, ry:-0.40 },
   // at the edge of the light, half in the dark, as the columns always were
-  { k:"column_upright",  rx: 1.12, ry:-0.34 },
-  { k:"column_leaning",  rx:-1.05, ry:-0.16 },
-  // fallen stone in the foreground, low enough never to mask a figure
-  { k:"moss",            rx: 1.20, ry: 0.44 },
-  { k:"root",            rx:-1.05, ry: 0.52 },
-  { k:"column_stump",    rx: 0.92, ry: 0.56 },
-  { k:"head_fallen",     rx:-0.62, ry: 0.64 },
-  { k:"rubble",          rx: 0.30, ry: 0.70 },
-  { k:"water",           rx:-0.20, ry: 0.74 }
+  { k:"column_upright",  rx: 1.15, ry:-0.30 },
+  { k:"column_leaning",  rx:-1.02, ry:-0.06 },
+  // fallen stone, pushed out to the corners. The centre of the foreground stays
+  // empty on purpose: it is the brightest ground in the frame, the seats open onto
+  // it, and the road bar sits across it. Debris there read as clutter no matter how
+  // it was lit, because vertical distance is compressed, so anything low in the
+  // frame is close to the fire and comes up brighter than the architecture behind.
+  { k:"root",            rx:-1.32, ry: 0.24 },
+  { k:"moss",            rx: 1.38, ry: 0.36 },
+  { k:"water",           rx:-1.38, ry: 0.56 },
+  { k:"column_stump",    rx: 1.02, ry: 0.64 },
+  { k:"head_fallen",     rx:-0.95, ry: 0.74 },
+  { k:"rubble",          rx: 0.85, ry: 0.86 }
 ];
 
 /* The wall stands behind everything at a fixed size in world units, wide enough to
@@ -1968,7 +1972,7 @@ function deriveDark(img){
   const g = c.getContext("2d");
   g.drawImage(img, 0, 0);
   g.globalCompositeOperation = "source-atop";
-  g.fillStyle = "rgba(15,21,18,0.86)";
+  g.fillStyle = "rgba(15,21,18,0.93)";
   g.fillRect(0, 0, w, h);
   return c;
 }
@@ -2019,7 +2023,7 @@ function drawBackWall(){
   const vis = Math.max(0, Math.min(1, (R - 58) / 92));   // the light is what builds it
   if (vis <= 0.02) return;
   const w = WALL.w, h = w * (c.height / c.width), x0 = fx - w / 2, y0 = WALL.bottom - h;
-  ctx.globalAlpha = 0.25 + 0.75 * vis;
+  ctx.globalAlpha = 0.16 + 0.56 * vis;
   ctx.drawImage(c, x0, y0, w, h);
   ctx.globalAlpha = 1;
 
@@ -2030,8 +2034,8 @@ function drawBackWall(){
      painting the dark straight on costs nothing and needs no clip. */
   const reach = R * 1.9 * (0.55 + 0.45 * flameLife());
   const g = ctx.createRadialGradient(fx, fy - 20, R * 0.30, fx, fy - 20, reach);
-  g.addColorStop(0, "rgba(15,21,18,0.30)");
-  g.addColorStop(0.5, "rgba(15,21,18,0.72)");
+  g.addColorStop(0, "rgba(15,21,18,0.42)");
+  g.addColorStop(0.5, "rgba(15,21,18,0.82)");
   g.addColorStop(1, C.void);
   ctx.fillStyle = g;
   ctx.fillRect(x0, y0, w, h);
@@ -2058,8 +2062,13 @@ function drawProps(time, behind){
   near.sort((m, n) => m.y - n.y);                  // nearer stone overlaps what is behind it
   for (const it of near){
     const h = it.h, w = h * (it.img.naturalWidth / it.img.naturalHeight);
+    /* Gamma on the falloff. Linear proximity put the columns at the light's edge at
+       roughly half brightness, which is the same value as the dais and the wall, and
+       a frame where everything lands in one mid band reads as clutter however well
+       each piece is drawn. Curving it drops the far stone into the dark and leaves
+       the value range for the fire and the figures. */
     const f = firePull(it.x, it.y - h * 0.45);     // the same reach the figures are lit by
-    const lit = f ? f.near * f.life : 0;
+    const lit = f ? Math.pow(f.near * f.life, 1.7) : 0;
     ctx.globalAlpha = 0.15 + 0.85 * vis;
     contact(it.x, it.y + 2, Math.max(12, w * 0.5), 0.4);
     if (it.dark) ctx.drawImage(it.dark, it.x - w / 2, it.y - h, w, h);

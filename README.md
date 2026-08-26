@@ -258,6 +258,16 @@ columns off-screen. Anything standing behind the dais is drawn *before* it, or
 its base paints over the stone and it reads as standing on the dais rather than
 behind it.
 
+**The centre of the foreground stays empty on purpose.** `firePull` compresses
+vertical distance, so anything low in the frame counts as close to the fire and
+comes up brighter than the architecture behind it. The first layout put six of
+the eleven props along the bottom, where they lit at 52-69% against columns at
+21-26% — debris outshining the temple, across the ground the seats open onto and
+the road bar sits over. Fallen stone now sits in the corners, and the falloff
+carries a 1.7 gamma so the far pieces drop into the dark instead of landing in
+the same mid band as the dais. Measured over the same frame, mid-grey went from
+29.8% to 23.2% and dark from 34.4% to 40.6%.
+
 `tools/clean_art.py` does for props what the normalizer does for characters:
 strips the magenta chroma-key halo the generators leave on outlines, despeckles,
 and crops tight. The crop is the important one — a prop is placed by its ground
