@@ -1,0 +1,3495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1512">
+<title>Sanctuary</title>
+<style>
+  :root{
+    /* Human stone is cool. The fire is the only warm thing. */
+    --bg:#0f1512; --panel:#1b2124; --panel-2:#232b2e; --ink:#0a0e0b;
+    --line:#0a0e0b; --text:#d8d2c4; --dim:#7d8a85;
+    --ember:#ffab3d; --ember-2:#f2682c; --gold:#ffe9b8;
+    --good:#4c5a38; --cold:#4d545a; --disabled:#2b3136;
+    --moss:#35402c; --stone:#2b3136; --keeper:#d9c48a;
+    --cursed:#7a4a6e; --rare:#c9a227;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:ui-rounded,"Avenir Next Rounded","Trebuchet MS",Verdana,system-ui,sans-serif;
+    font-weight:700;letter-spacing:.02em;
+    display:flex;justify-content:center;
+    touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  }
+  #app{
+    width:100%;max-width:430px;height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+
+  /* ---------- top bar ---------- */
+  #top{
+    flex:0 0 auto;padding:9px 10px 6px;gap:6px;
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--panel);
+  }
+  #soulWrap{display:flex;align-items:baseline;gap:5px;min-width:0;flex-wrap:wrap}
+  #souls{font-size:25px;line-height:1;color:var(--gold);text-shadow:0 2px 0 var(--ink)}
+  #matWrap{font-size:9px;color:var(--dim);letter-spacing:.04em}
+  #matWrap span{color:#4c5a38;font-size:12px}
+  #soulLabel{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+  #rate{font-size:8px;color:var(--dim);text-align:right;line-height:1.3;white-space:nowrap}
+  #rate b{display:block;font-size:13px;color:var(--text)}
+  #flameWrap{flex:0 0 auto;margin-left:6px;text-align:center}
+  #flameBar{
+    width:52px;height:9px;border:3px solid var(--line);border-radius:6px;background:#232c20;overflow:hidden;
+  }
+  #flameBar i{display:block;height:100%;width:100%;background:var(--ember);transition:width .3s linear}
+  #flameNum{display:block;font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
+  #bookBtn{
+    flex:0 0 auto;margin-left:6px;width:34px;height:34px;border-radius:10px;
+    border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
+  }
+  #sheet{
+    position:fixed;inset:0;z-index:22;background:#0f1512;
+    display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  #sheet[hidden]{display:none}
+  #sheetList{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+  #sheetList button{
+    text-align:left;padding:10px 12px;border:3px solid var(--line);border-radius:14px;
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:12px;line-height:1.45;
+  }
+  #sheetList button b{font-size:13px}
+  #sheetList button span{color:var(--gold);font-weight:700}
+  #sheetList button em{color:var(--dim);font-style:italic}
+  #sheetList button:disabled{opacity:.7}
+  #book{
+    position:fixed;inset:0;z-index:20;background:#0f1512;
+    display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  #book[hidden]{display:none}
+  .bookTop{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:3px solid var(--line);
+    background:var(--panel);
+  }
+  .bookTop h3{margin:0;font-size:15px;letter-spacing:.06em}
+  .bookTop p{margin:3px 0 0;font-size:11px;font-weight:600;color:var(--dim);font-style:italic}
+  #bookList{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+  #pop{
+    flex:0 0 auto;display:flex;gap:14px;padding:0 16px 9px;
+    background:var(--panel);border-bottom:3px solid var(--line);
+    font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.06em;
+  }
+  #pop span{display:flex;align-items:center;gap:5px}
+  #pop i{width:8px;height:8px;border-radius:9px;display:block;border:2px solid var(--ink)}
+  .dFire{background:var(--ember)} .dAway{background:var(--cold)} .dHollow{background:#454b48}
+
+  /* ---------- sanctuary ---------- */
+  /* Nothing in the HUD exists until it is true; then it arrives. */
+  #top,#top>*,#pop,#pop>span,#bottom,.tab{transition:opacity .55s ease,height .45s ease,padding .45s ease}
+  body.boot #top,body.boot #top>*,body.boot #pop,body.boot #bottom,body.boot .tab{transition:none}
+  .gone{opacity:0;pointer-events:none}
+  #top.gone,#pop.gone{height:0;padding:0;overflow:hidden;border:0}
+  #bottom.gone{flex:0 0 0;height:0;min-height:0;padding:0;overflow:hidden;border:0}
+  .tab.gone{display:none}
+
+  #stage{flex:1 1 auto;position:relative;min-height:0;background:var(--bg)}
+  canvas{display:block;width:100%;height:100%}
+
+  /* ---------- counsel card ---------- */
+  #gest{
+    position:fixed;inset:0;z-index:30;background:rgba(15,11,22,0.97);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;
+  }
+  #gest[hidden]{display:none}
+  #gestCv{
+    width:260px;height:190px;border:3px solid var(--line);border-radius:14px;
+    background:#1b1526;touch-action:none;
+  }
+  #art{
+    position:absolute;inset:0;z-index:6;background:rgba(15,11,22,0.96);
+    display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 12px;
+  }
+  #art[hidden]{display:none}
+  .artTop{display:flex;align-items:center;gap:10px;width:100%}
+  .artTitle{font-size:15px}
+  .artSub{font-size:11px;font-weight:600;color:var(--dim);margin-top:2px}
+  #artCv{
+    width:240px;height:200px;flex:0 0 auto;border:3px solid var(--line);border-radius:14px;
+    background:#1b1526;touch-action:none;
+  }
+  .artHint{font-size:11px;font-weight:600;color:var(--dim);text-align:center;margin:2px 0 6px}
+  #artDust,#artTest{width:100%;display:flex;flex-direction:column;gap:6px}
+  #artTest[hidden],#artDust[hidden]{display:none}
+  .axis{display:flex;gap:6px}
+  .axis button{
+    flex:1;padding:8px 2px;border:3px solid var(--line);border-radius:10px;
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:11px;
+  }
+  .axis button.on{background:var(--gold);color:var(--ink)}
+  .axis button.out{opacity:.35;text-decoration:line-through}
+  .tests{display:flex;gap:6px;margin-top:2px}
+  .tests button{
+    flex:1;padding:9px 2px;border:3px solid var(--line);border-radius:10px;
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:10.5px;line-height:1.3;
+  }
+  .tests button:disabled{opacity:.4}
+  .tests button b{display:block;color:var(--gold);font-size:11px}
+  #counsel{
+    position:absolute;left:10px;right:10px;bottom:10px;z-index:5;
+    background:var(--panel-2);border:3px solid var(--line);border-radius:16px;
+    padding:10px;box-shadow:0 8px 0 rgba(0,0,0,.35);
+  }
+  #counsel[hidden]{display:none}
+  .cTop{display:flex;align-items:center;gap:10px}
+  .cTone{flex:0 0 auto;width:26px;height:26px;border-radius:14px;border:3px solid var(--line)}
+  .cTitle{font-size:14px}
+  .cSub{font-size:11px;font-weight:600;color:var(--dim);margin-top:2px}
+  .cClose{
+    margin-left:auto;width:30px;height:30px;border-radius:10px;border:3px solid var(--line);
+    background:var(--panel);color:var(--dim);font:inherit;font-size:14px;
+  }
+  .cOdds{
+    margin:8px 0;padding:7px 9px;border-radius:11px;background:var(--panel);
+    border:3px solid var(--line);font-size:11.5px;font-weight:600;color:var(--dim);line-height:1.45;
+  }
+  .cOdds b{font-size:15px;color:var(--text);font-weight:800}
+  .cGear{display:flex;gap:6px;margin-bottom:8px}
+  .cGear button{
+    flex:1;padding:7px 3px;border:3px solid var(--line);border-radius:11px;
+    background:var(--panel);color:var(--text);font:inherit;font-size:10px;line-height:1.3;
+  }
+  .cGear button i{display:block;color:var(--dim);font-style:normal;font-size:9px;letter-spacing:.08em}
+  .cGear button.filled{background:var(--panel-2);color:var(--gold)}
+  .cGear button.cursed{color:#e0708a}
+  .cActs{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+  .cActs button{
+    width:100%;padding:8px 10px;border:3px solid var(--line);border-radius:11px;text-align:left;
+    background:var(--panel);color:var(--text);font:inherit;font-size:11.5px;
+  }
+  .cActs button i{display:block;color:var(--dim);font-style:normal;font-size:10px;margin-top:2px}
+  .cPick button b{font-size:11.5px}
+  .cPick button span{color:var(--gold);font-weight:700}
+  .cPick button em{color:var(--dim);font-style:italic;font-weight:600}
+  .cPick{
+    max-height:126px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:8px;
+  }
+  .cPick button{
+    width:100%;padding:8px;border:3px solid var(--line);border-radius:10px;
+    background:var(--panel);color:var(--text);font:inherit;font-size:11px;text-align:left;
+  }
+  .cAct{
+    width:100%;padding:11px;border:3px solid var(--line);border-radius:12px;
+    background:var(--cold);color:var(--ink);font:inherit;font-size:14px;
+  }
+  .cAct:disabled{background:var(--disabled);color:#7d7090}
+  .cAct.warm{background:var(--ember)}
+  .cNote{font-size:10.5px;font-weight:600;color:var(--dim);text-align:center;margin-top:6px;line-height:1.35}
+
+  /* ---------- bottom panel ---------- */
+  #bottom{
+    flex:0 0 auto;height:44%;min-height:296px;
+    background:var(--panel);border-top:3px solid var(--line);
+    display:flex;flex-direction:column;
+  }
+  #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
+  .tab{
+    flex:1;padding:13px 0;background:var(--panel-2);color:var(--dim);
+    border:0;border-right:3px solid var(--line);
+    font:inherit;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;
+  }
+  .tab:last-child{border-right:0}
+  .tab.on{background:var(--panel);color:var(--gold);box-shadow:inset 0 -4px 0 var(--ember)}
+  #list{flex:1 1 auto;overflow-y:auto;padding:11px;display:flex;flex-direction:column;gap:9px;-webkit-overflow-scrolling:touch}
+
+  .card{
+    background:var(--panel-2);border:3px solid var(--line);border-radius:14px;
+    padding:10px 11px;display:flex;align-items:center;gap:11px;
+  }
+  .icon{
+    flex:0 0 auto;width:42px;height:42px;border:3px solid var(--line);border-radius:12px;
+    display:grid;place-items:center;font-size:19px;
+  }
+  .info{flex:1 1 auto;min-width:0}
+  .name{font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .lvl{flex:0 0 auto;font-size:11px;color:var(--ink);background:var(--gold);border-radius:20px;padding:2px 7px;letter-spacing:.06em}
+  .desc{font-size:11.5px;font-weight:600;color:var(--dim);margin-top:3px;line-height:1.35}
+  .buy{
+    flex:0 0 auto;min-width:86px;padding:10px;border:3px solid var(--line);border-radius:12px;
+    background:var(--ember);color:var(--ink);font:inherit;font-size:14px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .buy small{font-size:10px;font-weight:700;opacity:.72;letter-spacing:.1em}
+  .buy:active{transform:translateY(2px)}
+  .buy:disabled{background:var(--disabled);color:#7d7090;transform:none}
+  .buy.done{background:var(--good);color:var(--ink)}
+  .razeBtn{
+    flex:0 0 auto;margin-left:6px;padding:9px 7px;border:3px solid var(--line);border-radius:11px;
+    background:var(--panel);color:var(--dim);font:inherit;font-size:10px;
+  }
+  .entry{
+    background:var(--panel-2);border:3px solid var(--line);border-radius:14px;padding:10px 12px;
+  }
+  .entry h4{margin:0;font-size:13px;letter-spacing:.06em}
+  .entry p{margin:5px 0 0;font-size:11.5px;font-weight:600;color:var(--dim);line-height:1.45}
+  .entry.locked{opacity:.55}
+  .entry.locked h4{color:var(--dim)}
+  .entry.locked p{font-style:italic}
+  .note{font-size:11px;font-weight:600;color:var(--dim);text-align:center;padding:2px 6px 6px;line-height:1.4}
+</style>
+</head>
+<body class="boot">
+<div id="app">
+  <div id="top" class="gone">
+    <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div>
+      <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
+    <div id="rate"><b>0.0</b>souls/sec</div>
+    <div id="flameWrap"><div id="flameBar"><i></i></div><span id="flameNum">100</span></div>
+    <button id="bookBtn" title="The keeper's notes">📕</button>
+  </div>
+  <div id="pop" class="gone">
+    <span><i class="dFire"></i><em id="pFire">0</em> at fire</span>
+    <span><i class="dAway"></i><em id="pAway">0</em> on expedition</span>
+    <span id="popHollow"><i class="dHollow"></i><em id="pHollow">0</em> hollow</span>
+  </div>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="gest" hidden>
+      <div class="artTop">
+        <div><div class="artTitle" id="gestTitle"></div><div class="artSub" id="gestHint"></div></div>
+        <button class="cClose" id="gestX">✕</button>
+      </div>
+      <canvas id="gestCv" width="260" height="190"></canvas>
+    </div>
+
+    <div id="art" hidden>
+      <div class="artTop">
+        <div><div class="artTitle">Unidentified</div><div class="artSub"></div></div>
+        <button class="cClose" id="artX">✕</button>
+      </div>
+      <canvas id="artCv" width="240" height="200"></canvas>
+      <div id="artDust">
+        <div class="artHint">Drag to wipe the grime away.</div>
+        <button class="cAct" id="artToFire" disabled>To the fire</button>
+      </div>
+      <div id="artTest" hidden>
+        <div class="axis" data-axis="slot"></div>
+        <div class="axis" data-axis="rarity"></div>
+        <div class="axis" data-axis="cursed"></div>
+        <div class="tests">
+          <button data-test="sound"></button>
+          <button data-test="heat"></button>
+          <button data-test="bleed"></button>
+        </div>
+        <button class="cAct warm" id="artName">Name it</button>
+      </div>
+    </div>
+
+    <div id="counsel" hidden>
+      <div class="cTop">
+        <div class="cTone"></div>
+        <div><div class="cTitle">Adventurer</div><div class="cSub"></div></div>
+        <button class="cClose">✕</button>
+      </div>
+      <div class="cOdds"></div>
+      <div class="cGear"></div>
+      <button class="cAct"></button>
+      <div class="cNote"></div>
+    </div>
+  </div>
+
+  <div id="sheet" hidden>
+    <div class="bookTop">
+      <div><h3 id="sheetTitle"></h3><p id="sheetSub"></p></div>
+      <button class="cClose" id="sheetX" style="margin-left:auto">✕</button>
+    </div>
+    <div id="sheetList"></div>
+  </div>
+
+  <div id="book" hidden>
+    <div class="bookTop">
+      <div><h3>The keeper's notes</h3><p>Kept because no one else was going to.</p></div>
+      <button class="cClose" id="bookX" style="margin-left:auto">✕</button>
+    </div>
+    <div id="bookList"></div>
+  </div>
+
+  <div id="bottom" class="gone">
+    <div id="tabs">
+      <button class="tab on" data-tab="skills">Skills</button>
+      <button class="tab gone" data-tab="build">Build</button>
+    </div>
+    <div id="list"></div>
+    <div class="note" id="note"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================ tuning ============================
+
+   Deaths now scar permanently and depth halves instead of resetting,
+   so dying no longer hands an adventurer their survivability back.
+   DEATH_PEN is the spec's 0.10; SURV_BASE is the dial that moved.
+   At 0.84 the spiral runs far too hot — first hollow at 5 minutes and
+   a choked sanctuary by 11 — so base goes up, not the penalty down.
+   0.98 keeps the slide legible (92% fresh, 80% at depth 4 with one
+   death, 70% with two) and lands: first hollow ~7min (p90 13),
+   Herbalist ~10, choke ~19, ~22 if you rekindle, and a Counsel-heavy
+   player stalls past 30 without ever escaping it.                    */
+
+const T = {
+  POOL:8, SLOTS:16, AWAY:30, REST:20, WALK:62,
+  SURV_BASE:0.98, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05, DEATH_PEN:0.10,
+  FIRST_GRACE:0.07,
+  SURV_MIN:0.15, SURV_MAX:0.92,
+  HOLLOW_AT:3, HOLLOW_AT_HERB:4,
+  DEPTH_PAY:0.5,
+  SMITH_COST:200, HERB_COST:500, REK_BASE:150, REK_GROWTH:1.6,
+  BELL_BASE:40, BELL_GROWTH:1.55, LETGO_COST:40,
+  DROP_BASE:0.12, DROP_PER_DEPTH:0.03, DROP_CAP:0.45, CURSE_RATE:0.20,
+  MAT_DROP_BASE:0.10, MAT_DROP_PER_DEPTH:0.02, RELIC_CAP:3, CRAFT_SECONDS:15,
+  FLAME_MAX:100, BASE_DECAY:0.037, HEARTH:0.0074, FAR_FEED:0.35,
+  HOLLOW_HIT:5, HOLLOW_HIT_PER_DEPTH:0.25, HOLLOW_WINDOW:30, HOLLOW_CAP:3,
+  RING_MIN:4, RING_BASE:5, RING_MAX:8, NAME_AT_DEPTH:3,
+  SMITH_LV:[0, 200, 800, 2500], SMITH_MAT:[0, 0, 12, 40],
+  HERB_LV:[0, 500, 1100, 3000], HERB_MAT:[0, 0, 14, 44],
+  FORGE_COST:{ fine:[150, 6], rare:[600, 20] },
+  CLEANSE_COST:{ rough:[200, 8], clean:[700, 24] },
+  MAX_EMBERS:10, EMBER_REGEN:2
+};
+const SMITH_SLOTS = [1,2], HERB_SLOT = 6;
+
+const S = {
+  souls:0, lv:{flame:0, word:0, echo:0, circle:0}, rekindles:0,
+  embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
+  pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
+  first:true, beat:0, rests:0, nudge:null, bookShown:false,
+  rev:{ embers:false, souls:false, arrivals:false, tabs:false, book:false, road:false,
+        flameBar:false, pop:false, hollowCount:false, pips:false, build:false,
+        sawFind:false, sawDeath:false,
+        skWord:false, skCircle:false, skEcho:false, skRite:false },
+  seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false, material:false, relic:false },
+  mat:0, relic:[], lost:[], nextArt:1,
+  v:{ smith:0, herb:0, quart:0, carto:0, ossu:0, tink:0 }, plots:[null,null,null,null,null,null,null],
+  spent:{}, marked:null, freeRiteUsed:false,
+  offline:null, ending:false, flameOn:true, everHollowed:false,
+  flame:100, flameMax:100, runStart:0, peakDepth:0, runEarned:0,
+  unlocked:0, log:[],
+  meta:{ ash:0, unlocks:[], dead:[], cycles:0 },
+  earnLog:[], floats:[], sparks:[], says:[]
+};
+
+const ARCHIVE = [
+  { name:"This place", open:()=>true, body:
+    "People built it. The steps are too tall, the doors are too wide, and the basin the fire sits "
+    + "in would take four of me to fill. They are not here now. Nobody I have asked knows where "
+    + "they went, and the ones who go down looking come back with their things instead of them." },
+  { name:"Souls", open:()=>true, body:
+    "What they pay with. I have never asked where it comes from and they have never offered. "
+    + "It buys skills, vendors, the bell, and whatever the smith and the herbalist want for their "
+    + "work. It does not buy anyone back." },
+  { name:"Who comes", open:()=>true, body:
+    "Cats keep more of themselves back and hand over less. Dogs take one more death than the rest "
+    + "before the grey. Frogs go down too fast and do not last. Crows find things and cannot work "
+    + "a latch. Rabbits are quick there and back and never much deeper. Goats get doors open that "
+    + "nothing else will, and are slow about everything else." },
+  { name:"The fire", open:()=>true, body:
+    "It does not need me. I tend it anyway. Stoking it by hand pulls a soul out of the embers, "
+    + "ten of them at a time, and one comes back every two seconds. Early on that is most of the "
+    + "money. Later it is a thing to do with my hands." },
+  { name:"Expeditions", open:()=>true, body:
+    "They rest twenty seconds, pay, and go down for thirty. The bar under the count is how I "
+    + "know where they are: one length of it for each place, "
+    + "and a mark on it for everyone who is down there." },
+  { name:"The bell", open:()=>true, body:
+    "Rung, it brings one of them straight back up. They arrive alive, no deeper than they went, "
+    + "and they owe me nothing, which is the point and also the cost. It asks more of me every "
+    + "time I ring it." },
+  { name:"Depth", open:()=>S.seen.depth, body:
+    "Every run they survive takes them one layer further down. A rest pays half again as much for "
+    + "each layer, so the ones who go deepest keep this place standing. Each layer also takes five "
+    + "points off their odds of coming back. Both of those things are the same sentence." },
+  { name:"Deaths and scars", open:()=>S.seen.death, body:
+    "Dying does not end them. It halves how deep they are and it takes ten points off their odds "
+    + "for good. The red pips under a figure are how many they have taken. Nothing lifts a scar "
+    + "but the rite, and the rite is not cheap." },
+  { name:"Hollowing", open:()=>S.seen.hollow, body:
+    "The third death does it. The fourth, if the herbalist is here. They drop where they stand "
+    + "and the colour goes out of them, and the fire takes a hard knock the moment it happens — "
+    + "harder for the ones who got deep. Then there is a ring draining on the ground beside them, "
+    + "and half a minute to decide. Bring them back with the rite, or let them go, or do nothing: "
+    + "if the ring runs out they stand up and walk into the dark on their own, and I write them "
+    + "down either way. I have never had more than three of them sitting here at once. The "
+    + "fourth one always leaves first." },
+  { name:"The rite of rekindling", open:()=>S.seen.hollow, body:
+    "It brings one of them back from grey: no depth, no scars, no memory of it that I can see. "
+    + "The price climbs every time and my income does not climb with it. I have not decided yet "
+    + "whether it is mercy." },
+  { name:"The vendors", open:()=>true, body:
+    "The smith takes two places and gives back two souls a rest and twelve points of survival. "
+    + "The herbalist takes one place, gives eight points, and buys everyone a fourth death. They "
+    + "are worth their room. Everything at this fire costs room." },
+  { name:"Standing beside each other", open:()=>true, body:
+    "Two of them on neighbouring ground start working together. Nothing on the ground says so — "
+    + "it is written on their card in the Build tab, and here. "
+    + "The smith beside the tinker: half again as much scrap out of anything broken. "
+    + "The herbalist beside the ossuary: letting one go lifts a death off somebody still standing. "
+    + "The quartermaster beside the cartographer: routed adventurers travel a tenth faster again. "
+    + "The smith beside the quartermaster: reforged weapons ask less scrap. The herbalist beside "
+    + "the cartographer: a marked place turns up fewer cursed things. The ossuary beside the "
+    + "tinker: what the grey leave reaches the shelf unspoiled." },
+  { name:"Ground", open:()=>true, body:
+    "Four plots to start and one more for every three levels of Kindled Flame, to seven. What "
+    + "stands inside the light works quickly and takes a seat from the ring for itself. What "
+    + "stands outside it works slower, weaker, and costs no seat. The light moves, so the same "
+    + "plot is not always the same bargain. Anything can be pulled down for half the souls put "
+    + "into it, and its levels go with it." },
+  { name:"The road", open:()=>true, body:
+    "Seven places, each one two layers deep, each one shut behind a gate until somebody gets "
+    + "through it. A gate is tried once a fire, against what the one trying it is carrying and how "
+    + "far they have already been. Get through and the place below opens and they come back with "
+    + "something out of the gate itself. Fail and they are thrown back, take a death, and drop "
+    + "what they had. Tap the head of the strip to see the whole road." },
+  { name:"The flame", open:()=>true, body:
+    "It burns down on its own and the circle holds it up: everyone living feeds it, and only "
+    + "those who can reach a seat feed it fully — the ones out on the road feed it at a third. A "
+    + "full circle roughly holds. What takes it down is losing somebody: the moment one of them "
+    + "goes grey the fire drops all at once, and further for the ones who got deep. When it "
+    + "reaches nothing the fire is out and the run is finished, and what the run was worth comes "
+    + "back as ash." },
+  { name:"Counsel", open:()=>S.seen.depth, body:
+    "Sitting with one of them tells me what they are worth and how close they are. Sending them "
+    + "shallow means one layer short of where they have been: better odds, a thinner purse, and "
+    + "no new ground. It is how you keep a veteran instead of spending one." },
+  { name:"What they bring back", open:()=>S.seen.artifact, body:
+    "Twelve times in a hundred, and three more for every layer down, one of them comes up "
+    + "carrying something. It arrives filthy. The tray by the fire holds six and I have watched "
+    + "a full tray turn a find into nothing." },
+  { name:"Cleaning a find", open:()=>S.seen.artifact, body:
+    "It comes up filthy and it stays theirs. Cleaning it takes a minute of my thumb and depends on "
+    + "what it came out of: ash wipes, rust wants scraping one way, waterlogged wants pressing, "
+    + "roots want cutting along, ice wants warming in patches before it takes hold again. After "
+    + "that I can see what shape it is and how well it was made. What it was for is still a guess." },
+  { name:"One of the two", open:()=>S.seen.ident, body:
+    "If they already carry something in that slot, I choose, and the one I do not choose goes in "
+    + "the fire. Nothing is kept in a drawer here. A second of a thing they already own never even "
+    + "reaches them — it goes straight in the scrap." },
+  { name:"Cursed things", open:()=>S.seen.curse, body:
+    "About one in five is owed on, and the mark shows once it is clean. A cursed piece gives more "
+    + "than an honest one and takes the difference out of somewhere else: a blade that keeps them "
+    + "alive and cuts their pay by two fifths, plate that blunts the scar and costs eight points of "
+    + "survival, a charm that pays and makes every death cut deeper. Worth it, sometimes. That is "
+    + "the whole decision." },
+  { name:"Scrap", open:()=>S.seen.material, body:
+    "Twisted metal, spoiled reagents, whatever will not be a thing again. It comes up on its own and "
+    + "from duplicates. The smith and the herbalist both want it, and souls alone will not buy their "
+    + "later work." },
+  { name:"The forge and the still", open:()=>S.seen.material, body:
+    "Both of them can be paid to learn. The smith reaches common into fine, then fine into rare, "
+    + "working on the piece while it is still being worn. The herbalist lifts curses — roughly at "
+    + "first, taking a grade off the piece for it, and cleanly once she is fully paid for. Either "
+    + "takes about fifteen seconds and neither can be hurried." },
+  { name:"What the dead leave", open:()=>S.seen.artifact, body:
+    "Whatever they were wearing when they died stays at the depth that took them, until someone "
+    + "survives a run that deep and brings it up. Whatever they were wearing when they hollowed "
+    + "goes on the shelf by the fire instead. I can hand one of those to someone living, once. The "
+    + "shelf holds three, and when a fourth arrives the oldest is not there any more." }
+];
+
+const NODES = [
+  { key:"flame", name:"Kindled Flame", glyph:"🔥", base:10, growth:1.5,
+    desc:()=> "+1 soul per rest, and the fire itself grows. A depth 0 rest pays " + perRest()
+              + ", and the light seats " + ringCap() + "." },
+  { key:"word", name:"Word of Sanctuary", glyph:"🔔", base:25, growth:1.7,
+    desc:()=> "Recruits arrive 10% faster, one every " + interval().toFixed(2) +
+              "s, while the circle is below " + poolCap() + "." },
+  { key:"circle", name:"Widen the Circle", glyph:"🔆", base:300, growth:1.9, max:4,
+    desc:()=> "One more may take up with us, to a limit of " + (T.POOL + 4 + (has("wider") ? 2 : 0)) + ". "
+              + "Room for " + poolCap() + " now, and " + usableSeats() + " seats at the fire." },
+  { key:"echo", name:"Soul Echo", glyph:"💀", base:50, growth:2.0,
+    desc:()=> "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
+];
+
+const cost      = n => (S.first && n.key === "flame" && S.lv.flame === 0) ? 3
+                     : Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
+const perRest   = () => 1 + S.lv.flame + (built("smith") ? 2 : 0);
+const interval  = () => 5 * Math.pow(0.9, S.lv.word);
+const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
+const peakOf    = a => Math.max(a.peak || 0, a.depth || 0);
+const rekCost   = a => a ? 120 + peakOf(a) * 45 : 120;      // a deep veteran is worth paying for
+const letGoCost = () => T.LETGO_COST;
+const letGoAsh  = a => Math.max(1, Math.floor(peakOf(a) / 5)) * (vlv("ossu") >= 1 ? 2 : 1);
+const bellCost  = () => Math.floor(T.BELL_BASE * Math.pow(T.BELL_GROWTH, S.bells));
+const away      = () => S.pool.filter(a => a.state === "away");
+const poolCap   = () => T.POOL + S.lv.circle + (has("wider") ? 2 : 0);
+const has       = k => S.meta.unlocks.indexOf(k) >= 0;
+const flameLife = () => Math.max(0, Math.min(1, S.flame / T.FLAME_MAX));
+function awayScale(a){                                     // supplies make the road shorter
+  let f = 1 + (a && a.sp ? (spOf(a).away || 0) : 0);        // and some of them are just quicker
+  const q = vlv("quart");
+  if (q) f -= (q === 1 ? 0.15 : 0.25) * vEff("quart");
+  if (a && a.packed) f -= 0.05;
+  if (a && a.route != null && adjActive("quart", "carto")) f -= 0.10;
+  return Math.max(0.5, f);
+}
+const lightR    = () => (104 + S.lv.flame * 9) * (0.5 + 0.5 * flameLife());
+const ringCap   = () => Math.max(T.RING_MIN, Math.round(   // the first level has to buy a seat
+                    Math.min(T.RING_MAX, T.RING_BASE + Math.round(S.lv.flame / 2)) * (0.45 + 0.55 * flameLife())));
+const vendorSeats = () => VENDORS.reduce((n, v) => n + (built(v.key) && inLight(plotOf(v.key)) ? v.seats : 0), 0);
+const usableSeats = () => Math.max(1, ringCap() - vendorSeats());
+
+function tickFlame(dt){
+  const alive = living().length, dead = hollows().length;
+  const seats = Math.max(0, usableSeats() - dead);
+  const atFire = Math.min(alive, seats);
+  const feed = atFire + T.FAR_FEED * Math.max(0, alive - atFire);
+  const rate = T.BASE_DECAY - feed * T.HEARTH;   // the loss itself is a spike, not a drag
+  S.flame = Math.max(0, Math.min(S.flameMax, S.flame - rate * dt));
+  if (S.flame <= 0 && !S.ending) endRun(false);
+}
+const hollowAt  = a => (built("herb") ? T.HOLLOW_AT_HERB : T.HOLLOW_AT)
+                     + (a && a.sp ? (spOf(a).deaths || 0) : 0);
+const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.DEPTH_PAY + mods(a).pay)
+                        * mods(a).payMul * (1 + (a && a.sp ? (spOf(a).pay || 0) : 0))));
+const runDepth  = a => a.route != null ? Math.min(a.depth, locFloor(a.route) + 1)
+                     : a.shallow ? Math.max(0, a.depth - 1) : a.depth;
+const spSurv    = a => a && a.sp ? (spOf(a).survival || 0) : 0;
+/* The sequence has to run eight to twelve minutes and the first hollow measured at
+   a median of 6.6, so the opening pool is a little harder to kill. The survival cap
+   swallows this at depth 0, which is the point: the number a new player reads is
+   unchanged and only the deep, scarred runs that actually cause hollowing get the
+   help. It expires the moment the first one hollows, and only the first fire. */
+const grace     = () => (S.first && !S.everHollowed) ? T.FIRST_GRACE : 0;
+const survival  = (d, deaths, a) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
+                    grace() + T.SURV_BASE + (built("smith") ? T.SURV_SMITH * vEff("smith") : 0) + (built("herb") ? T.SURV_HERB * vEff("herb") : 0)
+                    - d * T.DEPTH_PEN - deaths * (a ? deathPenFor(a) : T.DEATH_PEN)
+                    + mods(a).surv + spSurv(a)));
+const hollows   = () => S.pool.filter(a => a.state === "hollow");
+const living    = () => S.pool.filter(a => a.state !== "hollow");
+const avgRate   = () => {                 // never divide by a window too short to mean anything
+  const w = Math.max(20, Math.min(60, S.elapsed || 0));
+  return S.earnLog.reduce((s,e)=>s+e.n, 0) / w;
+};
+
+/* ============================ canvas ============================ */
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+/* fx and fy are world coordinates and never move. The stage changes height as the
+   HUD assembles itself, and the camera absorbs all of it. */
+let W = 0, H = 0;
+const fx = 195, fy = 300;
+
+function resize(){
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  if (Math.abs(r.width - W) < 1 && Math.abs(r.height - H) < 1) return;   // the panel animates
+  W = r.width; H = r.height;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", resize);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);   // a panel reflow is not a resize
+
+/* One palette, one set of line weights. Outer contour 3, interior 1.5, detail 1. */
+const C = {
+  shadow:"#171b1e", stone:"#2b3136", stoneLit:"#3d444a", relief:"#4d545a", wet:"#3a4448",
+  void:"#0f1512", mossDark:"#232c20", moss:"#35402c", mossLit:"#4c5a38",
+  root:"#2c2a21", water:"#1e2724",
+  fireCore:"#ffe9b8", fireBody:"#ffab3d", fireTongue:"#f2682c",
+  deadBody:"#6e6a7a", deadCore:"#a9a3b5",
+  line:"#0a0e0b", hollow:"#454b48", socket:"#1a1f1c",
+  keeper:"#d9c48a", cursed:"#7a4a6e", rare:"#c9a227"
+};
+const LW = { outer:3, inner:3, detail:3 };   // uniform heavy outline; the style depends on it
+
+function shape(path, fill, lw){
+  ctx.beginPath(); path();
+  if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+  ctx.lineWidth = lw === 0 ? 0 : (lw || LW.outer);
+  if (ctx.lineWidth){ ctx.strokeStyle = OUTLINE; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke(); }
+}
+
+const mix = (a, b, t) => {                      // blend two hexes: firelight, and things dying
+  const pa = parseInt(a.slice(1),16), pb = parseInt(b.slice(1),16);
+  const r = Math.round(((pa>>16&255)*(1-t) + (pb>>16&255)*t));
+  const g = Math.round(((pa>>8&255)*(1-t) + (pb>>8&255)*t));
+  const bl = Math.round(((pa&255)*(1-t) + (pb&255)*t));
+  return "#" + [r,g,bl].map(v=>v.toString(16).padStart(2,"0")).join("");
+};
+
+/* 10. Grounding: nothing floats. */
+function contact(x, y, w, alpha){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, w);
+  g.addColorStop(0, "rgba(10,14,11," + (alpha || 0.45) + ")");
+  g.addColorStop(1, "rgba(10,14,11,0)");
+  ctx.fillStyle = g;
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.36); ctx.beginPath();
+  ctx.arc(0, 0, w, 0, 6.2832); ctx.fill(); ctx.restore();
+}
+function circle(x, y, r, fill, lw){ shape(()=>ctx.arc(x, y, r, 0, 6.2832), fill, lw); }
+function rrect(x, y, w, h, rad, fill, lw){
+  shape(()=>{ ctx.moveTo(x-w/2+rad, y-h/2);
+    ctx.arcTo(x+w/2, y-h/2, x+w/2, y+h/2, rad);
+    ctx.arcTo(x+w/2, y+h/2, x-w/2, y+h/2, rad);
+    ctx.arcTo(x-w/2, y+h/2, x-w/2, y-h/2, rad);
+    ctx.arcTo(x-w/2, y-h/2, x+w/2, y-h/2, rad); ctx.closePath(); }, fill, lw);
+}
+function teardrop(x, y, w, h, fill, lw){
+  shape(()=>{ ctx.moveTo(x, y-h);
+    ctx.bezierCurveTo(x+w, y-h*0.5, x+w*0.85, y, x, y);
+    ctx.bezierCurveTo(x-w*0.85, y, x-w, y-h*0.5, x, y-h); ctx.closePath(); }, fill, lw);
+}
+function desat(hex){                       // a hollow keeps its hue, drained of life
+  const n = parseInt(hex.slice(1), 16), r = n>>16 & 255, g = n>>8 & 255, b = n & 255;
+  const l = r*0.30 + g*0.59 + b*0.11;
+  const m = c => Math.round(Math.min(255, c*0.20 + l*0.52));
+  return "#" + [m(r), m(g), m(b)].map(v => v.toString(16).padStart(2,"0")).join("");
+}
+
+/* ============================ the pool ============================ */
+
+/* 4. Six species. Identity is silhouette; the colours are all warm-neutral so
+   the animals read against grey stone and green moss without competing with the fire. */
+const SPECIES = [
+  { key:"cat",    name:"cat",    body:"#8a6a4e", plate:"#c9a882", survival:+0.05, pay:-0.15,
+    note:"Careful. Comes back more often, and with less." },
+  { key:"dog",    name:"dog",    body:"#6f5645", plate:"#b09077", deaths:+1,
+    note:"Holds on. One more death before the grey." },
+  { key:"frog",   name:"frog",   body:"#5c6b45", plate:"#8fa06b", depth:+1, survival:-0.05,
+    note:"Reckless. Goes deeper faster and lasts less time doing it." },
+  { key:"crow",   name:"crow",   body:"#3b3740", plate:"#6b6572", drop:+0.08, gate:-1.5,
+    note:"Sharp-eyed. Finds more, opens less." },
+  { key:"rabbit", name:"rabbit", body:"#8f8375", plate:"#c4b8a6", away:-0.18,
+    note:"Quick. Short trips, and not much deeper for them." },
+  { key:"goat",   name:"goat",   body:"#7d7364", plate:"#b5a894", gate:+2.5, away:+0.15,
+    note:"Stubborn. Better at doors, slower at everything." }
+];
+/* Garments carry the colour and tell two of the same species apart. */
+const GARMENTS = [
+  { key:"red",    hex:"#c03a2f" }, { key:"gold",   hex:"#e0a52c" },
+  { key:"violet", hex:"#6b4a9c" }, { key:"teal",   hex:"#2f8a8a" },
+  { key:"moss",   hex:"#5c8a3a" }, { key:"rust",   hex:"#c26a25" }
+];
+const OUTLINE = "#141014";
+
+const SPMAP = {}; SPECIES.forEach(sp => SPMAP[sp.key] = sp);
+const spOf = a => SPMAP[a.sp] || SPECIES[0];
+const BUILDS = [{ h:1, w:1 }, { h:1.06, w:0.95 }, { h:0.95, w:1.06 }];
+
+const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d57"],
+                ["#c9a227","#5c4a1c"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"],
+                ["#5fbec4","#2f7d82"], ["#d9c48a","#9c5a22"], ["#b96fc4","#7a3f85"],
+                ["#a8c95c","#6c8a30"], ["#8894b0","#525b74"], ["#c45f5f","#832f2f"] ];
+const slotUsed = new Array(T.RING_MAX).fill(null);
+const FIRE_TAP_R = 66;                    // nobody may sit inside this
+let RING_R = 108;                         // recomputed each frame: the seats sit at the light's edge
+
+const emberY = () => fy + RING_R * 0.52 + 34;
+
+/* 6. The camera. The lit area fills the frame and the dark is the edge it pushes
+   against, not the majority of the screen. As the light grows the frame widens to
+   match, so the sanctuary grows into the screen instead of shrinking inside it. */
+const CAM = { z:1, cy:0, oy:0, set:false };
+
+function sceneBounds(){
+  const onStage = S.pool.some(a => a.state !== "away");
+  const R = lightR();
+  let halfW = onStage ? RING_R + 24 : Math.max(R * 1.35, 66);
+  let top   = onStage ? fy - RING_R * 0.52 - 66 : fy - Math.max(R * 0.62, 52);
+  let bot   = Math.max(emberY() + 12, fy + (onStage ? RING_R * 0.52 + 48 : R * 0.5 + 26));
+  for (let i = 0; i < plotCount(); i++){          // built ground has to stay in shot
+    if (!S.plots[i]) continue;
+    const pp = plotPos(i);
+    halfW = Math.max(halfW, Math.abs(pp.x - fx) + 28);
+    bot = Math.max(bot, pp.y + 26); top = Math.min(top, pp.y - 40);
+  }
+  if (K.placed){                                  // the keeper is never half out of frame
+    halfW = Math.max(halfW, Math.abs(K.x - fx) + 42);
+    top = Math.min(top, K.y - 68); bot = Math.max(bot, K.y + 14);
+  }
+  if (S.relic.length || S.seen.relic){
+    const rb = relicBounds();
+    halfW = Math.max(halfW, rb.x1 - fx + 12); bot = Math.max(bot, rb.y + 24);
+  }
+  return { halfW, top, bot };
+}
+
+function camera(dt){
+  const b = sceneBounds();
+  const barH = revealed("road") ? stripGeom().y + stripGeom().h + 10 : 10;
+  const availH = Math.max(80, H - barH);
+  const z = Math.max(0.85, Math.min(3.2, Math.min((W - 10) / (b.halfW * 2),
+                                                  availH / Math.max(60, b.bot - b.top))));
+  const cy = (b.top + b.bot) / 2, oy = barH + availH / 2;
+  if (!CAM.set){ CAM.z = z; CAM.cy = cy; CAM.oy = oy; CAM.set = true; }
+  else {
+    const k = Math.min(1, dt * 1.6);              // the pull-back is a drift, never a cut
+    CAM.z += (z - CAM.z) * k; CAM.cy += (cy - CAM.cy) * k; CAM.oy += (oy - CAM.oy) * k;
+  }
+  return CAM;
+}
+const worldHalfW = () => (W / 2) / CAM.z;
+function toWorld(x, y){ return { x: fx + (x - W / 2) / CAM.z, y: CAM.cy + (y - CAM.oy) / CAM.z }; }
+
+function slotPos(i){
+  const n = Math.max(1, ringCap());
+  const a = -Math.PI/2 + (i / n) * Math.PI * 2 + 0.4;
+  return { x: fx + Math.cos(a) * RING_R, y: fy + Math.sin(a) * (RING_R * 0.52) + 14 };
+}
+function claimSlot(a){
+  const n = usableSeats();
+  for (let i = 0; i < n; i++){
+    if (slotUsed[i]) continue;
+    slotUsed[i] = a; a.slot = i; return true;
+  }
+  return false;
+}
+function releaseSlot(a){ if (a.slot >= 0){ slotUsed[a.slot] = null; a.slot = -1; } }
+function edgeSpawn(a){
+  const left = Math.random() < 0.5, off = worldHalfW() + 34;
+  a.x = fx + (left ? -off : off); a.y = fy + 40 + Math.random() * 12;
+  a.dir = left ? 1 : -1; a.exit = fx + (left ? off : -off);
+}
+
+const rand = arr => arr[(Math.random() * arr.length) | 0];
+
+function pickSpecies(){                    // two candidates, the rarer one wins: no wall of frogs
+  const count = k => S.pool.filter(a => a.sp === k).length;
+  const a = rand(SPECIES), b = rand(SPECIES);
+  return count(a.key) <= count(b.key) ? a : b;
+}
+function pickGarb(spKey){                  // garment is how you tell two of the same animal apart
+  const kin = S.pool.filter(a => a.sp === spKey).map(a => a.garb);
+  const used = g => S.pool.filter(a => a.garb === g.hex).length + (kin.includes(g.hex) ? 8 : 0);
+  const best = Math.min.apply(null, GARMENTS.map(used));
+  return rand(GARMENTS.filter(g => used(g) === best)).hex;   // the rarest colour in the circle
+}
+
+function recruit(){
+  const sp = pickSpecies();
+  const a = { id:S.nextId++, depth:0, deaths:0, shallow:false, slot:-1,
+              sp:sp.key, build:(Math.random() * BUILDS.length) | 0, rate:0.8 + Math.random() * 0.5,
+              garb:pickGarb(sp.key),
+              tone:TONES[(S.nextId - 1) % TONES.length], state:"walkin", t:0,
+              x:0, y:0, dir:1, exit:0, bob:Math.random() * 6, queue:0 };
+  edgeSpawn(a); S.pool.push(a); return a;
+}
+
+function earn(n, x, y, doubled){
+  S.souls += n; S.runEarned += n;
+  if (S.first && !S.rev.souls){ S.rev.souls = true; refresh(); }
+  S.earnLog.push({ t:S.elapsed, n });
+  if (S.offline) return;
+  S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffe9b8" : "#d8d2c4" });
+}
+
+function sitDown(a){
+  a.state = "rest"; a.t = T.REST;
+  const p = slotPos(a.slot); a.x = p.x; a.y = p.y;
+  if (a.recalled){                      // the bell buys their life, not their purse
+    a.recalled = false;
+    S.floats.push({ x:a.x, y:a.y - 26, t:0, txt:"no fee", col:"#4d545a" });
+  } else {
+    const doubled = Math.random() < echoChance();
+    earn(payFor(a) * (doubled ? 2 : 1), a.x, a.y - 26, doubled);
+  }
+  if (S.first && S.beat < 4 && ++S.rests >= 3) beatTo(4);
+  if (a.pending){ say(a, a.pending); a.pending = null; }
+  a.shallow = false;                    // the discount is spent on this rest
+  for (let k = 0; k < 4; k++) sparks(a.x, a.y - 10, 0.7);
+}
+
+function resolveExpedition(a){
+  const d = runDepth(a), survived = Math.random() < survival(d, a.deaths, a);
+  a.shallow = false;
+  if (S.first && !S.rev.flameBar){        // they are back, so now there is something to protect
+    S.rev.flameBar = true; S.flameOn = true; refresh();
+  }
+  if (survived){
+    if (a.depth === d){
+      const wouldBe = d + 1;
+      if (wouldBe > deepestAllowed() && S.unlocked < LOC.length - 1){
+        if (!attemptGate(a, S.unlocked + 1)){ edgeSpawn(a); a.state = "walkin"; return; }
+      }
+      const leap = spOf(a).depth || 0;                      // the reckless take two at a time
+      a.depth = Math.min(wouldBe + (leap && Math.random() < 0.35 ? 1 : 0), deepestAllowed());
+      if (a.depth > (a.peak || 0)) a.peak = a.depth;
+    }
+    if (S.first && S.beat < 6 && a.depth > 0){    // glows at the fire until tapped, once, ever
+      S.nudge = a.id; beatTo(6);
+    }
+    if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
+    if (a.depth >= T.NAME_AT_DEPTH && !a.name){
+      giveName(a);
+      if (!S.offline) say(a, "They started calling this one " + a.name + ".");
+    }
+    if (a.depth > S.peakDepth) S.peakDepth = a.depth;
+    dropFor(a);
+    recoverGear(a, d);
+    if (Math.random() < 0.25) a.pending = oneOf(d >= 5 ? LINES.deepRet : LINES.ret);
+    a.packed = false; a.skipped = false; a.route = null;
+  } else {
+    a.deaths++; S.seen.death = true;
+    beatEvent(8);                                 // pips, on everyone from now on
+    if (a.deaths === 1) a.pending = oneOf(LINES.firstDeath);
+    const hollowing = a.deaths >= hollowAt(a);
+    if (!hollowing) loseGear(a, d, false);   // dropped at the depth that took them
+    // a hollowing death keeps hold of it: goHollow puts it on the shelf instead
+    a.depth = Math.floor(a.depth / 2);    // a setback, not a reset — the scar stays
+    if (hollowing){ goHollow(a); return; }
+  }
+  edgeSpawn(a); a.state = "walkin";
+}
+
+/* ================== the first fire ==================
+   Not a tutorial layer: the first cycle, authored. Every element of the HUD starts
+   absent and arrives the moment it first becomes true. The sequence gates what is
+   revealed, never what is permitted, and every word of it is one line in the
+   keeper's voice that fades. It runs on the first cycle only. */
+
+const revealed = k => !S.first || !!S.rev[k];
+
+const OPEN_LINE = {
+  0: "The fire is nearly out, and nobody has come this way in a long time.",
+  2: "It was bigger than the fire once. Some of it is still standing.",
+  3: "Someone found the light. They do not look like they were going anywhere.",
+  5: "They go down. There is a down, and it runs further than I have been.",
+  7: "The people who built this left their things behind. Nobody knows what for.",
+  8: "Something down there had a go at them first. They came back anyway."
+};
+
+/* 7 and 8 are driven by what actually happens down there, and either can land
+   first. Each owns a flag so neither is swallowed by the other arriving early. */
+function beatEvent(n){                             // true the one time it fires
+  if (!S.first) return false;
+  const key = n === 7 ? "sawFind" : "sawDeath";
+  if (S.rev[key]) return false;
+  S.rev[key] = true;
+  if (n === 8) S.rev.pips = true;
+  if (!S.offline && OPEN_LINE[n]) S.notice = { txt:OPEN_LINE[n], t:0 };
+  S.beat = Math.max(S.beat, n);
+  render(); refresh(); saveGame();
+  return true;
+}
+
+function beatTo(n){
+  if (!S.first || S.beat >= n) return;
+  S.beat = n;
+  const line = OPEN_LINE[n];
+  if (line && !S.offline) S.notice = { txt:line, t:0 };
+  switch (n){
+    case 2: break;                                  // the light does its own talking
+    case 3: S.rev.arrivals = true; break;
+    case 4: S.rev.tabs = true; S.rev.book = true; break;
+    case 5: S.rev.road = true; S.rev.pop = true; break;
+    case 6: S.rev.skEcho = true; break;             // depth exists, so paying by depth can
+    case 9: S.rev.hollowCount = true; S.rev.skRite = true; break;
+    case 10: S.rev.build = true; break;
+  }
+  render(); refresh(); saveGame();
+}
+
+/* Beats 1-3 have to land inside ninety seconds even for somebody who never taps,
+   so the keeper feeds it too — slowly enough that a tap is plainly worth more. */
+const OPEN_TREND = 0.55, TAP_INTENSITY = 1.5;
+
+function tickOpening(dt){
+  if (!S.first) return;
+  if (S.beat < 3){
+    S.flame = Math.min(S.flameMax, S.flame + OPEN_TREND * dt);
+    if (S.flame >= 40) beatTo(2);
+    if (S.flame >= 60) beatTo(3);
+  }
+}
+
+const hollowWindow = () => vlv("ossu") >= 2 ? 60 : T.HOLLOW_WINDOW;
+
+/* They stand up and walk out on their own if nobody decides for them. */
+/* Beat 10. Whatever the player did about the first hollow, including nothing, the
+   book opens once on the entry about it — the one moment they will want to know. */
+function hollowResolved(){
+  if (!S.first || S.beat < 9 || S.bookShown) return;
+  S.bookShown = true;
+  if (S.offline){ beatTo(10); return; }
+  setTimeout(() => { openBook("Hollowing"); beatTo(10); }, 1500);
+}
+
+function depart(a, quiet){
+  if (!a || a.state !== "hollow") return;
+  const ash = letGoAsh(a);
+  S.meta.ash += ash;
+  if (a.gear) for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (g) toReliquary(g, peakOf(a), a.deaths, a.name);
+  }
+  a.gear = null;
+  releaseSlot(a);
+  S.pool.splice(S.pool.indexOf(a), 1);
+  if (S.sel === a.id) closeCounsel();
+  if (!quiet && !S.offline){
+    S.notice = { txt:(a.name ? a.name + " walked out on their own." : "One of them walked out."), t:0 };
+    S.floats.push({ x:a.x, y:a.y - 46, t:0, txt:"+" + ash + " ash", col:"#a9a3b5" });
+  }
+  hollowResolved();
+}
+
+function goHollow(a){                     // the thing the whole system exists to produce
+  a.state = "hollow"; a.t = 0; a.hollowT = 0; S.seen.hollow = true;
+  S.flame = Math.max(0, S.flame - (T.HOLLOW_HIT + peakOf(a) * T.HOLLOW_HIT_PER_DEPTH));
+  const others = hollows().filter(o => o !== a);
+  while (others.length >= T.HOLLOW_CAP) depart(others.shift(), true);   // never a wall of grey
+  if (a.gear) for (const slot of A_SLOTS){     // what they carried outlives them
+    const g = a.gear[slot];
+    if (g) toReliquary(g, a.depth, a.deaths, a.name);
+  }
+  a.gear = null; a.find = null; a.choice = null;
+  releaseSlot(a);
+  if (claimSlot(a)){ const p = slotPos(a.slot); a.x = p.x; a.y = p.y; }
+  else { a.x = fx; a.y = fy + 78; }
+  S.meta.dead.push({ name:a.name || null, depth:a.depth, deaths:a.deaths, sp:a.sp,
+                     carried: A_SLOTS.map(k => a.gear && a.gear[k] ? artTitle(a.gear[k]) : null).filter(Boolean),
+                     cycle: S.meta.cycles + 1 });
+  if (S.offline) S.offline.hollowed.push({ name:a.name || null, depth:a.depth, sp:a.sp });
+  const first = !S.everHollowed; S.everHollowed = true;
+  if (first) beatTo(9);
+  say(a, oneOf(first ? LINES.firstHollow : LINES.hollow));
+  S.notice = { txt:"Someone has gone hollow.", t:0 };
+  for (let k = 0; k < 22; k++)
+    S.sparks.push({ x:a.x + (Math.random()-0.5)*18, y:a.y - 14, vx:(Math.random()-0.5)*44,
+                    vy:-30-Math.random()*40, t:0, life:1.1 + Math.random()*0.7, col:"#6e6a7a" });
+  if (S.sel === a.id) showCounsel(a);
+}
+
+function updatePool(dt){
+  const speed = 62;
+  for (let i = S.pool.length - 1; i >= 0; i--){      // the window runs down whether you look or not
+    const h = S.pool[i];
+    if (h.state !== "hollow") continue;
+    h.hollowT = (h.hollowT || 0) + dt;
+    if (h.hollowT >= hollowWindow()) depart(h, false);
+  }
+  const seats = usableSeats();             // a shrinking ring puts the outermost back on their feet
+  for (const a of S.pool){
+    if (a.slot >= seats){ releaseSlot(a); if (a.state === "rest"){ a.state = "walkin"; } }
+  }
+  let spill = 0;                           // a hollow squats the next slot that frees
+  for (const h of S.pool){
+    if (h.state !== "hollow") continue;
+    if (h.slot < 0 && claimSlot(h)){ const p = slotPos(h.slot); h.x = p.x; h.y = p.y; }
+    if (h.slot < 0){                       // no room left: they slump outside the ring
+      h.x = fx + 108 - (spill++) * 38; h.y = fy + 78;
+    }
+  }
+  for (const a of S.pool){
+    if (a.state === "hollow") continue;
+    a.bob += dt * 9;
+    if (a.state === "walkin"){
+      if (a.slot < 0 && !claimSlot(a)){ a.state = "wait"; a.t = 0.4; continue; }
+      const p = slotPos(a.slot), dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
+      if (d <= Math.max(3, speed * dt)) sitDown(a);      // a coarse step must not overshoot the seat
+      else { a.x += dx/d * speed * dt; a.y += dy/d * speed * dt; a.dir = dx >= 0 ? 1 : -1; }
+    } else if (a.state === "wait"){
+      const qi = S.pool.filter(o => o.state === "wait").indexOf(a);
+      const tx = fx - 108 + qi * 40, ty = fy + 62;
+      a.x += (tx - a.x) * Math.min(1, dt * 3); a.y += (ty - a.y) * Math.min(1, dt * 3);
+      a.t -= dt;
+      if (a.t <= 0){ a.t = 0.4; if (claimSlot(a)) a.state = "walkin"; }
+    } else if (a.state === "rest"){
+      a.t -= dt;
+      if (a.t <= 0){
+        if (S.first && S.beat < 5){                 // they stay until there are three
+          if (living().length < 3){ a.t = T.REST; sitDown(a); continue; }
+          beatTo(5);
+        }
+        releaseSlot(a); a.state = "walkout"; if (S.sel === a.id) closeCounsel();
+      }
+    } else if (a.state === "walkout"){
+      a.x += Math.sign(a.exit - a.x) * speed * dt;
+      a.y += (fy + 46 - a.y) * Math.min(1, dt);
+      a.dir = Math.sign(a.exit - a.x);
+      if (Math.abs(a.x - a.exit) <= Math.max(6, speed * dt)){
+        a.state = "away";
+        a.t = T.AWAY * awayScale(a);
+        a.events = [0.22 + Math.random()*0.12, 0.5 + Math.random()*0.12, 0.74 + Math.random()*0.12]
+          .slice(0, 2 + (Math.random() < 0.5 ? 1 : 0))
+          .map(at => ({ at, icon: EVENTS[(Math.random()*EVENTS.length)|0], fired:false }));
+        a.flash = null;
+      }
+    } else if (a.state === "away"){
+      a.t -= dt;
+      const prog = 1 - a.t / T.AWAY;
+      if (a.events) for (const e of a.events)
+        if (!e.fired && prog >= e.at){
+          e.fired = true;
+          if (a.packed && vlv("quart") >= 3 && !a.skipped){   // supplies carry them past the first
+            a.skipped = true; continue;
+          }
+          a.flash = { icon:e.icon, t:0 };
+          const L = LOC[locOf(a.depth)];
+          logEvent(locOf(a.depth), oneOf(L.events).replace("{n}", a.name || "Someone"));
+        }
+      if (a.flash && (a.flash.t += dt) > 2) a.flash = null;
+      if (a.t <= 0) resolveExpedition(a);
+    }
+  }
+}
+
+/* ============================ artifacts ============================ */
+
+const A_SLOTS = ["weapon", "armour", "trinket"];
+const RARITIES = ["common", "fine", "rare"];
+const SLOT_NAME = { weapon:"Weapon", armour:"Armour", trinket:"Trinket" };
+const RARITY_NAME = { common:"Common", fine:"Fine", rare:"Rare" };
+
+/* A curse gives more than the clean version and takes it out of another system. */
+const EFFECT = {
+  weapon:  { common:0.04, fine:0.08, rare:0.14 },
+  armour:  { common:0.03, fine:0.05, rare:0.08 },
+  trinket: { common:0.15, fine:0.30, rare:0.55 }
+};
+const CURSED_EFFECT = {
+  weapon:  { common:0.07, fine:0.13, rare:0.22 },
+  armour:  { common:0.05, fine:0.08, rare:0.12 },
+  trinket: { common:0.25, fine:0.50, rare:0.90 }
+};
+const CURSE_COST = {                      // each cost lands on a different system
+  weapon:  "they pay 40% less",
+  armour:  "8% off their survival",
+  trinket: "every death cuts 5% deeper"
+};
+const MAT_VALUE = { common:1, fine:3, rare:8 };
+
+const artTitle = g => RARITY_NAME[g.rarity] + " " + SLOT_NAME[g.slot];
+const magnitude = g => (g.cursed ? CURSED_EFFECT : EFFECT)[g.slot][g.rarity];
+
+function effectLine(g){
+  const v = magnitude(g);
+  const base = g.slot === "weapon"  ? "+" + Math.round(v*100) + "% survival"
+             : g.slot === "armour"  ? "scars cut " + Math.round(v*100) + "% shallower"
+             :                        "+" + v.toFixed(2).replace(/0$/,"") + "x payment";
+  return g.cursed ? base + ", and " + CURSE_COST[g.slot] : base;
+}
+
+function makeArtifact(depth){
+  const slot = A_SLOTS[(Math.random()*3)|0], rarity = rollRarity();
+  const cursed = Math.random() < T.CURSE_RATE;
+  return { id:S.nextArt++, slot, rarity, cursed, depth, dusted:false, loc:locOf(depth),
+           line: oneOf(ART_LINES[slot][rarity]), curseLine: cursed ? oneOf(CURSE_LINES) : null,
+           grid:null, cleared:0, sites:{ form:false, material:false, glyph:false },
+           owner:null, craft:null };
+}
+function rollRarity(){ const r = Math.random(); return r < 0.60 ? "common" : r < 0.90 ? "fine" : "rare"; }
+
+function markedBonus(a){                       // a marked place turns up better things
+  return S.marked != null && locOf(a.depth) === S.marked ? 1 : 0;
+}
+
+function dropFor(a){
+  if (Math.random() < T.MAT_DROP_BASE + a.depth * T.MAT_DROP_PER_DEPTH){
+    const n = 1 + ((Math.random() * (1 + a.depth/3)) | 0);
+    S.mat += n; S.seen.material = true;
+    S.floats.push({ x:a.x, y:a.y - 30, t:0, txt:"+" + n + " scrap", col:"#4c5a38" });
+  }
+  const chance = Math.min(T.DROP_CAP, T.DROP_BASE + a.depth * T.DROP_PER_DEPTH
+                          + (a.sp ? (spOf(a).drop || 0) : 0));
+  if (Math.random() >= chance) return;
+  const art = makeArtifact(a.depth);
+  if (markedBonus(a)){
+    if (art.rarity === "common") art.rarity = "fine";
+    else if (art.rarity === "fine") art.rarity = "rare";
+    if (adjActive("herb", "carto") && art.cursed && Math.random() < 0.5) art.cursed = false;
+  }
+  const held = a.gear && a.gear[art.slot];
+  if (held && held.rarity === art.rarity){        // a second of what they already carry
+    S.mat += MAT_VALUE[art.rarity]; S.seen.material = true;
+    a.pending = "Brought up its twin. It went in the scrap.";
+    return;
+  }
+  if (a.find || a.choice){                        // hands already full
+    S.mat += MAT_VALUE[art.rarity]; S.seen.material = true;
+    return;
+  }
+  a.find = art; art.owner = a.id;
+  S.seen.artifact = true;
+  const firstEver = beatEvent(7);                 // the first one gets its own line
+  if (S.offline){ S.offline.found++; return; }
+  if (!firstEver) S.notice = { txt:"Something came up with them.", t:0 };
+}
+
+const gearIn = (a, slot) => (a.gear && a.gear[slot]) || null;
+
+/* what someone's gear does to them, all three slots at once */
+function mods(a){
+  const m = { surv:0, scar:0, pay:0, payMul:1 };
+  if (!a || !a.gear) return m;
+  for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (!g) continue;
+    const v = magnitude(g);
+    if (slot === "weapon"){ m.surv += v; if (g.cursed) m.payMul *= 0.6; }
+    else if (slot === "armour"){ m.scar -= v; if (g.cursed) m.surv -= 0.08; }
+    else { m.pay += v; if (g.cursed) m.scar += 0.05; }
+  }
+  return m;
+}
+const deathPenFor = a => Math.max(0, T.DEATH_PEN + mods(a).scar);
+
+function loseGear(a, depth, destroy){
+  if (a.find){ a.find = null; }                 // an uncleaned find goes down with them
+  if (a.choice){ a.choice = null; }
+  if (!a.gear) return;
+  for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (!g) continue;
+        if (!destroy) S.lost.push({ art:g, depth, deaths:a.deaths });
+  }
+  a.gear = null;
+}
+
+function recoverGear(a, depth){               // a deep enough run finds what the dead dropped
+  const i = S.lost.findIndex(l => l.depth <= depth);
+  if (i < 0) return;
+  const found = S.lost.splice(i, 1)[0];
+  toReliquary(found.art, found.depth, found.deaths || 0);
+  S.notice = { txt:"Brought up someone else's " + SLOT_NAME[found.art.slot].toLowerCase() + ".", t:0 };
+}
+
+function toReliquary(art, depth, deaths, name){
+  art.owner = null; art.craft = null;
+  S.relic.push({ art, depth, deaths, name:name || null });
+  S.seen.relic = true;
+  while (S.relic.length > T.RELIC_CAP) S.relic.shift();   // oldest goes, quietly
+}
+
+/* ============================ voice ============================
+   Flat, past tense, no jokes. Written on a gravestone, not a tooltip. */
+
+const LINES = {
+  hollow: [ "The fire stopped being warm.", "Something went out and did not come back.",
+            "They forgot which one was the door.", "No one saw the moment it happened.",
+            "The eyes stayed open. Nothing behind them." ],
+  firstHollow: [ "This is what the third death looks like." ],
+  firstDeath: [ "They came back wrong the first time. They always do.",
+                "Something was left behind down there." ],
+  ret: [ "They did not talk about it.", "Came back lighter than they went.",
+         "Sat closer to the fire than before.", "Counted the others twice.",
+         "Wiped something off their hands for a long while.", "Slept without lying down." ],
+  deepRet: [ "Said the dark had a floor.", "Something down there knew their name.",
+             "Came back up counting.", "Would not say what turned back." ]
+};
+const oneOf = arr => arr[(Math.random() * arr.length) | 0];
+
+const sayY = a => a.y - 76 - (spOf(a).key === "rabbit" ? 16 : spOf(a).key === "cat"
+                              || spOf(a).key === "goat" ? 9 : 0);
+
+function say(a, txt){
+  if (S.offline) return;
+  S.says.push({ id:a.id, x:a.x, y:sayY(a), txt, t:0 });
+  if (S.says.length > 4) S.says.shift();
+}
+
+/* Human relics, described by someone who never saw one used. Guesses, not lore. */
+const ART_LINES = {
+  weapon: {
+    common: [ "A handle, and an edge, and no way to hold both at once.",
+              "Too long for anyone here. They carry it across the back.",
+              "Sharpened by someone, at some point, badly." ],
+    fine:   [ "Balanced for a hand with one more joint than ours.",
+              "Somebody kept this oiled right up until they stopped.",
+              "A maker's mark, filed half off. Hiding from who?" ],
+    rare:   [ "It does not dull. Nobody can say why, and nobody asks twice.",
+              "Older than the steps outside, and in better repair than they are.",
+              "The edge is quiet in a way the rest of it is not." ]
+  },
+  armour: {
+    common: [ "Bent inward, twice, in the same place. Something did that twice.",
+              "The straps were replaced with something that was never leather.",
+              "It failed once already. That is most of what is known about it." ],
+    fine:   [ "Fitted. Someone was measured for this, and stood still while it was done.",
+              "Scored across the back, which says which way they were going.",
+              "Mended well, and often, and then not again." ],
+    rare:   [ "Nothing has managed to mark it yet, and things have tried.",
+              "Cold to hold. Colder to wear. Warm on the inside, which is worse.",
+              "It fits nobody here and settles onto them anyway." ]
+  },
+  trinket: {
+    common: [ "Worn smooth on one side by a thumb, over years.",
+              "Worth nothing. Carried a long way regardless.",
+              "Wire and hair, wound tight. Someone's, once." ],
+    fine:   [ "Kept in a pocket rather than worn. That means something.",
+              "There is an inscription. Nobody here reads.",
+              "Small, and finely made, and never once sold." ],
+    rare:   [ "The dark parts of it move when it is not looked at directly.",
+              "Whoever set these stones stopped partway through.",
+              "It hums against the teeth. Only some of them notice." ]
+  }
+};
+
+const CURSE_LINES = [ "Something is owed on it.", "It wants to be worn, which is the tell.",
+                      "Whoever had it last is still paying for it.",
+                      "It gives more than it should and takes it back somewhere else." ];
+
+/* ==================== the trade and the ground ==================== */
+
+const VENDORS = [
+  { key:"smith", name:"The Blacksmith", glyph:"🔨", tint:"#332f24", verb:"hammer", seats:2,
+    cost:[0,200,800,2500], mat:[0,0,12,40],
+    blurb:["Pays for repairs: +2 souls a rest, +12% survival.",
+           "Reforges common into fine, on the wearer.",
+           "Reforges fine into rare. The last thing he learns.",
+           "Reforges common to fine and fine to rare, on the wearer."] },
+  { key:"herb", name:"The Herbalist", glyph:"🌿", tint:"#232c20", verb:"stir", seats:1,
+    cost:[0,500,1100,3000], mat:[0,0,14,44],
+    blurb:["+8% survival, and a fourth death before anyone hollows.",
+           "Lifts a curse, though the piece comes back a grade poorer.",
+           "Lifts a curse and leaves the piece as strong as it was.",
+           "Lifts curses cleanly, and buys everyone a fourth death."] },
+  { key:"quart", name:"The Quartermaster", glyph:"🎒", tint:"#6b5a3c", verb:"pack", seats:1,
+    cost:[0,1200,2200,4000], mat:[0,0,16,46],
+    blurb:["Supplies for the road. Expeditions run 15% shorter.",
+           "Expeditions run 25% shorter.",
+           "25% shorter, and anyone packed off walks past their first trouble.",
+           "25% shorter, and the packed walk past their first trouble."] },
+  { key:"carto", name:"The Cartographer", glyph:"🗺", tint:"#4a5a74", verb:"route", seats:1,
+    cost:[0,2000,3200,5200], mat:[0,0,18,50],
+    blurb:["Maps of the road. You choose where each of them goes.",
+           "Gates are measured before they are tried, not after.",
+           "One place a fire can be marked: better things come out of it.",
+           "You route them, you see the gates, and one place a fire runs rich."] },
+  { key:"ossu", name:"The Ossuary", glyph:"⚱", tint:"#4a4458", verb:"vigil", seats:1,
+    cost:[0,900,1800,3600], mat:[0,0,14,42],
+    blurb:["Keeps the dead. Letting one go, or letting one walk, pays double ash.",
+           "Twice as long to decide what to do with the ones who go.",
+           "One rite a fire costs nothing.",
+           "Double ash, a minute to decide, and one free rite a fire."] },
+  { key:"tink", name:"The Tinker", glyph:"⚙", tint:"#3d444a", verb:"break", seats:1,
+    cost:[0,700,1500,3000], mat:[0,0,12,38],
+    blurb:["Deals in scrap. Gear can be broken down, off the shelf or off a back.",
+           "Scrap buys souls, badly. Souls buy scrap, worse.",
+           "One thing on the shelf a fire can be beaten into another shape.",
+           "Breaks down, trades badly, and reshapes one shelved thing a fire."] }
+];
+const VMAP = {}; VENDORS.forEach(v => VMAP[v.key] = v);
+
+const plotCount = () => Math.min(7, 4 + Math.floor(S.lv.flame / 3));
+function plotPos(i){
+  const n = Math.max(4, plotCount());
+  const a = -Math.PI / 2 + (i / n) * Math.PI * 2 + 0.55;
+  const r = 92 + (i % 3) * 32;                      // fixed ground; the light is what moves
+  return { x: fx + Math.cos(a) * r, y: fy + Math.sin(a) * r * 0.46 + 10, r };
+}
+const inLight = i => i >= 0 && plotPos(i).r <= lightR() * 1.12;
+const plotOf  = key => S.plots.indexOf(key);
+const vlv     = key => S.v[key] || 0;
+const built   = key => vlv(key) > 0;
+const vEff    = key => { const i = plotOf(key); return i < 0 ? 0 : (inLight(i) ? 1 : 0.7); };
+const vSlow   = key => { const i = plotOf(key); return i >= 0 && !inLight(i) ? 1.5 : 1; };
+
+function adjacent(k1, k2){
+  const a = plotOf(k1), b = plotOf(k2), n = Math.max(4, plotCount());
+  if (a < 0 || b < 0) return false;
+  const d = Math.abs(a - b);
+  return d === 1 || d === n - 1;
+}
+const ADJACENCIES = [
+  ["smith","tink",  "Breaking gear down yields half again as much scrap."],
+  ["herb","ossu",   "Letting one go lifts a death off somebody still standing."],
+  ["quart","carto", "Anyone routed travels a tenth faster again."],
+  ["smith","quart", "Reforging weapons asks less scrap."],
+  ["herb","carto",  "A marked place turns up fewer cursed things."],
+  ["ossu","tink",   "What the grey leave reaches the shelf unspoiled."]
+];
+const adjActive = (a, b) => built(a) && built(b) && adjacent(a, b);
+
+/* ==================== the road ==================== */
+
+const LOC = [
+  { name:"The Cistern Steps", code:"CS", tint:"#4d545a", gate:"The Turnstile",
+    events:["{n} found the steps swept. Something sweeps them.",
+            "The steps are built for legs twice {n}'s length.",
+            "{n} passed a boot, still laced, with nothing in it."],
+    gateLine:"Worked loose from the turnstile." },
+  { name:"The Flooded Library", code:"FL", tint:"#3a4448", gate:"The Weighing Stone",
+    events:["{n} says the shelves go down as far as they go along.",
+            "Everything written down here has come off in the water. {n} brought back a page of nothing.",
+            "{n} heard pages turning. Nobody has hands down there."],
+    gateLine:"Prised out of the weighing stone." },
+  { name:"The Broken Aqueduct", code:"BA", tint:"#5fbec4", gate:"The Sluice",
+    events:["{n} walked the channel dry-shod. It was not built dry.",
+            "The water still runs somewhere under it. {n} could hear it and not find it.",
+            "{n} found the ledgers cut into the wall. Every entry is the same mark."],
+    gateLine:"Pulled dripping out of the sluice." },
+  { name:"The Quarry", code:"QY", tint:"#7d8a85", gate:"The Hoist",
+    events:["Something was counting {n}'s steps back at them, off the walls.",
+            "The cuts in the stone are square and clean and older than the forest.",
+            "{n} left the tools where they lay. They are all too big to lift."],
+    gateLine:"Cut down from the hoist." },
+  { name:"The Ossuary Road", code:"OR", tint:"#6e6a7a", gate:"The Held Breath",
+    events:["{n} walked between the shelves for three hours without a turn.",
+            "They stacked their own dead here, in rows, by size. {n} counted and stopped counting.",
+            "{n} says the dark down there has a grain to it, like sawn wood."],
+    gateLine:"Carried out of the held breath." },
+  { name:"The Signal Tower", code:"ST", tint:"#d8d2c4", gate:"The Chancel",
+    events:["{n} found the lamp housing intact and cold.",
+            "Something up there was still pointed at the horizon, waiting.",
+            "The tower knew {n} was coming. The stairs were lit."],
+    gateLine:"Taken from under the lamp." },
+  { name:"Where They Went", code:"WW", tint:"#c45f5f", gate:"The Last Door",
+    events:["{n} would not say what was through it.",
+            "{n} came back up counting, and would not stop.",
+            "There is a door, and {n} says it was never locked."],
+    gateLine:"Brought back through the last door." }
+];
+
+const CLEAN = ["wipe", "scrape", "press", "cut", "thaw", "creep", "creep"];
+const CLEAN_HINT = {
+  wipe:  "Drag across it. The ash comes off.",
+  scrape:"Scrape one way, over and over. Back the other way does nothing.",
+  press: "Hold still on it. The water comes out where you press.",
+  cut:   "Follow the roots. Cut along them, not across.",
+  thaw:  "Warm it in patches. What you leave goes back to ice.",
+  creep: "Wipe it. The deep ash comes back at the edges."
+};
+const DEPTHS_PER_LOC = 2;
+const locOf = d => Math.min(LOC.length - 1, Math.floor(d / DEPTHS_PER_LOC));
+const locFloor = i => i * DEPTHS_PER_LOC;                    // first depth of a place
+const deepestAllowed = () => (S.unlocked + 1) * DEPTHS_PER_LOC - 1;
+/* A gate is set against what is reachable at the cap below it: depth climbs 2 a place,
+   and gear has to make up the rest. Gate 1 falls to a decent weapon; gate 6 needs a kit. */
+const gateDifficulty = i => 2.5 + (i - 1) * 3.1;
+const bestGateScore = () => living().reduce((m, a) => Math.max(m, gateScore(a)), 0);
+
+function gateScore(a){                                       // gear, depth and scars, not a coin flip
+  const m = mods(a);
+  return a.depth + m.surv * 22 + (-m.scar) * 30 + m.pay * 3 - a.deaths * 1.4
+       + (a.sp ? (spOf(a).gate || 0) : 0);
+}
+
+function logEvent(loc, txt){
+  S.log.push({ loc, txt, t:S.elapsed });
+  if (S.log.length > 60) S.log.shift();
+}
+
+function attemptGate(a, next){
+  const need = gateDifficulty(next), got = gateScore(a);
+  const where = LOC[next];
+  if (got >= need){
+    S.unlocked = next;
+    logEvent(next, (a.name || "Someone") + " got through " + where.gate + ".");
+    S.notice = { txt:where.gate + " is open. " + where.name + " is below.", t:0 };
+    const g = makeArtifact(a.depth);
+    g.rarity = "rare"; g.origin = next; g.line = where.gateLine;
+    g.dusted = true; g.owner = a.id;
+    a.gear = a.gear || {};
+    if (!a.gear[g.slot]) a.gear[g.slot] = g; else a.choice = g;
+    S.seen.artifact = true; S.seen.ident = true;
+    if (!S.offline) say(a, "Through, and carrying something.");
+    return true;
+  }
+  logEvent(next, where.gate + " threw " + (a.name || "someone") + " back.");
+  a.deaths++; S.seen.death = true;
+  loseGear(a, a.depth, false);
+  a.depth = Math.floor(a.depth / 2);
+  if (!S.offline) say(a, oneOf(["The gate did not open.", "Thrown back, and lighter for it."]));
+  if (a.deaths >= hollowAt(a)){ goHollow(a); return false; }
+  return false;
+}
+
+const NAMES = ("Aldric Bryn Calla Doon Ester Fenn Garrow Hesk Ilva Joss Kettle Lorn Mave Nyle "
+  + "Orrin Pell Quill Rooke Sabel Tolm Ulf Vesper Wick Yarrow Ash Brenna Corvin Dell Ewen Fray "
+  + "Gost Hallow Iris Jarr Kelda Lem Moss Ninn Osric Prue Rell Sedge Thane Vane Wren Ysolde").split(" ");
+let nameCursor = (Math.random() * NAMES.length) | 0;
+function giveName(a){
+  if (a.name) return;
+  const taken = S.pool.map(o => o.name).filter(Boolean);
+  for (let i = 0; i < NAMES.length; i++){
+    const n = NAMES[(nameCursor + i) % NAMES.length];
+    if (taken.indexOf(n) < 0){ a.name = n; nameCursor = (nameCursor + i + 1) % NAMES.length; return; }
+  }
+  a.name = NAMES[(Math.random()*NAMES.length)|0];
+}
+
+const EVENTS = ["!", "✦", "~"];           // ambush, discovery, narrow escape
+
+function stripGeom(){ return { x:14, y:14, w:W - 28, h:26 }; }
+function markerPos(a, i){
+  const g = stripGeom(), n = Math.max(1, LOC.length);
+  const p = Math.min(1, Math.max(0, 1 - a.t / (T.AWAY * awayScale(a))));
+  const band = g.w / n, i0 = locOf(a.depth);
+  return { x: g.x + band * (i0 + 0.5) + (i % 2 ? 5 : -5), y: g.y + 7 + p * (g.h - 14) };
+}
+
+function ringBell(a){
+  const c = bellCost();
+  if (S.souls < c){
+    S.floats.push({ x:fx, y:fy - 40, t:0, txt:"need " + fmt(c), col:"#7d8a85" });
+    return false;
+  }
+  S.souls -= c; S.bells++;
+  a.recalled = true;                      // home safe, no deeper, and nothing to show for it
+  a.events = null; a.flash = null;
+  edgeSpawn(a); a.state = "walkin";
+  S.notice = { txt:"Recalled. Alive, and no richer.", t:0 };
+  for (let k = 0; k < 12; k++)
+    S.sparks.push({ x:a.x, y:a.y - 12, vx:(Math.random()-0.5)*36, vy:-26-Math.random()*30,
+                    t:0, life:0.9, col:"#4d545a" });
+  refresh(); return true;
+}
+
+function sparks(x, y, life){
+  S.sparks.push({ x, y, vx:(Math.random()-0.5)*26, vy:-24-Math.random()*30, t:0, life: life + Math.random()*0.6 });
+}
+
+/* ============================ drawing ============================ */
+
+/* 6. The sanctuary is a ruined temple floor, not open ground.
+   Columns stand at the edge of the light; as the fire dies the building
+   disappears around the player. */
+
+const COLUMNS = [];
+for (let i = 0; i < 9; i++){
+  const a = -Math.PI / 2 + (i / 9) * Math.PI * 2 + 0.22;
+  COLUMNS.push({ a, fallen: i === 2 || i === 6, h: 46 + (i % 3) * 16, w: 13 + (i % 2) * 3 });
+}
+const ROOTS = [];
+for (let i = 0; i < 14; i++)
+  ROOTS.push({ a: (i / 14) * Math.PI * 2 + 0.3, len: 26 + (i % 4) * 12, k: 0.6 + (i % 5) * 0.2 });
+
+function drawGround(time){
+  const R = lightR(), life = flameLife();
+  const seen = t => Math.max(0, Math.min(1, (R * 1.5 - t) / 60));   // fades out past the light
+
+  /* At a low fire the temple is not dim, it is absent. The light is what builds it. */
+  const reach = 0.34 + 0.66 * life;
+  shape(()=>ctx.ellipse(fx, fy + 30, 184 * reach, 76 * reach, 0, 0, 6.2832), "#141a15", 0);
+  shape(()=>ctx.ellipse(fx, fy + 28, 158 * reach, 62 * reach, 0, 0, 6.2832), C.mossDark, 0);
+  if (life > 0.3)
+    shape(()=>ctx.ellipse(fx - 54 * reach, fy + 62 * reach, 46 * reach, 13 * reach, 0.2, 0, 6.2832),
+          C.water, 0);
+
+  // roots coming up through the joints, thickest at the outer edge
+  ctx.lineCap = "round";
+  for (const r of ROOTS){
+    const x0 = fx + Math.cos(r.a) * (R * 0.9), y0 = fy + Math.sin(r.a) * (R * 0.42) + 16;
+    const rl = r.len * reach;
+    const x1 = x0 + Math.cos(r.a) * rl, y1 = y0 + Math.sin(r.a) * rl * 0.45;
+    ctx.strokeStyle = C.root; ctx.lineWidth = LW.inner + 1.5;
+    ctx.beginPath(); ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo((x0 + x1) / 2 + r.k * 10, (y0 + y1) / 2 - 6, x1, y1);
+    ctx.globalAlpha = 0.5 + 0.5 * seen(R); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  // the dais: a circular cut-stone step, worn, half taken by moss
+  shape(()=>ctx.ellipse(fx, fy + 22, R * 1.12, R * 0.52, 0, 0, 6.2832), C.stone, LW.inner);
+  shape(()=>ctx.ellipse(fx, fy + 16, R * 0.86, R * 0.40, 0, 0, 6.2832), C.stoneLit, LW.inner);
+  ctx.save();                                        // flagstone joints
+  ctx.beginPath(); ctx.ellipse(fx, fy + 16, R * 0.86, R * 0.40, 0, 0, 6.2832); ctx.clip();
+  ctx.strokeStyle = C.shadow; ctx.lineWidth = LW.detail; ctx.globalAlpha = 0.55;
+  for (let i = -3; i <= 3; i++){
+    ctx.beginPath(); ctx.moveTo(fx + i * 34, fy - 40); ctx.lineTo(fx + i * 34 + 14, fy + 70); ctx.stroke();
+  }
+  for (let i = 0; i <= 3; i++){
+    ctx.beginPath(); ctx.moveTo(fx - R, fy - 10 + i * 22); ctx.lineTo(fx + R, fy - 16 + i * 22); ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.restore();
+  shape(()=>ctx.ellipse(fx - R * 0.55, fy + 30, R * 0.30, R * 0.13, 0.3, 0, 6.2832), C.moss, 0);
+  shape(()=>ctx.ellipse(fx + R * 0.62, fy + 8, R * 0.22, R * 0.10, -0.2, 0, 6.2832), C.moss, 0);
+
+  // worn relief, too far gone to read
+  ctx.globalAlpha = 0.5; ctx.strokeStyle = C.relief; ctx.lineWidth = LW.detail;
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI / 2 + (i / 5) * Math.PI * 2 + 0.9;
+    const x = fx + Math.cos(a) * R * 0.72, y = fy + Math.sin(a) * R * 0.34 + 18;
+    ctx.beginPath(); ctx.arc(x, y - 5, 5, 0.3, 3.4); ctx.moveTo(x - 4, y + 1);
+    ctx.lineTo(x - 3, y + 9); ctx.moveTo(x + 4, y + 1); ctx.lineTo(x + 3, y + 9); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // the basin the fire sits in: human, cracked, too big for what it holds
+  shape(()=>ctx.ellipse(fx, fy + 16, 62, 26, 0, 0, 6.2832), C.stoneLit, LW.outer);
+  shape(()=>ctx.ellipse(fx, fy + 10, 50, 20, 0, 0, 6.2832), C.shadow, LW.inner);
+  ctx.strokeStyle = C.shadow; ctx.lineWidth = LW.detail;
+  ctx.beginPath(); ctx.moveTo(fx + 26, fy + 24); ctx.lineTo(fx + 40, fy + 14);
+  ctx.lineTo(fx + 52, fy + 20); ctx.stroke();
+}
+
+function drawColumns(time){                          // stand at the edge of the light
+  const R = lightR();
+  for (const c of COLUMNS){
+    const dist = R * 1.34;
+    const x = fx + Math.cos(c.a) * dist, y = fy + Math.sin(c.a) * dist * 0.30 + 30;
+    if (Math.abs(x - fx) > worldHalfW() + 60) continue;
+    const vis = Math.max(0, Math.min(1, (R - 72) / 62));
+    if (vis <= 0.02) continue;
+    ctx.globalAlpha = 0.15 + 0.85 * vis;
+    contact(x, y + 2, c.w * 1.3, 0.4);
+    if (c.fallen){
+      shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(1.2);
+        ctx.rect(-c.h * 0.5, -c.w * 0.5, c.h, c.w); ctx.restore(); }, C.stone, LW.inner);
+    } else {
+      shape(()=>ctx.rect(x - c.w / 2, y - c.h, c.w, c.h), C.stone, LW.inner);
+      shape(()=>ctx.rect(x - c.w * 0.72, y - c.h - 7, c.w * 1.44, 8), C.stoneLit, LW.inner);
+      ctx.strokeStyle = C.shadow; ctx.lineWidth = LW.detail;
+      for (let f = 1; f < 3; f++){
+        ctx.beginPath(); ctx.moveTo(x - c.w / 2 + f * c.w / 3, y - c.h + 5);
+        ctx.lineTo(x - c.w / 2 + f * c.w / 3, y - 3); ctx.stroke();
+      }
+      shape(()=>ctx.ellipse(x, y - c.h * 0.35, c.w * 0.55, c.h * 0.16, 0.4, 0, 6.2832), C.moss, 0);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* 9. The firelight itself: a warm rim on the side facing the fire,
+   cool shadow away from it, both scaling with how alive the flame is. */
+/* The firelight catches the edge of the head, on the side turned to it. It has to
+   hug the silhouette: an arc floating clear of the shape reads as a stray line. */
+function rimLight(cx, cy, w, h, r){
+  const life = flameLife();
+  if (life <= 0.05) return;
+  const dx = cx - fx, dy = (cy - fy) * 0.6, d = Math.max(1, Math.hypot(dx, dy));
+  const near = Math.max(0, Math.min(1, 1 - (d - 40) / (lightR() * 1.3)));
+  if (near <= 0.02) return;
+  const side = dx > 0 ? -1 : 1;                     // -1: the fire is to their left
+  const rad = r == null ? 12 : r, x0 = cx - w / 2, y0 = cy - h / 2;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(side > 0 ? cx : cx - w, cy - h, w, h * 2); ctx.clip();
+  ctx.globalAlpha = 0.10 + 0.20 * near * life;
+  ctx.strokeStyle = C.fireCore; ctx.lineWidth = 1.2 + 0.8 * near; ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(x0 + rad, y0);
+  ctx.arcTo(x0 + w, y0,     x0 + w, y0 + h, rad);
+  ctx.arcTo(x0 + w, y0 + h, x0,     y0 + h, rad);
+  ctx.arcTo(x0,     y0 + h, x0,     y0,     rad);
+  ctx.arcTo(x0,     y0,     x0 + w, y0,     rad);
+  ctx.closePath(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawFire(time){
+  const life = flameLife();                      // 0 dead, 1 roaring
+  const grow = 1 + S.lv.flame * 0.11;            // Kindled Flame builds the fire itself
+  const size = grow * (0.42 + 0.58 * life);      // dying pulls it back toward its base
+  const speed = 0.35 + 0.65 * life;
+  const pulse = 1 + Math.sin(time * 3.4 * speed) * 0.06 * life + flare;
+  const R = lightR() * pulse;
+
+  const hot  = mix("#f2682c", "#4a5668", 1 - life);
+  const mid  = mix("#ffab3d", "#66748a", 1 - life);
+  const tip  = mix("#ffe9b8", "#8b96a8", 1 - life);
+
+  const g = ctx.createRadialGradient(fx, fy - 12, 4, fx, fy - 12, R);
+  g.addColorStop(0, "rgba(255,152,56," + (0.20 * (0.25 + 0.75*life)).toFixed(3) + ")");
+  g.addColorStop(1, "rgba(255,157,61,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy - 12, R, 0, 6.2832); ctx.fill();
+
+  const logs = 2 + Math.floor(S.lv.flame / 4);   // the structure grows, not just the flame
+  ctx.save(); ctx.translate(fx, fy + 8);
+  for (let i = 0; i < logs; i++){
+    ctx.rotate(i === 0 ? -0.42 : 0.84 / Math.max(1, logs - 1));
+    rrect(0, i * 2, 56 * (1 + S.lv.flame * 0.045), 13, 6, i % 2 ? "#332f24" : "#2c2a21", 4);
+  }
+  ctx.restore();
+
+  const tongues = S.flame <= 0 ? 0
+                : Math.max(1, Math.min(5, 1 + Math.round(S.lv.flame / 3) + (life > 0.5 ? 1 : 0)));
+  const w1 = 26 * size, h1 = 62 * size + Math.sin(time * 5.1 * speed) * 4 * life;
+  for (let i = 0; i < tongues; i++){
+    const off = i === 0 ? 0 : (i % 2 ? 1 : -1) * (9 + i * 4) * size;
+    const sc = i === 0 ? 1 : 0.52 - i * 0.05;
+    teardrop(fx + off + Math.sin(time * (2.2 + i) * speed) * 2, fy - 2,
+             w1 * sc, h1 * sc * (0.8 + 0.2*life), hot, Math.max(2.4, 5 * size));
+  }
+  teardrop(fx + Math.sin(time * 3.7 * speed) * 3, fy - 4, w1 * 0.62, h1 * 0.66, mid,
+           Math.max(2, 4 * size));
+  if (life > 0.05)
+    teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.30, h1 * 0.36, tip,
+             Math.max(1.5, 3 * size));
+}
+
+/* 4 + 7 + 8. Species read as silhouettes. A hollow keeps its silhouette exactly
+   and loses everything else: colour, eyes, and all movement. */
+
+/* A head with legs, not a robe with a head.
+   Head 30x32, body 12x22, legs 8x6 with 6px between them: 48px in total.
+   The head must always be wider than the body or it reverts to a cone. */
+const FIG = { head:{ w:36, h:28 }, body:{ w:20, h:12 }, leg:{ w:6, h:8, gap:6 }, total:48 };
+
+function ear(x, y, w, h, tilt, fill){
+  shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
+    ctx.moveTo(-w * 0.5, 4); ctx.lineTo(0, -h); ctx.lineTo(w * 0.5, 4);
+    ctx.closePath(); ctx.restore(); }, fill, LW.outer);
+}
+
+function drawEyes(x, y, w, state){
+  const ex = w * 0.24, ry = 4.5, rx = 3.4;
+  if (state === "hollow"){                          // sockets, unfilled
+    for (const sx of [-1, 1]) shape(()=>ctx.ellipse(x + sx * ex, y, rx, ry, 0, 0, 6.2832), "#1a1f1c", LW.outer);
+    return;
+  }
+  ctx.fillStyle = OUTLINE;
+  for (const sx of [-1, 1]){
+    ctx.beginPath(); ctx.ellipse(x + sx * ex, y, rx, ry, 0, 0, 6.2832); ctx.fill();
+  }
+  if (state === "weary"){                           // lids over the top third
+    ctx.fillStyle = arguments[4] || "#c9a882";
+    for (const sx of [-1, 1]){
+      ctx.beginPath(); ctx.ellipse(x + sx * ex, y - ry * 0.72, rx * 1.15, ry * 0.7, 0, 0, 6.2832); ctx.fill();
+    }
+  }
+}
+
+/* The face plate is inset in the head and does most of the character work. */
+function facePlate(x, y, hw, hh, sp, fill){
+  const w = hw * 0.70, h = hh * 0.65;
+  if (sp === "frog")
+    shape(()=>ctx.ellipse(x, y, w * 0.62, h * 0.44, 0, 0, 6.2832), fill, LW.outer);
+  else if (sp === "crow")
+    shape(()=>{ ctx.moveTo(x, y - h * 0.5); ctx.quadraticCurveTo(x + w * 0.34, y - h * 0.1, x, y + h * 0.5);
+      ctx.quadraticCurveTo(x - w * 0.34, y - h * 0.1, x, y - h * 0.5); ctx.closePath(); }, fill, LW.outer);
+  else if (sp === "goat")
+    shape(()=>{ ctx.moveTo(x - w * 0.42, y - h * 0.5); ctx.lineTo(x + w * 0.42, y - h * 0.5);
+      ctx.quadraticCurveTo(x + w * 0.34, y + h * 0.55, x, y + h * 0.55);
+      ctx.quadraticCurveTo(x - w * 0.34, y + h * 0.55, x - w * 0.42, y - h * 0.5);
+      ctx.closePath(); }, fill, LW.outer);
+  else if (sp === "rabbit")
+    shape(()=>ctx.ellipse(x, y, w * 0.44, h * 0.56, 0, 0, 6.2832), fill, LW.outer);
+  else
+    shape(()=>ctx.ellipse(x, y, w * 0.52, h * 0.50, 0, 0, 6.2832), fill, LW.outer);
+}
+
+function drawAnimal(a, x, y, opts){
+  const o = opts || {};
+  const sp = spOf(a), b = BUILDS[a.build || 0];
+  const hollow = a.state === "hollow";
+  const garb = hollow ? mix(a.garb || sp.body, "#6a6a68", 0.78) : (a.garb || "#c03a2f");
+  const body = hollow ? C.hollow : sp.body;
+  const plate = hollow ? "#2a2830" : sp.plate;
+  const dir = o.dir || 1;
+  const drop = hollow ? 5 : 0;                      // head forward, body lower, legs bent
+  const hw = FIG.head.w * b.w, hh = FIG.head.h * b.h;
+  const bw = FIG.body.w * b.w, bh = FIG.body.h;
+  const gear = a.gear || {};
+
+  contact(x, y + 2, hw * 0.52, hollow ? 0.5 : 0.42);
+
+  const legY = y - FIG.leg.h / 2 + drop * 0.3;      // 12. legs first, behind the body
+  for (const sx of [-1, 1])
+    shape(()=>{ ctx.rect(x + sx * (FIG.leg.gap / 2) - (sx > 0 ? 0 : FIG.leg.w), legY - FIG.leg.h / 2,
+                         FIG.leg.w, FIG.leg.h + (hollow ? -2 : 0)); }, mix(body, OUTLINE, 0.25), LW.outer);
+
+  const bodyY = y - FIG.leg.h - bh / 2 + drop * 0.5;
+  shape(()=>{ ctx.moveTo(x - bw / 2, bodyY - bh / 2); ctx.lineTo(x + bw / 2, bodyY - bh / 2);
+    ctx.lineTo(x + bw / 2 + 1, bodyY + bh / 2); ctx.lineTo(x - bw / 2 - 1, bodyY + bh / 2);
+    ctx.closePath(); }, garb, LW.outer);            // the garment is the body block
+  if (gear.armour)                                  // armour widens the shoulders
+    shape(()=>ctx.ellipse(x, bodyY - bh * 0.3, bw * 0.72, bh * 0.5, 0, 0, 6.2832),
+          mix(garb, C.relief, 0.55), LW.outer);
+  if (!hollow)                                      // a pack, a bedroll: travellers
+    shape(()=>ctx.ellipse(x - dir * (bw * 0.52), bodyY, 5.5, bh * 0.55, dir * 0.2, 0, 6.2832),
+          mix(garb, OUTLINE, 0.4), LW.outer);
+
+  const hy = y - FIG.leg.h - bh - hh / 2 + drop;
+  if (sp.key === "cat"){
+    ear(x - hw * 0.30, hy - hh * 0.42, 12 * b.w, 13, -0.12, body);
+    ear(x + hw * 0.30, hy - hh * 0.42, 12 * b.w, 13, 0.12, body);
+  } else if (sp.key === "rabbit"){
+    ear(x - hw * 0.24, hy - hh * 0.44, 9 * b.w, 24, -0.14, body);
+    ear(x + hw * 0.24, hy - hh * 0.44, 9 * b.w, 24, 0.14, body);
+  } else if (sp.key === "goat"){
+    for (const sx of [-1, 1])
+      shape(()=>{ ctx.moveTo(x + sx * hw * 0.34, hy - hh * 0.40);
+        ctx.quadraticCurveTo(x + sx * hw * 0.86, hy - hh * 0.86, x + sx * hw * 0.74, hy - hh * 0.12);
+        ctx.quadraticCurveTo(x + sx * hw * 0.62, hy - hh * 0.62, x + sx * hw * 0.30, hy - hh * 0.28);
+        ctx.closePath(); }, "#5c5346", LW.outer);
+  }
+  rrect(x, hy, hw, hh, 12, body, LW.outer);         // the head, generously cornered
+  if (sp.key === "dog")
+    for (const sx of [-1, 1])
+      shape(()=>ctx.ellipse(x + sx * hw * 0.50, hy + hh * 0.10, 6.5 * b.w, 11, sx * 0.25, 0, 6.2832),
+            mix(body, OUTLINE, 0.18), LW.outer);
+
+  facePlate(x, hy + hh * 0.10, hw, hh, sp.key, plate);
+  if (sp.key === "crow")                            // the beak sits below the eyes, not through them
+    shape(()=>{ ctx.moveTo(x - 3.5, hy + hh * 0.30); ctx.lineTo(x + 3.5, hy + hh * 0.30);
+      ctx.lineTo(x, hy + hh * 0.56); ctx.closePath(); }, "#c9a06a", LW.outer);
+  drawEyes(x, hy + hh * (sp.key === "frog" ? 0.02 : 0.04), hw,
+           hollow ? "hollow" : a.deaths >= 2 ? "weary" : "normal", plate);
+
+  if (gear.weapon){                                 // scavenged, and too big for them
+    const g = gear.weapon, len = g.rarity === "rare" ? 34 : g.rarity === "fine" ? 28 : 22;
+    ctx.save(); ctx.translate(x + dir * (hw * 0.46), y - FIG.leg.h - bh * 0.4); ctx.rotate(dir * 0.22);
+    shape(()=>ctx.rect(-2.5, -len, 5, len), g.cursed ? C.cursed : C.relief, LW.outer);
+    ctx.restore();
+  }
+  if (gear.trinket){
+    const g = gear.trinket;
+    const col = g.cursed ? C.cursed : g.rarity === "rare" ? C.rare : g.rarity === "fine" ? "#9a8f6a" : "#6f6a5c";
+    const gl = ctx.createRadialGradient(x, bodyY, 0, x, bodyY, 10);
+    gl.addColorStop(0, col); gl.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = 0.9; ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(x, bodyY, 10, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+    circle(x, bodyY, 2.4, col, LW.detail);
+  }
+  if (!hollow) rimLight(x, hy, hw, hh, 12);
+}
+
+function drawAdventurer(a, time){
+  if (S.nudge === a.id && a.state === "rest"){    // the only attention-directing thing in the game
+    const pulse = 0.5 + 0.5 * Math.sin(time * 2.6);
+    const g = ctx.createRadialGradient(a.x, a.y - 24, 6, a.x, a.y - 24, 46);
+    g.addColorStop(0, "rgba(255,233,184," + (0.20 + 0.16 * pulse).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(255,233,184,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y - 24, 46, 0, 6.2832); ctx.fill();
+  }
+  if (a.state === "hollow"){ drawAnimal(a, a.x, a.y, { seated:true, dir:1 }); }
+  else {
+    const rest = a.state === "rest";
+    const bob = rest ? Math.sin(time * 1.6 * (a.rate || 1)) * 1.2
+                     : Math.sin(a.bob) * 2.2;        // 11. nothing synchronised
+    drawAnimal(a, a.x, a.y + bob, { seated:rest, dir:a.dir || 1,
+                                    wag:Math.sin(time * 1.1 * (a.rate || 1) + a.id) * 3 });
+  }
+  const sp = spOf(a), lift = sp.key === "rabbit" ? 16 : sp.key === "cat" || sp.key === "goat" ? 9 : 0;
+  const top = a.y - (a.state === "rest" ? 52 : 58) - lift;
+  /* The scene carries no text. Marks only, and only where a decision waits. */
+  if (a.find || a.choice) circle(a.x - 16, top, 5.5, C.rare, LW.outer);
+  if (a.shallow) circle(a.x + 16, top, 4.5, C.relief, LW.outer);
+  if (a.state === "hollow"){                        // the only countdown in the game
+    const left = 1 - Math.min(1, (a.hollowT || 0) / hollowWindow());
+    const cy = a.y + 5, rx = 28, ry = 10;           // on the ground, never across the figure
+    ctx.save();
+    ctx.strokeStyle = "rgba(20,16,20,0.55)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(a.x, cy, rx, ry, 0, 0, 6.2832); ctx.stroke();
+    ctx.strokeStyle = C.deadCore; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath(); ctx.ellipse(a.x, cy, rx, ry, 0, -1.5708, -1.5708 + left * 6.2832);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawPips(a.x, a.y + 16, a.deaths, hollowAt(a), a.state === "hollow");
+}
+
+
+function drawPips(x, y, deaths, cap, hollow){
+  if (!revealed("pips")) return;
+  const gap = 9, x0 = x - (cap - 1) * gap / 2;
+  for (let i = 0; i < cap; i++)
+    circle(x0 + i*gap, y, 3.4, i < deaths ? (hollow ? "#454b48" : "#f2682c") : "#2a2136", 2.5);
+}
+
+function drawBlacksmith(time, px, py){
+  const x = px != null ? px : fx + RING_R * 0.86;
+  const y = py != null ? py : fy + 26, swing = Math.sin(time*5.2);
+  rrect(x + 34, y - 4, 26, 9, 4, "#2b3136", 4);
+  shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
+              ctx.lineTo(x+29, y-18); ctx.closePath(); }, "#3d444a", 4);
+  shape(()=>{ ctx.moveTo(x+22, y-18); ctx.lineTo(x+46, y-18); ctx.lineTo(x+46, y-26);
+              ctx.lineTo(x+26, y-26); ctx.lineTo(x+16, y-22); ctx.closePath(); }, "#4d545a", 4);
+  hooded(x, y, 30, 30, "#332f24", "#3a3529", 1, true);
+  rrect(x + 1, y - 12, 20, 22, 6, "#2c2a21", 3);
+  ctx.save(); ctx.translate(x + 16, y - 24); ctx.rotate(-0.35 + swing*0.6);
+  rrect(0, -11, 7, 24, 3, "#332f24", 3);
+  rrect(0, -22, 16, 11, 4, "#4d545a", 3);
+  ctx.restore();
+  if (swing > 0.95) sparks(x + 34, y - 26, 0.4);
+}
+
+function drawHerbalist(time, px, py){
+  const x = px != null ? px : Math.max(fx - RING_R * 0.86, 48);
+  const y = py != null ? py : fy + 8, grind = Math.sin(time*3.1);
+  rrect(x - 25, y - 2, 22, 9, 4, "#2b3136", 4);              // bench, tucked outside the ring
+  shape(()=>{ ctx.moveTo(x-33, y-8); ctx.lineTo(x-17, y-8); ctx.lineTo(x-20, y-18);
+              ctx.lineTo(x-30, y-18); ctx.closePath(); }, "#35402c", 4);      // mortar
+  ctx.save(); ctx.translate(x - 25, y - 18); ctx.rotate(-0.4 + grind*0.25);
+  rrect(0, -7, 5, 17, 3, "#3a4448", 3); ctx.restore();       // pestle
+  hooded(x, y, 26, 26, "#35402c", "#232c20", -1, true);
+  rrect(x - 1, y - 10, 17, 19, 6, "#232c20", 3);             // apron
+  circle(x + 10, y - 27, 5.5, "#4c5a38", 3);                 // sprig at the hood
+  if (grind > 0.97) S.sparks.push({ x:x-25, y:y-22, vx:(Math.random()-0.5)*20, vy:-18, t:0, life:0.5 });
+}
+
+/* The road, as a bar under the status line: how many are in each place,
+   and a marker per adventurer sinking as they go. */
+function drawStrip(time){
+  if (!revealed("road")) return;
+  const g = stripGeom(), list = away(), n = LOC.length, band = g.w / n;
+  const base = g.y + g.h - 5;
+  rrect(g.x + g.w / 2, g.y + g.h / 2, g.w + 10, g.h + 8, 11, "rgba(15,21,18,0.82)", 0);
+  ctx.save();
+  ctx.strokeStyle = "rgba(78,88,82,0.5)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.rect(g.x - 4, g.y - 3, g.w + 8, g.h + 6); ctx.stroke();
+  for (let i = 0; i < n; i++){
+    const x = g.x + band * (i + 0.5), open = i <= S.unlocked;
+    const inside = list.filter(a => locOf(a.depth) === i).length;
+    if (i){                                              // a notch between one place and the next
+      ctx.strokeStyle = "rgba(78,88,82,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(g.x + band * i, g.y + 3); ctx.lineTo(g.x + band * i, g.y + g.h - 3);
+      ctx.stroke();
+    }
+    ctx.lineCap = "round"; ctx.lineWidth = open ? 3 : 2;
+    ctx.strokeStyle = open ? (inside ? LOC[i].tint : "rgba(120,132,124,0.55)") : "rgba(70,78,74,0.35)";
+    ctx.beginPath(); ctx.moveTo(x - band * 0.34, base); ctx.lineTo(x + band * 0.34, base); ctx.stroke();
+  }
+  ctx.restore();
+  list.forEach((a, i) => {
+    const p = markerPos(a, i);
+    circle(p.x, p.y, 5, a.garb || spOf(a).body, 2);
+    if (a.flash){
+      const al = a.flash.t < 0.2 ? a.flash.t / 0.2 : Math.min(1, (2 - a.flash.t) / 0.6);
+      ctx.save(); ctx.globalAlpha = al * 0.9;
+      ctx.strokeStyle = C.fireCore; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 6.2832); ctx.stroke(); ctx.restore();
+    }
+  });
+}
+
+const K = { x:0, y:0, tx:0, ty:0, mode:"idle", t:0, dir:1, placed:false };
+
+function keeperGoTo(x, y, mode){ K.tx = x; K.ty = y; K.mode = mode || "attend"; K.t = 0; }
+function keeperIdle(){ keeperGoTo(fx - 62, fy + 30, "idle"); }
+
+/* Vendors are built in the same language: a head, a body block, two pegs.
+   Hooded, because none of them are animals the player recruits. */
+function hooded(x, y, h, w, cloak, hood, dir, eyes){
+  contact(x, y + 2, w * 0.5, 0.42);
+  for (const sx of [-1, 1])
+    shape(()=>ctx.rect(x + sx * 3 - (sx > 0 ? 0 : 6), y - 8, 6, 8), mix(hood, OUTLINE, 0.3), LW.outer);
+  shape(()=>{ ctx.moveTo(x - w * 0.42, y - 20); ctx.lineTo(x + w * 0.42, y - 20);
+              ctx.lineTo(x + w * 0.46, y - 8); ctx.lineTo(x - w * 0.46, y - 8);
+              ctx.closePath(); }, cloak, LW.outer);
+  rrect(x, y - 20 - h * 0.42, w * 1.05, h * 0.84, 11, hood, LW.outer);
+  shape(()=>ctx.ellipse(x + dir * w * 0.10, y - 20 - h * 0.40, w * 0.30, h * 0.28, 0, 0, 6.2832),
+        mix(hood, OUTLINE, 0.5), LW.outer);
+  if (eyes) drawEyes(x + dir * w * 0.10, y - 20 - h * 0.40, w * 0.8, "normal");
+  rimLight(x, y - 20 - h * 0.42, w * 1.05, h * 0.84, 11);
+}
+
+function updateKeeper(dt){
+  if (!K.placed){ K.x = fx - 62; K.y = fy + 30; K.tx = K.x; K.ty = K.y; K.placed = true; }
+  if (S.sel != null){                        // stands with whoever you are counselling
+    const who = S.pool.find(o => o.id === S.sel);
+    if (who && who.state !== "away") keeperGoTo(who.x + (who.x > fx ? -34 : 34), who.y + 6, "attend");
+  } else if (K.mode !== "idle" && (K.t += dt) > 6) keeperIdle();
+  const dx = K.tx - K.x, dy = K.ty - K.y, d = Math.hypot(dx, dy);
+  if (d > 2){ const sp = Math.min(d, 54 * dt); K.x += dx/d * sp; K.y += dy/d * sp; K.dir = dx >= 0 ? 1 : -1; }
+}
+
+/* The keeper is built the same way as everyone else — head, block, two pegs — and
+   set apart by scale and colour instead: taller, darker, and nothing under the hood. */
+function drawKeeper(time){
+  const walking = Math.hypot(K.tx - K.x, K.ty - K.y) > 2;
+  const sway = walking ? Math.sin(time * 9) * 1.6 : Math.sin(time * 1.4) * 0.8;
+  const y = K.y + sway, hw = 36, hh = 34, bw = 24, bh = 14;
+  contact(K.x, K.y + 3, 20, 0.5);
+  for (const sx of [-1, 1])                                            // pegs, same as theirs
+    shape(()=>ctx.rect(K.x + sx * 3 - (sx > 0 ? 0 : 9), y - 8, 9, 8), "#151a1c", LW.outer);
+  const bodyY = y - 8 - bh / 2;
+  shape(()=>{ ctx.moveTo(K.x - bw / 2, bodyY - bh / 2); ctx.lineTo(K.x + bw / 2, bodyY - bh / 2);
+              ctx.lineTo(K.x + bw / 2 + 2, bodyY + bh / 2); ctx.lineTo(K.x - bw / 2 - 2, bodyY + bh / 2);
+              ctx.closePath(); }, "#1e2427", LW.outer);
+  rrect(K.x, bodyY - bh * 0.34, bw * 0.6, 5, 2.5, C.keeper, LW.outer); // the one warm colour
+  const hy = y - 8 - bh - hh / 2;
+  rrect(K.x, hy, hw, hh, 14, "#171d1f", LW.outer);                     // the hood, worn as a head
+  shape(()=>ctx.ellipse(K.x + K.dir * 4, hy + hh * 0.10, hw * 0.30, hh * 0.30, 0, 0, 6.2832),
+        "#0d1113", LW.outer);                                          // nothing inside it
+  rimLight(K.x, hy, hw, hh, 14);
+  const tend = K.mode === "tend" && !walking;                          // leans in to feed the fire
+  ctx.save();
+  ctx.translate(K.x + K.dir * 17, bodyY - 2);
+  ctx.rotate(K.dir * (tend ? 0.5 + Math.sin(time * 2.2) * 0.22 : 0.15 + Math.sin(time * 0.9) * 0.06));
+  rrect(0, 0, 6, 34, 3, "#332f24", LW.outer);
+  circle(0, -19, 4.5, C.keeper, LW.outer);
+  ctx.restore();
+}
+
+function relicPos(i){ return { x: fx + 92 + i * 30, y: fy + 76 }; }
+function relicBounds(){ return { x0: fx + 74, x1: fx + 172, y: fy + 76 }; }
+
+function drawReliquary(time){
+  if (!S.relic.length && !S.seen.relic) return;
+  const x0 = fx + 78, y = fy + 76;
+  rrect(x0 + 46, y + 12, 108, 7, 3, "#2b3136", 3);            // the shelf, and no label on it
+  S.relic.forEach((r, i) => {
+    const p = relicPos(i), g = r.art;
+    const mat = { common:"#4d545a", fine:"#c9a227", rare:"#4c5a38" }[g.rarity];
+    const bob = Math.sin(time * 1.6 + i) * 1;
+    if (g.slot === "weapon") rrect(p.x, p.y + bob, 7, 26, 3, mat, 2.5);
+    else if (g.slot === "armour")
+      shape(()=>{ ctx.moveTo(p.x-9, p.y-12+bob); ctx.lineTo(p.x+9, p.y-12+bob);
+                  ctx.lineTo(p.x, p.y+12+bob); ctx.closePath(); }, mat, 2.5);
+    else circle(p.x, p.y + bob, 9, mat, 2.5);
+    if (g.cursed) circle(p.x, p.y - 17 + bob, 3, C.cursed, 2);   // a mark, not a word
+  });
+  ctx.textAlign = "center";
+}
+
+function drawPlots(time){
+  const n = plotCount();
+  for (let i = 0; i < n; i++){
+    const p = plotPos(i), key = S.plots[i], lit = inLight(i);
+    if (!key){                                        // a footprint someone else laid
+      if (!revealed("build")) continue;
+      ctx.setLineDash([4, 6]);
+      shape(()=>ctx.ellipse(p.x, p.y, 22, 11, 0, 0, 6.2832), "rgba(23,27,30,0.45)", 2);
+      ctx.setLineDash([]);
+      continue;
+    }
+    const v = VMAP[key];
+    shape(()=>ctx.ellipse(p.x, p.y + 8, 24, 9, 0, 0, 6.2832), "rgba(0,0,0,0.3)", 0.001);
+    if (key === "smith") drawBlacksmith(time, p.x, p.y);
+    else if (key === "herb") drawHerbalist(time, p.x, p.y);
+    else {
+      hooded(p.x, p.y, 26, 26, v.tint, mix(v.tint, "#0a0e0b", 0.45), p.x > fx ? -1 : 1, true);
+      rrect(p.x, p.y - 10, 17, 19, 6, mix(v.tint, "#0a0e0b", 0.25), 3);
+      rrect(p.x, p.y - 46, 20, 9, 4, v.tint, LW.outer);   // their colour on a board, not their name
+    }
+    /* Inner and outer read from where the light falls. Adjacency is in the Build tab. */
+  }
+}
+
+function drawEmbers(){
+  if (!revealed("embers")) return;
+  const n = T.MAX_EMBERS, gap = 15, x0 = fx - (n-1)*gap/2, y = emberY();
+  for (let i = 0; i < n; i++)
+    circle(x0 + i*gap, y, 4.5, i < Math.floor(S.embers) ? "#ffab3d" : "#232c20", 3);
+  /* No text on the scene. The pips are the whole instruction. */
+}
+
+/* The keeper's lines are sentences, and a phone is 390 wide. */
+function wrapText(txt, max){
+  if (ctx.measureText(txt).width <= max) return [txt];
+  const words = String(txt).split(" "), out = [];
+  let line = "";
+  for (const w of words){
+    const next = line ? line + " " + w : w;
+    if (ctx.measureText(next).width > max && line){ out.push(line); line = w; }
+    else line = next;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+function drawFx(dt){
+  for (let i = S.sparks.length - 1; i >= 0; i--){
+    const p = S.sparks[i]; p.t += dt;
+    if (p.t > p.life){ S.sparks.splice(i,1); continue; }
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 14*dt;
+    ctx.globalAlpha = 1 - p.t/p.life; ctx.fillStyle = p.col || "#ffe9b8";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = "center";
+  for (let i = S.says.length - 1; i >= 0; i--){
+    const q = S.says[i]; q.t += dt;
+    if (q.t > 4.2){ S.says.splice(i, 1); continue; }
+    const who = S.pool.find(o => o.id === q.id);
+    if (who && who.state !== "away"){ q.x = who.x; q.y = sayY(who); }
+    ctx.globalAlpha = q.t < 0.5 ? q.t/0.5 : Math.min(1, (4.2 - q.t)/1.1);
+    ctx.font = "600 11px ui-rounded, system-ui, sans-serif";
+    const w = ctx.measureText(q.txt).width + 16;
+    const lim = Math.max(20, worldHalfW() - w/2 - 6);
+    const bx = Math.max(fx - lim, Math.min(fx + lim, q.x));     // never off the edge
+    rrect(bx, q.y, w, 20, 9, "rgba(20,15,28,0.9)", 2);
+    ctx.fillStyle = "#a9a3b5"; ctx.fillText(q.txt, bx, q.y + 4);
+    ctx.globalAlpha = 1;
+  }
+  for (let i = S.floats.length - 1; i >= 0; i--){
+    const f = S.floats[i]; f.t += dt;
+    if (f.t > 1.2){ S.floats.splice(i,1); continue; }
+    ctx.globalAlpha = 1 - f.t/1.2;
+    ctx.font = "800 16px ui-rounded, system-ui, sans-serif";
+    ctx.lineWidth = 4; ctx.strokeStyle = "#0a0e0b";
+    ctx.strokeText(f.txt, f.x, f.y - f.t*38);
+    ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - f.t*38);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* 12. A little grain over the whole thing, to unify the flats. */
+let grainTile = null, grainT = 0, grainOff = 0;
+function drawGrain(){
+  if (!grainTile){
+    grainTile = document.createElement("canvas"); grainTile.width = grainTile.height = 72;
+    const g = grainTile.getContext("2d"), img = g.createImageData(72, 72);
+    for (let i = 0; i < img.data.length; i += 4){
+      const v = (Math.random() * 255) | 0;
+      img.data[i] = img.data[i+1] = img.data[i+2] = v;
+      img.data[i+3] = Math.random() < 0.5 ? 16 : 0;
+    }
+    g.putImageData(img, 0, 0);
+  }
+  grainT += 1;
+  if (grainT > 24){ grainT = 0; grainOff = (grainOff + 17) % 72; }
+  const pat = ctx.createPattern(grainTile, "repeat");
+  ctx.save(); ctx.globalAlpha = 0.5; ctx.translate(-grainOff, grainOff * 0.5);
+  ctx.fillStyle = pat; ctx.fillRect(0, 0, W + 72, H + 72); ctx.restore();
+}
+
+/* ============================ loop ============================ */
+
+let flare = 0, sparkT = 0, uiT = 0, last = performance.now();
+S.elapsed = 0;
+
+function frame(now){
+  let dt = (now - last) / 1000; last = now;
+  if (dt > 0.25) dt = 0.25;
+  S.elapsed += dt;
+  const time = now / 1000;
+
+  S.arriveT += dt;
+  const iv = interval();
+  let guard = 0;
+  while (S.arriveT >= iv && guard++ < 20){
+    S.arriveT -= iv;
+    if (revealed("arrivals") && living().length < poolCap()) recruit();
+  }
+
+  S.emberT += dt;
+  while (S.emberT >= T.EMBER_REGEN){ S.emberT -= T.EMBER_REGEN; S.embers = Math.min(T.MAX_EMBERS, S.embers + 1); }
+
+  RING_R = Math.min(168, Math.max(FIRE_TAP_R + 30, lightR() * 1.18));
+  tickOpening(dt);
+  if (S.flameOn && !S.ending) tickFlame(dt);
+  updatePool(dt);
+  updateKeeper(dt);
+  tickCraft(dt);
+  while (S.earnLog.length && S.earnLog[0].t < S.elapsed - 60) S.earnLog.shift();
+  flare = Math.max(0, flare - dt * 1.6);
+  sparkT += dt;
+  if (sparkT > 0.16){ sparkT = 0;
+    if (Math.random() < 0.12 + 0.88 * flameLife()) sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, H);   // the dark, before any transform
+  const cam = camera(dt);
+  ctx.save();
+  ctx.translate(W / 2, cam.oy); ctx.scale(cam.z, cam.z); ctx.translate(-fx, -cam.cy);
+  drawGround(time);
+  drawColumns(time);
+  const onStage = S.pool.filter(a => a.state !== "away");
+  onStage.sort((a,b) => a.y - b.y);
+  const behind = onStage.filter(a => a.y <= fy), front = onStage.filter(a => a.y > fy);
+  behind.forEach(a => drawAdventurer(a, time));
+  drawPlots(time);
+  if (K.y <= fy) drawKeeper(time);
+  drawFire(time);
+  front.forEach(a => drawAdventurer(a, time));
+  if (K.y > fy) drawKeeper(time);
+  drawEmbers();
+  drawReliquary(time);
+  drawFx(dt);
+  ctx.restore();
+  drawStrip(time);                                // the road bar is chrome, not scenery
+
+  if (S.notice){
+    S.notice.t += dt;
+    if (S.notice.t > 4.5) S.notice = null;
+    else {
+      const n = S.notice;
+      ctx.globalAlpha = n.t < 0.3 ? n.t / 0.3 : Math.min(1, (4.5 - n.t) / 1.2);
+      ctx.font = "800 14px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.lineWidth = 5; ctx.strokeStyle = "#0a0e0b"; ctx.fillStyle = "#a9a3b5";
+      let ny = (revealed("road") ? stripGeom().y + stripGeom().h : 8) + 26;
+      for (const ln of wrapText(n.txt, W - 30)){       // a line, never a line running off the edge
+        ctx.strokeText(ln, W / 2, ny); ctx.fillText(ln, W / 2, ny); ny += 18;
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  if (open_ && !open_.dusted && (open_.clean === "thaw" || open_.clean === "creep")){
+    open_.regrow = (open_.regrow || 0) + dt;
+    if (open_.regrow > (open_.clean === "thaw" ? 1.1 : 1.7)){
+      open_.regrow = 0;
+      const a = open_, edge = a.clean === "creep";
+      for (let k = 0; k < 6; k++){
+        const gx = (Math.random() * GRID) | 0, gy = (Math.random() * GRID) | 0;
+        const isEdge = gx < 3 || gy < 3 || gx > GRID - 4 || gy > GRID - 4;
+        if (edge && !isEdge) continue;
+        if (a.grid[gy * GRID + gx]){ a.grid[gy * GRID + gx] = 0; a.cleared--; }
+      }
+      if (a.grimeCv){
+        const g2 = a.grimeCv.getContext("2d");
+        g2.globalCompositeOperation = "source-over";
+        g2.fillStyle = a.clean === "thaw" ? "rgba(150,190,210,0.30)" : "rgba(74,63,82,0.28)";
+        if (a.clean === "creep"){
+          g2.fillRect(0, 0, AW, 22); g2.fillRect(0, AH - 22, AW, 22);
+          g2.fillRect(0, 0, 22, AH); g2.fillRect(AW - 22, 0, 22, AH);
+        } else g2.fillRect(0, 0, AW, AH);
+      }
+      const frac = a.cleared / (GRID * GRID);
+      artToFire.disabled = frac < 0.62;
+      drawArt();
+    }
+  }
+
+  drawGrain();
+  drawGesture(dt);
+
+  uiT += dt;
+  if (uiT > 0.15){ uiT = 0; refresh(); if (S.sel != null) showCounsel(byId(S.sel)); }
+  requestAnimationFrame(frame);
+}
+
+/* ============================ input ============================ */
+
+const byId = id => S.pool.find(a => a.id === id);
+
+cv.addEventListener("pointerdown", e => {
+  const r = cv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+
+  const sg = stripGeom();                       // the whole bar opens the road
+  if (revealed("road") && y < sg.y + sg.h + 8){ openMap(); return; }
+
+  const w = toWorld(x, y), wx = w.x, wy = w.y;  // everything below is world space
+
+  const rb = relicBounds();                     // the shelf opens when tapped
+  if (S.relic.length && Math.abs(wy - rb.y) < 26 && wx > rb.x0 - 14 && wx < rb.x1){ openShelf(); return; }
+
+  /* A figure owns a tight circle of their own; the fire owns the rest of its ground.
+     Nobody may sit inside the fire's clear radius, so the fire is always tappable. */
+  let hit = null, best = 28;
+  for (const a of S.pool){
+    if (a.state !== "rest" && a.state !== "hollow") continue;
+    const d = Math.hypot(wx - a.x, wy - (a.y - 16));
+    if (d < best){ best = d; hit = a; }
+  }
+  if (hit){ S.sel = hit.id; S.nudge = null; showCounsel(hit);
+            keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
+  const dx = (wx - fx) / 52, dy = (wy - (fy - 6)) / 48;
+  if (dx*dx + dy*dy > 1){ closeCounsel(); return; }
+  S.taps++;
+  if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#7d8a85" }); return; }
+  keeperGoTo(fx - 52, fy + 26, "tend");
+  S.embers--; flare = 0.5;
+  for (let k = 0; k < 5; k++) sparks(fx + (Math.random()-0.5)*16, fy - 22, 0.6);
+  if (S.first && S.beat < 3){                     // the one time in the game it goes up
+    S.flame = Math.min(S.flameMax, S.flame + TAP_INTENSITY);
+    S.floats.push({ x:fx + (Math.random()-0.5)*20, y:fy - 46, t:0, txt:"+1.5", col:"#ffab3d" });
+    beatTo(1);
+    if (S.taps >= 3) S.rev.embers = true;
+    if (S.flame >= 40) beatTo(2);
+    if (S.flame >= 60) beatTo(3);
+    return;
+  }
+  earn(1, fx + (Math.random()-0.5)*20, fy - 46, false);
+});
+
+/* ============================ counsel card ============================ */
+
+const counsel = document.getElementById("counsel");
+const cTone = counsel.querySelector(".cTone"), cTitle = counsel.querySelector(".cTitle");
+const cSub = counsel.querySelector(".cSub"), cOdds = counsel.querySelector(".cOdds");
+const cAct = counsel.querySelector(".cAct"), cNote = counsel.querySelector(".cNote");
+counsel.querySelector(".cClose").addEventListener("click", closeCounsel);
+
+function closeCounsel(){
+  S.sel = null; picking = null; counsel.hidden = true;
+  const old = counsel.querySelector(".cActs"); if (old) old.remove();
+}
+const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+
+function showCounsel(a){
+  if (!a){ closeCounsel(); return; }
+  S.sel = a.id; counsel.hidden = false;
+  const hollow = a.state === "hollow";
+  cTone.style.background = hollow ? C.hollow : (a.garb || spOf(a).body);
+  cTitle.textContent = (a.name ? a.name + ", " : "") + (hollow ? "hollowed" : "a " + spOf(a).name);
+  cSub.textContent = hollow ? "Nothing left to spend" : spOf(a).note;
+  const stale = counsel.querySelector(".cActs"); if (stale) stale.remove();
+  cGear.hidden = hollow;
+  if (hollow) cGear.innerHTML = "";
+  else if (a.choice) renderChoice(a);
+  else if (a.find) renderFind(a);
+  else renderGear(a);
+
+  if (hollow){
+    const c = rekCost(a), free = vlv("ossu") >= 3 && !S.freeRiteUsed;
+    cOdds.innerHTML = (a.name ? "<b>" + a.name + "</b>. " : "") + "Got as far as depth "
+      + peakOf(a) + ". " + plural(a.deaths, "death") + ".<br>"
+      + "Carrying " + gearSummary(a) + ".<br>"
+      + "<b>" + Math.max(0, Math.ceil(hollowWindow() - (a.hollowT || 0))) + "s</b> before they stand up "
+      + "and walk out on their own.";
+    cGear.hidden = false; cGear.className = "cPick"; cGear.innerHTML = "";
+    const rite = document.createElement("button");
+    rite.innerHTML = "<b>Rite of Rekindling — " + (free ? "free" : fmt(c)) + "</b><br><em>"
+      + "They come back at depth 0 with their deaths forgiven, and they keep what they carry."
+      + "</em>";
+    rite.disabled = !free && S.souls < c;
+    rite.onclick = () => { if (rekindle(a)) closeCounsel(); };
+    cGear.appendChild(rite);
+    const go = document.createElement("button");
+    go.innerHTML = "<b>Let Them Go — " + fmt(letGoCost()) + "</b><br><em>"
+      + "The seat comes back. Their things go on the shelf. They are written down and that is "
+      + "all that is left of them. <span>+" + letGoAsh(a) + " ash</span></em>";
+    go.disabled = S.souls < letGoCost();
+    go.onclick = () => { if (vlv("ossu")) startGesture("vigil", () => { letThemGo(a); closeCounsel(); });
+                         else { letThemGo(a); closeCounsel(); } };
+    cGear.appendChild(go);
+    cAct.style.display = "none";
+    cNote.textContent = "One of them costs souls you may not have. The other costs less than that.";
+  } else {
+    cAct.style.display = "";
+    const d = runDepth(a), odds = Math.round(survival(d, a.deaths, a) * 100);
+    const mult = (1 + d * T.DEPTH_PAY).toFixed(1).replace(/\.0$/, "");
+    const left = hollowAt(a) - a.deaths;
+    cOdds.innerHTML =
+      (a.name ? "<b>" + a.name + "</b>. " : "") + LOC[locOf(d)].name + ", depth " + d +
+      ". Pays <b>" + mult + "x</b>, or " + plural(payFor(a), "soul") + ".<br>" +
+      "Deaths " + a.deaths + " of " + hollowAt(a) + ". " +
+      (left === 1 ? "One more and they hollow." : left === 2 ? "Two more and they hollow." : "Unscarred.") + "<br>" +
+      "Survival <b>" + odds + "%</b>.";
+    cAct.textContent = a.shallow ? "Sent shallow" : "Send shallow";
+    cAct.className = "cAct";
+    cAct.disabled = a.shallow || a.depth === 0;
+    cAct.onclick = () => { a.shallow = true; showCounsel(a); };
+    cNote.textContent = a.depth === 0 ? "Nowhere shallower to send them."
+      : a.shallow ? "They come home no deeper than they left."
+      : "One layer short: safer odds, a smaller purse, no new depth.";
+  }
+}
+
+const cGear = counsel.querySelector(".cGear");
+let picking = null;
+
+function renderFind(a){
+  cGear.className = "cPick"; cGear.innerHTML = "";
+  const b = document.createElement("button");
+  b.innerHTML = "<b>They brought something up</b><br><span>It is filthy. Clean it and see.</span>";
+  b.onclick = () => openArtifact(a.find);
+  cGear.appendChild(b);
+}
+
+function renderChoice(a){
+  cGear.className = "cPick"; cGear.innerHTML = "";
+  const g = a.choice, worn = gearIn(a, g.slot);
+  const row = (title, art, keep) => {
+    const b = document.createElement("button");
+    b.innerHTML = "<b>" + title + ": " + artTitle(art) + (art.cursed ? " ✦" : "") +
+      "</b><br><span>" + effectLine(art) + "</span><br><em>" + art.line + "</em>";
+    b.onclick = () => {
+      if (!keep){ a.gear[g.slot] = g; }        // the other one goes in the fire either way
+      a.choice = null;
+      S.notice = { txt:"The other one went in the fire.", t:0 };
+      showCounsel(a);
+    };
+    cGear.appendChild(b); return b;
+  };
+  const head = document.createElement("button");
+  head.disabled = true;
+  head.innerHTML = "<b>Only one of these can be kept.</b><br><span>The other is destroyed.</span>";
+  cGear.appendChild(head);
+  row("Keep", worn, true);
+  row("Take", g, false);
+}
+
+function craftOffers(g){
+  const out = [];
+  if (vlv("smith") >= 2 && g.rarity === "common") out.push(["forge", "fine", T.FORGE_COST.fine]);
+  if (vlv("smith") >= 3 && g.rarity === "fine")   out.push(["forge", "rare", T.FORGE_COST.rare]);
+  if (g.cursed && vlv("herb") >= 3) out.push(["cleanse", "clean", T.CLEANSE_COST.clean]);
+  else if (g.cursed && vlv("herb") >= 2 && g.rarity !== "common") out.push(["cleanse", "rough", T.CLEANSE_COST.rough]);
+  return out;
+}
+
+function startCraft(a, slot, kind, grade, cost){
+  const g = gearIn(a, slot);
+  if (!g || g.craft) return;
+  let scrap = cost[1];
+  if (kind === "forge" && slot === "weapon" && adjActive("smith", "quart")) scrap = Math.ceil(scrap * 0.65);
+  if (S.souls < cost[0] || S.mat < scrap) return;
+  S.souls -= cost[0]; S.mat -= scrap;
+  const key = kind === "forge" ? "smith" : "herb";
+  startGesture(VMAP[key].verb, q => {
+    g.craft = { kind, grade, left: T.CRAFT_SECONDS * vSlow(key) * (q >= 0.7 ? 0.6 : 1) };
+    if (q >= 0.7) S.floats.push({ x:fx, y:fy - 40, t:0, txt:"good work", col:"#ffe9b8" });
+    showCounsel(a);
+  });
+  const pi = plotOf(kind === "forge" ? "smith" : "herb");
+  if (pi >= 0){ const pp = plotPos(pi); keeperGoTo(pp.x, pp.y, "attend"); }
+}
+
+function tickCraft(dt){
+  for (const a of S.pool){
+    if (!a.gear) continue;
+    for (const slot of A_SLOTS){
+      const g = a.gear[slot];
+      if (!g || !g.craft) continue;
+      if ((g.craft.left -= dt) > 0) continue;
+      const c = g.craft; g.craft = null;
+      if (c.kind === "forge"){ g.rarity = c.grade; S.notice = { txt:"Reforged. " + artTitle(g) + ".", t:0 }; }
+      else {
+        g.cursed = false; g.curseLine = null;
+        if (c.grade === "rough" && g.rarity !== "common")
+          g.rarity = g.rarity === "rare" ? "fine" : "common";
+        S.notice = { txt:"The mark is off it. " + artTitle(g) + ".", t:0 };
+      }
+      if (S.sel === a.id) showCounsel(a);
+    }
+  }
+}
+
+function gearButton(a, slot){
+  const g = gearIn(a, slot), b = document.createElement("button");
+  b.className = g ? (g.cursed ? "filled cursed" : "filled") : "";
+  b.innerHTML = "<i>" + SLOT_NAME[slot].toUpperCase() + "</i>" +
+    (g ? (g.craft ? Math.ceil(g.craft.left) + "s" : RARITY_NAME[g.rarity] + (g.cursed ? " ✦" : "")) : "empty");
+  b.onclick = () => { picking = slot; showCounsel(a); };
+  return b;
+}
+
+function vendorActions(a){
+  const out = [];
+  if (vlv("carto") >= 1) out.push({
+    label:"Send them somewhere else",
+    sub: a.route != null ? "Bound for " + LOC[a.route].name + "." : "They go as deep as they can.",
+    go: () => openRoute(a) });
+  if (vlv("quart") >= 1 && !a.packed) out.push({
+    label:"Pack them off", sub:"Supplies for the road. Shorter trip.",
+    go: () => startGesture("pack", q => { a.packed = true; a.packQ = q; showCounsel(a); }) });
+  if (vlv("tink") >= 1) out.push({
+    label:"Break something down", sub:"Whatever they carry, into scrap.",
+    go: () => openBreak(a) });
+  return out;
+}
+
+function openRoute(a){
+  const rows = LOC.slice(0, S.unlocked + 1).map((L, i) => ({
+    html:"<b>" + L.name + "</b><br><em>Depths " + locFloor(i) + " and " + (locFloor(i)+1) +
+         (i === locOf(a.depth) ? ". Where they would go anyway." : ". Shallower than they have been.") +
+         "</em>" + (S.marked === i ? "<br><span>Marked. Better things come up.</span>" : ""),
+    onClick: () => startGesture("route", () => { a.route = i; closeSheet(); showCounsel(a); })
+  }));
+  rows.push({ html:"Let them go as deep as they can", onClick: () => { a.route = null; closeSheet(); showCounsel(a); } });
+  openSheet("Where to?", (a.name || "They") + " will be told the way.", rows);
+}
+
+function openBreak(a){
+  const rows = A_SLOTS.filter(k => gearIn(a, k)).map(k => {
+    const g = gearIn(a, k);
+    return { html:"<b>" + artTitle(g) + "</b><br><em>" + effectLine(g) + "</em>",
+      onClick: () => startGesture("break", q => {
+        let n = MAT_VALUE[g.rarity] * 2 + Math.round(q * 3);
+        if (adjActive("smith", "tink")) n = Math.round(n * 1.5);
+        S.mat += n; S.seen.material = true; a.gear[k] = null;
+        S.notice = { txt:"Broken down. " + n + " scrap.", t:0 };
+        closeSheet(); showCounsel(a);
+      }) };
+  });
+  if (!rows.length) rows.push({ html:"They are carrying nothing to break.", onClick:null });
+  openSheet("Break it down", "The Tinker takes anything.", rows);
+}
+
+function renderGear(a){
+  cGear.innerHTML = "";
+  if (!picking){
+    cGear.className = "cGear";
+    A_SLOTS.forEach(slot => cGear.appendChild(gearButton(a, slot)));
+    const acts = vendorActions(a);
+    if (acts.length){
+      const bar = document.createElement("div"); bar.className = "cActs";
+      for (const act of acts){
+        const b = document.createElement("button");
+        b.innerHTML = act.label + "<i>" + act.sub + "</i>";
+        b.onclick = act.go; bar.appendChild(b);
+      }
+      cGear.parentNode.insertBefore(bar, cGear.nextSibling);
+      if (cGear.nextSibling && cGear.nextSibling.nextSibling &&
+          cGear.nextSibling.nextSibling.className === "cActs")
+        cGear.nextSibling.nextSibling.remove();
+    }
+    return;
+  }
+  cGear.className = "cPick";
+  const slot = picking, worn = gearIn(a, slot);
+  const add = (html, fn, dis) => {
+    const b = document.createElement("button");
+    b.innerHTML = html; b.disabled = !!dis; if (fn) b.onclick = fn;
+    cGear.appendChild(b); return b;
+  };
+  if (worn){
+    add("<b>" + artTitle(worn) + (worn.cursed ? " ✦" : "") +
+        (worn.origin != null ? " — " + LOC[worn.origin].name : "") + "</b><br><span>" + effectLine(worn) +
+        "</span><br><em>" + worn.line + (worn.curseLine ? " " + worn.curseLine : "") + "</em>", null, true);
+    if (worn.craft) add("At the " + (worn.craft.kind === "forge" ? "forge" : "herbalist") + ", " +
+                        Math.ceil(worn.craft.left) + "s", null, true);
+    else for (const [kind, grade, cost] of craftOffers(worn)){
+      const label = kind === "forge" ? "Reforge to " + RARITY_NAME[grade].toLowerCase()
+                  : grade === "clean" ? "Lift the curse" : "Lift the curse, lose a grade";
+      add(label + "<br><span>" + fmt(cost[0]) + " souls · " + cost[1] + " scrap</span>",
+          () => startCraft(a, slot, kind, grade, cost), S.souls < cost[0] || S.mat < cost[1]);
+    }
+  } else {
+    const shelf = S.relic.filter(r => r.art.slot === slot);
+    if (!shelf.length) add("Nothing to put here.", null, true);
+    shelf.forEach(r => add(
+      "<b>" + artTitle(r.art) + (r.art.cursed ? " ✦" : "") + "</b><br><span>" + effectLine(r.art) +
+      "</span><br><em>Carried by someone who reached depth " + r.depth + ", and died " + r.deaths + " times.</em>",
+      () => {
+        S.relic.splice(S.relic.indexOf(r), 1);
+        a.gear = a.gear || {}; a.gear[slot] = r.art; r.art.owner = a.id;
+        picking = null; showCounsel(a);
+      }));
+  }
+  add("Back", () => { picking = null; showCounsel(a); });
+}
+
+function letThemGo(a){
+  if (!a || a.state !== "hollow" || S.souls < letGoCost()) return false;
+  S.souls -= letGoCost();
+  const ash = letGoAsh(a);
+  S.meta.ash += ash;
+  if (a.gear) for (const slot of A_SLOTS){
+    const g = a.gear[slot];
+    if (g) toReliquary(g, peakOf(a), a.deaths, a.name);
+  }
+  a.gear = null;
+  releaseSlot(a);
+  S.pool.splice(S.pool.indexOf(a), 1);
+  S.notice = { txt:(a.name ? a.name + " is not at the fire any more." : "One of them is gone."), t:0 };
+  if (vlv("herb") && vlv("ossu") && adjacent("herb", "ossuary")){   // the grove eases one of the living
+    const scarred = living().filter(o => o.deaths > 0);
+    if (scarred.length){
+      const o = scarred[(Math.random() * scarred.length) | 0];
+      o.deaths--; say(o, "Something lifted off them.");
+    }
+  }
+  S.floats.push({ x:fx, y:fy - 50, t:0, txt:"+" + ash + " ash", col:"#a9a3b5" });
+  hollowResolved();
+  render(); saveGame(); return true;
+}
+
+function rekindle(a){
+  const c = rekCost(a);
+  if (!a || a.state !== "hollow" || S.souls < c) return false;
+  const free = vlv("ossu") >= 3 && !S.freeRiteUsed;
+  if (free) S.freeRiteUsed = true; else S.souls -= c;
+  S.rekindles++;
+  releaseSlot(a); a.deaths = 0; a.depth = 0; a.shallow = false;
+  edgeSpawn(a); a.state = "walkin";
+  for (let k = 0; k < 14; k++) sparks(a.x, a.y - 10, 1.1);
+  hollowResolved();
+  render(); return true;
+}
+
+/* ==================== dusting and deduction ==================== */
+
+const artEl = document.getElementById("art");
+const artCv = document.getElementById("artCv");
+const actx  = artCv.getContext("2d");
+const artDust = document.getElementById("artDust");
+const artTest = document.getElementById("artTest");
+const artToFire = document.getElementById("artToFire");
+const AW = 240, AH = 200, GRID = 20;
+const SITES = { glyph:[0.50, 0.15], material:[0.32, 0.62], form:[0.70, 0.64] };
+let grimeCv = null, gctx = null, open_ = null, wiping = false, pick = null, testing = 0;
+
+function openArtifact(a){
+  open_ = a; artEl.hidden = false; closeCounsel();
+  if (!a.dusted){                                   // the grime only exists before it comes off
+    if (!a.grimeCv){
+      a.grid = a.grid || new Uint8Array(GRID * GRID);
+      a.grimeCv = document.createElement("canvas");
+      a.grimeCv.width = AW; a.grimeCv.height = AH;
+      grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); paintGrime();
+    } else { grimeCv = a.grimeCv; gctx = grimeCv.getContext("2d"); }
+  }
+  artDust.hidden = false;
+  a.clean = a.clean || CLEAN[a.loc != null ? a.loc : 0];
+  document.querySelector(".artTitle").textContent = "Filthy";
+  document.querySelector(".artSub").textContent = (a.loc != null ? LOC[a.loc].name + ". " : "")
+    + CLEAN_HINT[a.clean];
+  drawArt();
+}
+function closeArtifact(){ open_ = null; artEl.hidden = true; }
+document.getElementById("artX").addEventListener("click", closeArtifact);
+
+function paintGrime(){
+  gctx.globalCompositeOperation = "source-over";
+  gctx.fillStyle = "#4a3f52"; gctx.fillRect(0, 0, AW, AH);
+  for (let i = 0; i < 420; i++){                    // crust, so wiping reads as work
+    gctx.fillStyle = ["#3d3345","#574a5e","#443a4d"][(Math.random()*3)|0];
+    gctx.beginPath();
+    gctx.arc(Math.random()*AW, Math.random()*AH, 3 + Math.random()*9, 0, 6.2832);
+    gctx.fill();
+  }
+}
+
+/* the artifact as it appears — which is not always as it is */
+function drawArt(){
+  const a = open_; if (!a) return;
+  actx.clearRect(0, 0, AW, AH);
+  const mat = a.origin != null ? LOC[a.origin].tint
+            : { common:"#4d545a", fine:"#c9a227", rare:"#4c5a38" }[a.rarity];
+  const dark = { common:"#3d444a", fine:"#5c4a1c", rare:"#3a4448" }[a.rarity];
+  const cx = AW/2, cy = AH/2;
+  actx.lineWidth = 4; actx.strokeStyle = "#0a0e0b"; actx.lineJoin = "round";
+  const box = (x, y, w, h, r, fill) => {
+    actx.beginPath();
+    actx.moveTo(x-w/2+r, y-h/2);
+    actx.arcTo(x+w/2, y-h/2, x+w/2, y+h/2, r); actx.arcTo(x+w/2, y+h/2, x-w/2, y+h/2, r);
+    actx.arcTo(x-w/2, y+h/2, x-w/2, y-h/2, r); actx.arcTo(x-w/2, y-h/2, x+w/2, y-h/2, r);
+    actx.closePath(); actx.fillStyle = fill; actx.fill(); actx.stroke();
+  };
+  if (a.slot === "weapon"){                         // the shape is the truth once clean
+    actx.beginPath(); actx.moveTo(cx, cy - 74); actx.lineTo(cx + 13, cy - 46);
+    actx.lineTo(cx + 13, cy + 30); actx.lineTo(cx - 13, cy + 30); actx.lineTo(cx - 13, cy - 46);
+    actx.closePath(); actx.fillStyle = mat; actx.fill(); actx.stroke();
+    box(cx, cy + 38, 56, 12, 5, dark);
+    box(cx, cy + 60, 14, 34, 6, dark);
+  } else if (a.slot === "armour"){
+    actx.beginPath(); actx.moveTo(cx - 44, cy - 58); actx.lineTo(cx + 44, cy - 58);
+    actx.lineTo(cx + 36, cy + 34); actx.lineTo(cx, cy + 70); actx.lineTo(cx - 36, cy + 34);
+    actx.closePath(); actx.fillStyle = mat; actx.fill(); actx.stroke();
+    box(cx, cy - 4, 42, 60, 12, dark);
+  } else {
+    actx.beginPath(); actx.arc(cx, cy + 10, 46, 0, 6.2832);
+    actx.arc(cx, cy + 10, 26, 0, 6.2832, true);
+    actx.fillStyle = mat; actx.fill("evenodd");
+    actx.beginPath(); actx.arc(cx, cy + 10, 46, 0, 6.2832); actx.stroke();
+    actx.beginPath(); actx.arc(cx, cy + 10, 26, 0, 6.2832); actx.stroke();
+    actx.beginPath(); actx.arc(cx, cy - 32, 14, 0, 6.2832);
+    actx.fillStyle = dark; actx.fill(); actx.stroke();
+  }
+  const g = SITES.glyph;                            // glyph is the curse tell
+  actx.save(); actx.translate(AW*g[0], AH*g[1]);
+  actx.lineWidth = 3.4; actx.strokeStyle = a.cursed ? "#7a4a6e" : "#d8d2c4";
+  actx.beginPath();
+  if (a.cursed){ actx.moveTo(-9,-9); actx.lineTo(4,-2); actx.lineTo(-4,3); actx.lineTo(9,10); }
+  else { actx.arc(0, 0, 9, 0.5, 5.4); }
+  actx.stroke(); actx.restore();
+
+  if (!a.dusted && grimeCv) actx.drawImage(grimeCv, 0, 0);
+}
+
+function cellCleared(nx, ny){
+  const a = open_, gx = Math.min(GRID-1, (nx*GRID)|0), gy = Math.min(GRID-1, (ny*GRID)|0);
+  return a.grid[gy*GRID + gx] === 1;
+}
+
+function wipe(e){
+  const a = open_; if (!a || a.dusted) return;
+  const r = artCv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * AW / r.width, y = (e.clientY - r.top) * AH / r.height;
+  const mode = a.clean || "wipe";
+  let R = 24;
+  if (mode === "scrape"){                              // one direction only
+    const going = a.lastX != null ? x - a.lastX : 0;
+    a.lastX = x;
+    if (going <= 0.5) return;
+    R = 20;
+  } else if (mode === "press"){                        // reward staying still
+    const still = a.lastX != null && Math.hypot(x - a.lastX, y - (a.lastY || y)) < 3;
+    a.dwell = still ? (a.dwell || 0) + 1 : 0;
+    a.lastX = x; a.lastY = y;
+    R = 12 + Math.min(22, (a.dwell || 0) * 1.6);
+  } else if (mode === "cut"){                          // only along the roots
+    const vine = Math.abs(Math.sin((y / AH) * 6.2832) * (AW * 0.3) + AW / 2 - x);
+    if (vine > 34) return;
+    R = 18;
+  } else if (mode === "thaw"){
+    R = 30;
+  }
+  a.lastX = x; a.lastY = y;
+  gctx.globalCompositeOperation = "destination-out";
+  const grad = gctx.createRadialGradient(x, y, 0, x, y, R);   // soft edges, not a hard hole
+  grad.addColorStop(0, "rgba(0,0,0,1)"); grad.addColorStop(0.65, "rgba(0,0,0,0.9)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  gctx.fillStyle = grad; gctx.beginPath(); gctx.arc(x, y, R, 0, 6.2832); gctx.fill();
+
+  const cw = AW/GRID, ch = AH/GRID;
+  for (let gy = 0; gy < GRID; gy++) for (let gx = 0; gx < GRID; gx++){
+    if (a.grid[gy*GRID+gx]) continue;
+    if (Math.hypot((gx+0.5)*cw - x, (gy+0.5)*ch - y) < R*0.8){ a.grid[gy*GRID+gx] = 1; a.cleared++; }
+  }
+  for (const k in SITES) if (!a.sites[k] && cellCleared(SITES[k][0], SITES[k][1])) a.sites[k] = true;
+  for (let i = 0; i < 3; i++)
+    S.sparks.push({ x:fx + (Math.random()-0.5)*10, y:fy - 10, vx:(Math.random()-0.5)*20,
+                    vy:-14, t:0, life:0.4, col:"#6f6478" });
+  const frac = a.cleared / (GRID*GRID);
+  artToFire.disabled = frac < 0.62;
+  artToFire.textContent = frac < 0.62 ? "Keep wiping — " + Math.round(frac/0.62*100) + "%" : "To the fire";
+  drawArt();
+}
+artCv.addEventListener("pointerdown", e => { wiping = true; artCv.setPointerCapture(e.pointerId); wipe(e); });
+artCv.addEventListener("pointermove", e => { if (wiping) wipe(e); });
+artCv.addEventListener("pointerup",   () => { wiping = false; });
+artCv.addEventListener("pointercancel", () => { wiping = false; });
+
+artToFire.addEventListener("click", () => {
+  const g = open_; if (!g) return;
+  g.dusted = true;
+  const a = S.pool.find(o => o.id === g.owner);
+  closeArtifact();
+  if (!a) return;
+  a.find = null;
+  a.gear = a.gear || {};
+  if (!a.gear[g.slot]){ a.gear[g.slot] = g; S.notice = { txt:artTitle(g) + ". It fits.", t:0 }; }
+  else a.choice = g;                          // one of the two is going in the fire
+  S.seen.ident = true; if (g.cursed) S.seen.curse = true;
+  showCounsel(a);
+});
+
+/* ==================== the cycle ==================== */
+
+const UNLOCKS = [
+  { key:"forge",  name:"Standing Forge", cost:80,
+    body:"The smith never leaves. He is at his anvil when the next fire is lit." },
+  { key:"grove",  name:"Standing Grove", cost:120,
+    body:"The herbalist keeps her bench through the dark between fires." },
+  { key:"road",   name:"The Old Road", cost:100,
+    body:"The way down as far as the second place stays open. Nobody has to find it again." },
+  { key:"dead",   name:"Stubborn Dead", cost:150,
+    body:"They hold on longer. Four deaths before the grey takes them, not three." },
+  { key:"wider",  name:"Wider Fire", cost:180,
+    body:"Two more can sit from the beginning. The circle starts larger." },
+  { key:"deep",   name:"Deep Ash", cost:220,
+    body:"The new fire is lit off the old one's bed. It starts at 120, not 100." },
+  { key:"names",  name:"Kept Names", cost:300,
+    body:"One of the dead can be called back by name at the start of a fire, carrying one thing "
+       + "they died with. They will not remember you." }
+];
+
+function ashFor(){
+  return Math.max(1, Math.floor(S.peakDepth * 3 + S.runEarned / 400 + living().length * 2));
+}
+
+function endRun(voluntary){
+  if (S.ending) return;
+  S.ending = true;
+  S.endInfo = { ash: ashFor(), depth: S.peakDepth, earned: S.runEarned,
+                kept: living().length, hollowed: hollows().length,
+                minutes: Math.max(1, Math.round(S.elapsed / 60)), voluntary };
+  S.flame = 0;
+  closeCounsel(); closeArtifact(); closeSheet(); bookEl.hidden = true;
+  setTimeout(showEnd, voluntary ? 900 : 2600);     // let the light go out first
+}
+
+function showEnd(){
+  const e = S.endInfo;
+  S.meta.ash += e.ash; S.meta.cycles++;
+  openSheet("The fire is out", "Cycle " + S.meta.cycles + " ended.", [
+    { html:"<em>" + (e.voluntary ? "I let it go out while I still could."
+        : "It went out, the way they do.") + "</em>", onClick:null },
+    { html:"The fire held for <span>" + e.minutes + " minutes</span>.", onClick:null },
+    { html:"Deepest anyone got: <span>depth " + e.depth + "</span>.", onClick:null },
+    { html:"<span>" + fmt(e.earned) + " souls</span> passed through my hands.", onClick:null },
+    { html: e.kept + " still standing when the light went. " + e.hollowed + " grey.", onClick:null },
+    { html:"<b>" + e.ash + " ash</b><br><em>What is left of a fire is what you build the next one with.</em>",
+      onClick:null },
+    { html:"<b>Rake the ashes</b>", onClick: () => { closeSheet(); openAshes(); } },
+    { html:"Kindle another fire", onClick: () => { closeSheet(); newCycle(); } }
+  ]);
+  saveGame();
+}
+
+function openTrade(){
+  const rate = 6, back = 12;
+  openSheet("The Tinker's rate", "Both directions are bad. That is the trade.", [
+    { html:"<b>Sell 10 scrap</b><br><em>" + (10 * rate) + " souls, which is not what it is worth.</em>",
+      onClick: S.mat < 10 ? null : () => { S.mat -= 10; S.souls += 10 * rate;
+        S.notice = { txt:"Sold, badly.", t:0 }; openTrade(); } },
+    { html:"<b>Buy 5 scrap</b><br><em>" + (5 * back) + " souls, which is worse.</em>",
+      onClick: S.souls < 5 * back ? null : () => { S.souls -= 5 * back; S.mat += 5;
+        S.seen.material = true; openTrade(); } },
+    { html:"Leave it", onClick: closeSheet }
+  ]);
+}
+
+function openAshes(){
+  const rows = UNLOCKS.map(u => {
+    const owned = has(u.key), afford = S.meta.ash >= u.cost;
+    return { html:"<b>" + u.name + (owned ? " — kept" : "") + "</b><br><em>" + u.body + "</em>" +
+                  (owned ? "" : "<br><span>" + u.cost + " ash</span>"),
+      onClick: owned || !afford ? null : () => {
+        S.meta.ash -= u.cost; S.meta.unlocks.push(u.key); saveGame(); openAshes();
+      } };
+  });
+  rows.push(S.ending
+    ? { html:"<b>Kindle another fire</b>", onClick: () => { closeSheet(); newCycle(); } }
+    : { html:"Back to the fire", onClick: closeSheet });   // never end a live run by accident
+  openSheet("Ashes", fmt(S.meta.ash) + " ash. These carry between fires.", rows);
+}
+
+function newCycle(){
+  S.souls = 0; S.mat = 0; S.lv = { flame:0, word:0, echo:0, circle:0 };
+  S.v = { smith:has("forge")?1:0, herb:has("grove")?1:0, quart:0, carto:0, ossu:0, tink:0 };
+  S.plots = [null,null,null,null,null,null,null]; S.spent = {}; S.marked = null; S.freeRiteUsed = false;
+  if (S.v.smith) S.plots[0] = "smith";
+  if (S.v.herb) S.plots[1] = "herb";
+  S.rekindles = 0; S.bells = 0; S.embers = T.MAX_EMBERS; S.emberT = 0;
+  S.pool = []; S.relic = []; S.lost = []; S.arriveT = 0;
+  S.flameMax = has("deep") ? 120 : T.FLAME_MAX; S.flame = S.flameMax;
+  S.unlocked = has("road") ? 1 : 0; S.log = [];
+  S.peakDepth = 0; S.runEarned = 0; S.elapsed = 0; S.earnLog = [];
+  S.floats = []; S.sparks = []; S.says = []; S.notice = null;
+  S.sel = null; S.ending = false; S.endInfo = null;
+  S.first = false; S.nudge = null; S.tipSeen = true;   // every fire after the first opens whole
+  S.tab = "skills"; CAM.set = false;
+  for (let i = 0; i < slotUsed.length; i++) slotUsed[i] = null;
+  if (has("names") && S.meta.dead.length){        // one of them is called back
+    const d = S.meta.dead[(Math.random() * S.meta.dead.length) | 0];
+    const a = recruit(); a.name = d.name || null;
+    if (!a.name) giveName(a);
+    S.notice = { txt:(a.name || "Someone") + " came back. Not the same one, but the name is.", t:0 };
+  }
+  render(); saveGame();
+}
+
+/* ==================== gestures ====================
+   Six verbs, one per vendor. None runs past five seconds and none can fail
+   destructively: sloppy work gets the base result, good work gets a little more. */
+
+const GEST = {
+  hammer:{ title:"Strike it", hint:"Tap when the metal is bright.", rounds:4 },
+  stir:  { title:"Stir it",   hint:"Hold, and keep going round.",   rounds:2 },
+  pack:  { title:"Pack it",   hint:"Drag each thing into the pack.", rounds:3 },
+  route: { title:"Trace it",  hint:"Draw the way down.",            rounds:3 },
+  vigil: { title:"Sit with them", hint:"Hold. It takes as long as it takes.", rounds:1 },
+  break: { title:"Break it",  hint:"Left, right, left. Keep at it.", rounds:8 }
+};
+
+const gEl = document.getElementById("gest");
+const gCv = document.getElementById("gestCv");
+const gctx2 = gCv.getContext("2d");
+const GW = 260, GH = 190;
+let G = null;
+
+function startGesture(kind, done){
+  const spec = GEST[kind];
+  G = { kind, spec, done, hits:0, miss:0, t:0, phase:0, ang:0, held:0, last:null, items:[0,1,2], side:1 };
+  document.getElementById("gestTitle").textContent = spec.title;
+  document.getElementById("gestHint").textContent = spec.hint;
+  gEl.hidden = false;
+}
+function endGesture(){
+  if (!G) return;
+  const quality = Math.max(0, Math.min(1, G.hits / (G.spec.rounds || 1)));
+  const cb = G.done; G = null; gEl.hidden = true;
+  if (cb) cb(quality);
+}
+document.getElementById("gestX").addEventListener("click", () => {
+  if (!G) return;                                   // walking away still finishes the job, plainly
+  const cb = G.done; G = null; gEl.hidden = true; if (cb) cb(0);
+});
+
+function gestPoint(e){
+  const r = gCv.getBoundingClientRect();
+  return { x:(e.clientX - r.left) * GW / r.width, y:(e.clientY - r.top) * GH / r.height };
+}
+gCv.addEventListener("pointerdown", e => {
+  if (!G) return;
+  gCv.setPointerCapture(e.pointerId);
+  const p = gestPoint(e);
+  if (G.kind === "hammer"){
+    const bright = Math.abs(Math.sin(G.t * 2.4)) > 0.82;
+    if (bright) G.hits++; else G.miss++;
+    G.phase++;
+    for (let i = 0; i < 8; i++) S.sparks.push({ x:fx, y:fy - 16, vx:(Math.random()-0.5)*40, vy:-30, t:0, life:0.5 });
+    if (G.phase >= G.spec.rounds) endGesture();
+  } else if (G.kind === "break"){
+    const wantLeft = G.side > 0;
+    if ((p.x < GW/2) === wantLeft){ G.hits++; G.side *= -1; } else G.miss++;
+    G.phase++;
+    if (G.phase >= G.spec.rounds) endGesture();
+  } else if (G.kind === "pack" || G.kind === "route"){
+    G.drag = true; G.last = p;
+  } else if (G.kind === "vigil" || G.kind === "stir"){
+    G.holding = true; G.last = p;
+  }
+});
+gCv.addEventListener("pointermove", e => {
+  if (!G) return;
+  const p = gestPoint(e);
+  if (G.kind === "stir" && G.holding){
+    const a = Math.atan2(p.y - GH/2, p.x - GW/2);
+    if (G.ang !== 0 || G.lastAng != null){
+      let d = a - (G.lastAng == null ? a : G.lastAng);
+      while (d > Math.PI) d -= 6.2832;
+      while (d < -Math.PI) d += 6.2832;
+      G.ang += Math.abs(d) > 1 ? 0 : d;
+    }
+    G.lastAng = a;
+    if (Math.abs(G.ang) > 6.2832 * G.spec.rounds){ G.hits = G.spec.rounds; endGesture(); }
+  } else if (G.kind === "pack" && G.drag){
+    const idx = G.items.findIndex(i => i >= 0 && Math.hypot(p.x - (30 + i*40), p.y - 40) < 26);
+    if (idx >= 0 && p.y > 100){ G.items[idx] = -1; G.hits++;
+      if (G.items.every(i => i < 0)) endGesture(); }
+    if (G) G.last = p;                      // the last move can finish it; do not write to nothing
+  } else if (G.kind === "route" && G.drag){
+    const y = GH * (0.2 + 0.3 * G.phase);
+    if (Math.abs(p.y - y) < 30 && Math.abs(p.x - GW/2) < 100){ G.phase++; G.hits++;
+      if (G.phase >= G.spec.rounds) endGesture(); }
+    if (G) G.last = p;
+  }
+});
+const gestUp = () => { if (!G) return; G.drag = false; G.holding = false; G.lastAng = null; };
+gCv.addEventListener("pointerup", gestUp);
+gCv.addEventListener("pointercancel", gestUp);
+
+function drawGesture(dt){
+  if (!G) return;
+  G.t += dt;
+  if (G.kind === "vigil" && G.holding){
+    G.held += dt;
+    if (G.held >= 4){ G.hits = 1; endGesture(); return; }
+  } else if (G.kind === "vigil") G.held = Math.max(0, G.held - dt * 0.6);
+  if (G.t > 12) endGesture();                       // never trap anybody in here
+  gctx2.clearRect(0, 0, GW, GH);
+  gctx2.fillStyle = "#1b1526"; gctx2.fillRect(0, 0, GW, GH);
+  const box = (x, y, w, h, r, fill, line) => {
+    gctx2.beginPath();
+    gctx2.moveTo(x-w/2+r, y-h/2);
+    gctx2.arcTo(x+w/2,y-h/2,x+w/2,y+h/2,r); gctx2.arcTo(x+w/2,y+h/2,x-w/2,y+h/2,r);
+    gctx2.arcTo(x-w/2,y+h/2,x-w/2,y-h/2,r); gctx2.arcTo(x-w/2,y-h/2,x+w/2,y-h/2,r);
+    gctx2.closePath(); gctx2.fillStyle = fill; gctx2.fill();
+    gctx2.lineWidth = 3; gctx2.strokeStyle = line || "#0a0e0b"; gctx2.stroke();
+  };
+  if (G.kind === "hammer"){
+    const bright = Math.abs(Math.sin(G.t * 2.4));
+    box(GW/2, GH/2, 120, 34, 8, mix("#3d444a", "#ffab3d", bright), bright > 0.82 ? "#ffe9b8" : "#0a0e0b");
+    gctx2.fillStyle = "#7d8a85"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    gctx2.textAlign = "center"; gctx2.fillText(G.phase + " / " + G.spec.rounds, GW/2, GH - 20);
+  } else if (G.kind === "stir"){
+    gctx2.strokeStyle = "#2b3136"; gctx2.lineWidth = 16;
+    gctx2.beginPath(); gctx2.arc(GW/2, GH/2, 52, 0, 6.2832); gctx2.stroke();
+    gctx2.strokeStyle = "#7fbf8a"; gctx2.lineWidth = 12;
+    gctx2.beginPath();
+    gctx2.arc(GW/2, GH/2, 52, -1.57, -1.57 + Math.min(6.2832, Math.abs(G.ang) / G.spec.rounds));
+    gctx2.stroke();
+  } else if (G.kind === "pack"){
+    box(GW/2, GH - 42, 150, 56, 10, "#2b3136");
+    G.items.forEach((v, i) => { if (v >= 0) box(30 + i*40, 40, 34, 34, 8, "#c9a227"); });
+  } else if (G.kind === "route"){
+    for (let i = 0; i < G.spec.rounds; i++){
+      const y = GH * (0.2 + 0.3 * i);
+      box(GW/2, y, 150, 18, 8, i < G.phase ? "#6f8fd6" : "#2b3136");
+    }
+  } else if (G.kind === "vigil"){
+    box(GW/2, GH/2, 150, 40, 10, "#2b3136");
+    box(GW/2 - 75 + Math.min(150, 150 * G.held / 4) / 2, GH/2,
+        Math.max(2, Math.min(150, 150 * G.held / 4)), 40, 10, "#454b48");
+    gctx2.fillStyle = "#a9a3b5"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    gctx2.textAlign = "center"; gctx2.fillText("hold", GW/2, GH/2 + 4);
+  } else if (G.kind === "break"){
+    box(GW/4, GH/2, 90, 70, 10, G.side > 0 ? "#c9a227" : "#2b3136");
+    box(3*GW/4, GH/2, 90, 70, 10, G.side < 0 ? "#c9a227" : "#2b3136");
+    gctx2.fillStyle = "#7d8a85"; gctx2.font = "700 11px ui-rounded, system-ui, sans-serif";
+    gctx2.textAlign = "center"; gctx2.fillText(G.hits + " / " + G.spec.rounds, GW/2, GH - 12);
+  }
+}
+
+/* ==================== sheets ==================== */
+
+const sheetEl = document.getElementById("sheet");
+const sheetList = document.getElementById("sheetList");
+document.getElementById("sheetX").addEventListener("click", ()=>{ sheetEl.hidden = true; });
+
+function openSheet(title, sub, rows){
+  document.getElementById("sheetTitle").textContent = title;
+  document.getElementById("sheetSub").textContent = sub;
+  sheetList.innerHTML = "";
+  for (const r of rows){
+    const b = document.createElement("button");
+    b.innerHTML = r.html; b.disabled = !r.onClick;
+    if (r.onClick) b.onclick = () => { r.onClick(); };
+    sheetList.appendChild(b);
+  }
+  sheetEl.hidden = false;
+}
+const closeSheet = () => { sheetEl.hidden = true; };
+
+function gearSummary(a){
+  const bits = A_SLOTS.map(k => {
+    const g = gearIn(a, k);
+    if (!g) return null;
+    return RARITY_NAME[g.rarity].toLowerCase() + " " + k + (g.cursed ? " ✦" : "")
+         + (g.origin != null ? " (" + LOC[g.origin].code + ")" : "");
+  }).filter(Boolean);
+  return bits.length ? bits.join(", ") : "nothing but their own skin";
+}
+
+function openLocation(i){
+  const where = LOC[i];
+  const inside = away().filter(a => locOf(a.depth) === i);
+  const rows = [];
+  if (!inside.length) rows.push({ html:"<em>Nobody is down there right now.</em>", onClick:null });
+  for (const a of inside){
+    const prog = Math.round((1 - a.t / T.AWAY) * 100);
+    const c = bellCost();
+    rows.push({
+      html:"<b>" + (a.name || "One of the unnamed") + "</b> · depth " + a.depth +
+           "<br><em>Carrying " + gearSummary(a) + ".</em>" +
+           "<br><span>" + prog + "% of the way through</span> · tap to ring them back for " + fmt(c),
+      onClick: () => { if (ringBell(a)) closeSheet(); else openLocation(i); }
+    });
+  }
+  const lines = S.log.filter(l => l.loc === i).slice(-8).reverse();
+  if (lines.length) rows.push({ html:"<b>What came back up</b>", onClick:null });
+  for (const l of lines) rows.push({ html:"<em>" + l.txt + "</em>", onClick:null });
+  const locked = i > S.unlocked;
+  openSheet(where.name, locked ? "Not open. " + where.gate + " is in the way."
+    : "Depths " + locFloor(i) + " to " + (i === LOC.length-1 ? "as far as it goes" : locFloor(i)+1) + ".", rows);
+}
+
+function openMap(){
+  const rows = LOC.map((L, i) => {
+    const inside = away().filter(a => locOf(a.depth) === i).length;
+    const open = i <= S.unlocked;
+    return {
+      html:"<b>" + L.name + "</b>" + (open ? "" : " — shut") +
+           "<br><em>" + (open ? (inside ? inside + " down there now." : "Empty.")
+             : L.gate + " holds it." + (vlv("carto") >= 2
+                 ? " It wants about " + gateDifficulty(i).toFixed(1)
+                   + "; the best of them is worth " + bestGateScore().toFixed(1) + "."
+                 : " Nobody has measured it.")) + "</em>" +
+           (open ? "<br><span>Depths " + locFloor(i) + "+</span>" : ""),
+      onClick: open ? () => openLocation(i) : null
+    };
+  });
+  if (vlv("carto") >= 3 && S.marked == null)
+    rows.push({ html:"<b>Mark a place for this fire</b><br><em>Better things come out of it. Once.</em>",
+      onClick: () => openSheet("Mark which?", "It holds until the fire goes out.",
+        LOC.slice(0, S.unlocked + 1).map((L, i) => ({ html:"<b>" + L.name + "</b>",
+          onClick: () => startGesture("route", () => { S.marked = i; closeSheet(); }) }))) });
+  if (vlv("tink") >= 2)
+    rows.push({ html:"<b>The Tinker's rate</b><br><em>Scrap for souls, souls for scrap, badly both ways.</em>",
+      onClick: openTrade });
+  openSheet("The road below", "Seven places, and a gate between each.", rows);
+}
+
+function openBuild(plot){
+  const free = VENDORS.filter(v => !built(v.key));
+  const lit = inLight(plot);
+  openSheet("Empty ground", lit ? "Inside the light. A seat goes with it."
+                                : "Outside the light. Slower, but it costs no seat.",
+    free.length ? free.map(v => ({
+      html:"<b>" + v.glyph + " " + v.name + "</b><br><em>" + v.blurb[0] + "</em><br><span>"
+           + fmt(v.cost[1]) + " souls</span>",
+      onClick: S.souls < v.cost[1] ? null : () => {
+        S.souls -= v.cost[1]; S.v[v.key] = 1; S.plots[plot] = v.key;
+        S.spent[v.key] = (S.spent[v.key] || 0) + v.cost[1];
+        const pp = plotPos(plot); keeperGoTo(pp.x, pp.y, "attend");
+        evictReserved(); closeSheet(); render();
+      }
+    })) : [{ html:"They are all here already.", onClick:null }]);
+}
+
+function openShelf(){
+  const living = S.pool.filter(a => a.state !== "hollow");
+  openSheet("Left Behind", "What outlived the people carrying it.", S.relic.length ? S.relic.map(r => ({
+    html: "<b>" + artTitle(r.art) + (r.art.cursed ? " ✦" : "") + "</b><br><span>" + effectLine(r.art) +
+          "</span><br><em>" + (r.name ? r.name + " carried it to depth " + r.depth
+                                      : "Carried to depth " + r.depth) +
+          ", and died " + r.deaths + " times.</em><br>Tap to give it to someone.",
+    onClick: () => {
+      const takers = living.filter(a => !gearIn(a, r.art.slot));
+      if (!takers.length){ openSheet("Left Behind", "Every one of them already carries " +
+        SLOT_NAME[r.art.slot].toLowerCase() + ".", [{ html:"Nobody has a free hand.", onClick:null }]); return; }
+      openSheet("Give it to", artTitle(r.art) + ". Once given, it stays with them.",
+        takers.map(a => ({
+          html: "<b>" + (a.name || "Someone") + "</b><br><em>Depth " + a.depth + ", " +
+                plural(a.deaths, "death") + ".</em>",
+          onClick: () => {
+            S.relic.splice(S.relic.indexOf(r), 1);
+            a.gear = a.gear || {}; a.gear[r.art.slot] = r.art; r.art.owner = a.id;
+            closeSheet(); saveGame();
+          }
+        })));
+    }
+  })) : [{ html:"Nothing yet. Nobody has hollowed.", onClick:null }]);
+  if (vlv("tink") >= 1 && S.relic.length){
+    const b = document.createElement("button");
+    b.innerHTML = "<b>Have the Tinker break one down</b><br><em>Scrap, and the shelf gets some room.</em>";
+    b.onclick = () => {
+      openSheet("Break down which?", "It does not come back.", S.relic.map(r => ({
+        html:"<b>" + artTitle(r.art) + "</b><br><em>" + effectLine(r.art) + "</em>",
+        onClick: () => startGesture("break", q => {
+          let n = MAT_VALUE[r.art.rarity] * 2 + Math.round(q * 3);
+          if (adjActive("smith", "tink")) n = Math.round(n * 1.5);
+          S.mat += n; S.seen.material = true;
+          S.relic.splice(S.relic.indexOf(r), 1);
+          S.notice = { txt:"Beaten flat. " + n + " scrap.", t:0 };
+          closeSheet(); render();
+        })
+      })));
+    };
+    sheetList.appendChild(b);
+  }
+  if (vlv("tink") >= 3 && S.relic.length && !S.reforgedThisCycle){
+    const b = document.createElement("button");
+    b.innerHTML = "<b>Beat one into another shape</b><br><em>Same quality, different use. Once a fire.</em>";
+    b.onclick = () => openSheet("Reshape which?", "It keeps its grade and loses its purpose.",
+      S.relic.map(r => ({ html:"<b>" + artTitle(r.art) + "</b>", onClick: () => {
+        const others = A_SLOTS.filter(k => k !== r.art.slot);
+        openSheet("Into what?", artTitle(r.art) + " becomes:", others.map(k => ({
+          html:"<b>" + RARITY_NAME[r.art.rarity] + " " + SLOT_NAME[k] + "</b>",
+          onClick: () => startGesture("hammer", () => {
+            r.art.slot = k; r.art.line = "Beaten into a shape it was never meant to hold.";
+            S.reforgedThisCycle = true; closeSheet(); render();
+          })
+        })));
+      } })));
+    sheetList.appendChild(b);
+  }
+}
+
+/* ==================== persistence ==================== */
+
+const SAVE_KEY = "sanctuary.save";
+const SAVE_VERSION = 4;
+const OFFLINE_CAP = 8 * 3600;
+
+const stripArt = g => g && { id:g.id, slot:g.slot, rarity:g.rarity, cursed:g.cursed, depth:g.depth, origin:g.origin,
+                             dusted:g.dusted, line:g.line, curseLine:g.curseLine, owner:g.owner,
+                             craft:g.craft, cleared:g.cleared };
+
+function serialize(){
+  return {
+    version: SAVE_VERSION, at: Date.now(),
+    souls:S.souls, mat:S.mat, lv:S.lv, smithLv:vlv("smith"), herbLv:vlv("herb"),
+    rekindles:S.rekindles, bells:S.bells, embers:S.embers, taps:S.taps,
+    seen:S.seen, tipSeen:S.tipSeen, nextId:S.nextId, nextArt:S.nextArt,
+    flame:S.flame, flameMax:S.flameMax, peakDepth:S.peakDepth, runEarned:S.runEarned,
+    unlocked:S.unlocked, log:S.log.slice(-30),
+    v:S.v, plots:S.plots, spent:S.spent, marked:S.marked,
+    freeRiteUsed:S.freeRiteUsed, reforgedThisCycle:S.reforgedThisCycle,
+    everHollowed:S.everHollowed, elapsed:S.elapsed, flameOn:S.flameOn,
+    first:S.first, beat:S.beat, rests:S.rests, rev:S.rev,
+    nudge:S.nudge, bookShown:S.bookShown,
+    pool: S.pool.map(a => ({
+      id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
+      slot:a.slot, sp:a.sp, garb:a.garb, build:a.build || 0, rate:a.rate || 1, peak:a.peak || 0, route:a.route == null ? null : a.route,
+      packed:!!a.packed,
+      gear: a.gear ? { weapon:stripArt(a.gear.weapon), armour:stripArt(a.gear.armour),
+                       trinket:stripArt(a.gear.trinket) } : null,
+      find: stripArt(a.find), choice: stripArt(a.choice), recalled:a.recalled || false
+    })),
+    relic: S.relic.map(r => ({ art:stripArt(r.art), depth:r.depth, deaths:r.deaths, name:r.name || null })),
+    lost:  S.lost.map(l => ({ art:stripArt(l.art), depth:l.depth, deaths:l.deaths })),
+    meta:  S.meta
+  };
+}
+
+function migrate(save){
+  if (!save || typeof save !== "object") return null;
+  let v = save.version | 0;
+  if (v > SAVE_VERSION) return null;          // a newer build wrote this; leave it alone
+  if (v < SAVE_VERSION){
+    save.meta = save.meta || { ash:0, unlocks:[], dead:[], cycles:0 };
+    save.version = SAVE_VERSION;
+  }
+  return save;
+}
+
+function saveGame(){
+  if (S.ending) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(serialize())); }
+  catch (e){ /* a full or blocked store is not worth crashing the fire over */ }
+}
+
+function restore(save){
+  S.souls = save.souls || 0; S.mat = save.mat || 0;
+  S.lv = Object.assign(S.lv, save.lv || {});
+  S.rekindles = save.rekindles || 0; S.bells = save.bells || 0;
+  S.embers = save.embers != null ? save.embers : T.MAX_EMBERS;
+  S.taps = save.taps || 0; S.tipSeen = !!save.tipSeen;
+  S.everHollowed = !!save.everHollowed; S.elapsed = save.elapsed || 0;
+  /* A save written before the first fire was authored has already seen everything. */
+  S.first = save.first != null ? !!save.first : false;
+  S.beat = save.beat || 0; S.rests = save.rests || 0;
+  S.nudge = save.nudge != null ? save.nudge : null;
+  S.bookShown = !!save.bookShown;
+  S.rev = Object.assign({}, S.rev, save.rev || {});
+  S.flameOn = save.flameOn != null ? !!save.flameOn : true;
+  S.tab = revealed("build") ? S.tab : "skills";
+  S.flameMax = save.flameMax || T.FLAME_MAX;
+  S.flame = save.flame != null ? save.flame : S.flameMax;
+  S.peakDepth = save.peakDepth || 0; S.runEarned = save.runEarned || 0;
+  S.unlocked = save.unlocked || 0; S.log = save.log || [];
+  S.v = Object.assign({ smith:0, herb:0, quart:0, carto:0, ossu:0, tink:0 },
+                      save.v || { smith:save.smithLv || 0, herb:save.herbLv || 0 });
+  S.plots = save.plots && save.plots.length ? save.plots : [null,null,null,null,null,null,null];
+  if (!save.plots){                                   // an older save had two vendors and no ground
+    if (S.v.smith) S.plots[0] = "smith";
+    if (S.v.herb) S.plots[1] = "herb";
+  }
+  S.spent = save.spent || {}; S.marked = save.marked == null ? null : save.marked;
+  S.freeRiteUsed = !!save.freeRiteUsed; S.reforgedThisCycle = !!save.reforgedThisCycle;
+  S.seen = Object.assign(S.seen, save.seen || {});
+  S.nextId = save.nextId || 1; S.nextArt = save.nextArt || 1;
+  S.meta = Object.assign(S.meta, save.meta || {});
+  const rehydrate = g => g ? Object.assign({ grid:null, sites:{}, grimeCv:null }, g) : null;
+  S.pool = (save.pool || []).map(p => {
+    const a = Object.assign({ x:0, y:0, dir:1, exit:0, bob:0, events:null, flash:null,
+                              pending:null, find:null, choice:null, gear:null }, p);
+    if (!a.sp){                                     // saves from before the animals arrived
+      a.sp = SPECIES[(Math.random() * SPECIES.length) | 0].key;
+      a.build = (Math.random() * BUILDS.length) | 0; a.rate = 0.8 + Math.random() * 0.5;
+    }
+    a.find = rehydrate(p.find); a.choice = rehydrate(p.choice);
+    if (p.gear){ a.gear = {}; for (const k of A_SLOTS) if (p.gear[k]) a.gear[k] = rehydrate(p.gear[k]); }
+    edgeSpawn(a);
+    if (a.state === "rest" || a.state === "wait" || a.state === "walkin"){ a.slot = -1; a.state = "walkin"; }
+    return a;
+  });
+  for (const a of S.pool) if (!a.garb) a.garb = pickGarb(a.sp);   // once the circle is whole again
+  for (let i = 0; i < T.SLOTS; i++) slotUsed[i] = null;
+  S.relic = (save.relic || []).map(r => ({ art:rehydrate(r.art), depth:r.depth, deaths:r.deaths, name:r.name }));
+  S.lost  = (save.lost  || []).map(l => ({ art:rehydrate(l.art), depth:l.depth, deaths:l.deaths }));
+}
+
+/* The offline pass runs the real rules at a coarse step, so nothing drifts. */
+function runOffline(seconds){
+  const report = { seconds, souls:0, hollowed:[], found:0, scrap:0, deaths:0 };
+  S.offline = report;
+  const step = 0.5;
+  const before = S.souls, beforeMat = S.mat;
+  for (let t = 0; t < seconds; t += step){
+    S.arriveT += step;
+    const iv = interval();
+    while (S.arriveT >= iv){ S.arriveT -= iv;
+      if (revealed("arrivals") && living().length < poolCap()) recruit(); }
+    updatePool(step);
+    tickCraft(step);
+    tickOpening(step);
+    if (S.flameOn && !S.ending) tickFlame(step);
+    if (S.ending){ report.flameDied = true; break; }
+  }
+  report.souls = S.souls - before;
+  report.scrap = S.mat - beforeMat;
+  S.offline = null;
+  S.floats.length = 0; S.sparks.length = 0; S.says.length = 0; S.notice = null;
+  return report;
+}
+
+/* ============================ ui ============================ */
+
+const listEl  = document.getElementById("list");
+const soulsEl = document.getElementById("souls");
+const rateEl  = document.querySelector("#rate b");
+const noteEl  = document.getElementById("note");
+const popEl   = { fire:document.getElementById("pFire"), away:document.getElementById("pAway"),
+                  hollow:document.getElementById("pHollow") };
+const matWrap = document.getElementById("matWrap"), matEl = document.getElementById("mat");
+const flameFill = document.querySelector("#flameBar i"), flameNum = document.getElementById("flameNum");
+const fmt = n => Math.floor(n).toLocaleString("en-US");
+let rows = [];
+
+function card(o){
+  const el = document.createElement("div"); el.className = "card";
+  el.innerHTML =
+    '<div class="icon" style="background:' + o.tint + '">' + o.glyph + '</div>' +
+    '<div class="info"><div class="name">' + o.name +
+      (o.level != null ? '<span class="lvl">LV ' + o.level + '</span>' : '') +
+    '</div><div class="desc"></div></div>' +
+    '<button class="buy"><span></span><small>SOULS</small></button>';
+  const btn = el.querySelector(".buy"), lvl = el.querySelector(".lvl");
+  btn.addEventListener("click", o.onBuy);
+  listEl.appendChild(el);
+  rows.push(()=>{
+    el.querySelector(".desc").textContent = o.desc();
+    btn.querySelector("span").textContent = o.label();
+    btn.disabled = !o.enabled();
+    if (lvl) lvl.textContent = "LV " + o.level2();
+    const done = o.done && o.done();
+    btn.classList.toggle("done", !!done);
+    const small = btn.querySelector("small");
+    if (small) small.style.visibility = done ? "hidden" : "visible";
+  });
+}
+
+const bookEl = document.getElementById("book"), bookList = document.getElementById("bookList");
+function openBook(focus){
+  bookList.innerHTML = "";
+  let want = null;
+  for (const e of ARCHIVE){
+    const open = e.open(), el = document.createElement("div");
+    el.className = "entry" + (open ? "" : " locked");
+    el.innerHTML = "<h4></h4><p></p>";
+    el.querySelector("h4").textContent = e.name;
+    el.querySelector("p").textContent = open ? e.body : "Nothing written here yet.";
+    if (focus && e.name === focus) want = el;
+    bookList.appendChild(el);
+  }
+  const extras = [
+    { name:"The ones I lost", body:"Every one who hollowed, in every fire I have kept. Tap to read them.",
+      go:openDead },
+    { name:"Ashes", body:"What a dead fire leaves. " + fmt(S.meta.ash) + " of it on the shelf. Tap to spend.",
+      go:openAshes },
+    { name:"Let it go out", body:"End this fire on purpose and keep what it was worth.", go:openBook2 }
+  ];
+  for (const e of extras){
+    const el = document.createElement("div");
+    el.className = "entry"; el.style.cursor = "pointer";
+    el.innerHTML = "<h4></h4><p></p>";
+    el.querySelector("h4").textContent = e.name;
+    el.querySelector("p").textContent = e.body;
+    el.onclick = e.go;
+    bookList.appendChild(el);
+  }
+  bookEl.hidden = false;
+  if (want) want.scrollIntoView({ block:"center" });
+}
+function openDead(){
+  const d = S.meta.dead;
+  openSheet("The ones I lost", d.length ? d.length + " of them, across " + Math.max(1, S.meta.cycles + 1)
+    + " fires." : "Nobody yet.", d.length ? d.slice().reverse().map(x => ({
+      html:"<b>" + (x.name || "One of the unnamed") + "</b> <em>" + (x.sp || "") + "</em>"
+           + "<br><em>Depth " + x.depth + ", "
+           + plural(x.deaths, "death") + (x.carried.length ? ", carrying " + x.carried.join(" and ") : "")
+           + ". Fire " + x.cycle + ".</em>", onClick:null }))
+    : [{ html:"Nobody has hollowed yet. It will not stay that way.", onClick:null }]);
+}
+
+let armed = false;
+function openBook2(){
+  bookEl.hidden = true;
+  openSheet("Let it go out", "The fire is at " + Math.round(S.flame) + ".", [
+    { html:"<em>Ending it now keeps what the run was worth. Waiting keeps nothing but the waiting.</em>",
+      onClick:null },
+    { html:"<b>" + (armed ? "Yes. Let it go out." : "Let it go out") + "</b>",
+      onClick: () => { if (!armed){ armed = true; openBook2(); } else { armed = false; closeSheet(); endRun(true); } } },
+    { html:"Keep it burning", onClick: () => { armed = false; closeSheet(); } }
+  ]);
+}
+
+document.getElementById("bookBtn").addEventListener("click", () => openBook());
+document.getElementById("bookX").addEventListener("click", ()=>{ bookEl.hidden = true; });
+
+const skillShown = k => !S.first ? true
+  : k === "flame"  ? true
+  : k === "word"   ? S.rev.skWord
+  : k === "circle" ? S.rev.skCircle
+  : S.rev.skEcho;                     // paying double means nothing before depth does
+
+function render(){
+  listEl.innerHTML = ""; rows = [];
+  if (S.tab === "build" && !revealed("build")) S.tab = "skills";
+  if (S.tab === "skills"){
+    NODES.filter(n => skillShown(n.key)).forEach(n => card({
+      glyph:n.glyph, tint:"#2b3136", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
+      desc:n.desc,
+      label:()=> n.max && S.lv[n.key] >= n.max ? "Full" : fmt(cost(n)),
+      enabled:()=> (!n.max || S.lv[n.key] < n.max) && S.souls >= cost(n),
+      done:()=> !!(n.max && S.lv[n.key] >= n.max),
+      onBuy(){ if (n.max && S.lv[n.key] >= n.max) return;
+               const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++;
+               if (S.first && n.key === "flame"){ S.rev.skWord = true; S.rev.skCircle = true; }
+               render(); }
+    }));
+    if (revealed("skRite")) card({
+      glyph:"✨", tint:"#4a3c2c", name:"Rite of Rekindling", level:S.rekindles, level2:()=>S.rekindles,
+      desc:()=> hollows().length
+        ? "Brings the shallowest of them back at depth 0, deaths forgiven. Tap a hollow to choose "
+          + "which one, and to weigh it against letting them go."
+        : "The way back from hollowing. Nothing to rekindle yet — no one has gone.",
+      label:()=> hollows().length ? fmt(rekCost(hollows()[0])) : "—",
+      enabled:()=> hollows().length > 0 && S.souls >= rekCost(hollows()[0]),
+      onBuy(){ rekindle(hollows()[0]); }
+    });
+    noteEl.textContent = "Skills grow the take. Vendors keep them alive.";
+  } else {
+    for (let i = 0; i < plotCount(); i++){
+      const idx = i, key = S.plots[i], v = key ? VMAP[key] : null;
+      const lit = () => inLight(idx);
+      card({
+        glyph: v ? v.glyph : "▢", tint: v ? v.tint : "#2a1f30",
+        name: v ? v.name : "Empty ground", level: v ? vlv(key) : null, level2:()=> v ? vlv(key) : 0,
+        desc:()=> {
+          if (!v) return (lit() ? "Inside the light. Whoever stands here works quickly and takes a seat."
+                                : "Outside the light. Slower work, but nobody gives up a seat for it.")
+                   + " Tap to raise something.";
+          const nxt = Math.min(3, vlv(key) + 1);
+          const adj = ADJACENCIES.filter(x => adjActive(x[0], x[1]) && (x[0] === key || x[1] === key));
+          return v.blurb[vlv(key)] + (vlv(key) < 3 ? "  Next: " + fmt(v.cost[nxt]) + " souls"
+                 + (v.mat[nxt] ? " and " + v.mat[nxt] + " scrap." : ".") : "")
+                 + (lit() ? "" : "  Out in the dark: weaker, slower, and holding no seat.")
+                 + (adj.length ? "  Beside it: " + adj.map(x => x[2]).join(" ") : "");
+        },
+        label:()=> !v ? "Build" : vlv(key) >= 3 ? "Done" : fmt(v.cost[Math.min(3, vlv(key) + 1)]),
+        enabled:()=> !v ? true
+                   : vlv(key) < 3 && S.souls >= v.cost[vlv(key)+1] && S.mat >= v.mat[vlv(key)+1],
+        done:()=> !!v && vlv(key) >= 3,
+        onBuy(){
+          if (!v){ openBuild(idx); return; }
+          const nxt = Math.min(3, vlv(key) + 1);
+          if (vlv(key) >= 3 || S.souls < v.cost[nxt] || S.mat < v.mat[nxt]) return;
+          S.souls -= v.cost[nxt]; S.mat -= v.mat[nxt];
+          S.spent[key] = (S.spent[key] || 0) + v.cost[nxt];
+          S.v[key] = nxt;
+          const pp = plotPos(idx); keeperGoTo(pp.x, pp.y, "attend");
+          render();
+        }
+      });
+      if (v){
+        const el = listEl.lastChild, b = document.createElement("button");
+        b.className = "razeBtn"; b.textContent = "Raze";
+        b.onclick = () => {
+          const back = Math.floor((S.spent[key] || 0) * 0.5);
+          S.souls += back; S.v[key] = 0; S.plots[idx] = null; S.spent[key] = 0;
+          S.notice = { txt:"Pulled down. " + fmt(back) + " souls back, and the ground is clear.", t:0 };
+          evictReserved(); render();
+        };
+        el.appendChild(b);
+      }
+    }
+    noteEl.textContent = plotCount() + " plots. Kindled Flame clears more ground, to seven.";
+  }
+  refresh();
+}
+
+function evictReserved(){                 // a vendor taking a seat turns whoever had it out
+  const seats = usableSeats();
+  for (let i = 0; i < slotUsed.length; i++){
+    const a = slotUsed[i];
+    if (!a || i < seats) continue;
+    releaseSlot(a);
+    if (a.state === "hollow") continue;   // a hollow re-squats elsewhere on the next tick
+    a.state = a.state === "rest" ? "walkout" : "walkin";   // never pays twice for one rest
+  }
+}
+
+const HUD = {
+  top: document.getElementById("top"),
+  soul: document.getElementById("soulWrap"), rate: document.getElementById("rate"),
+  flame: document.getElementById("flameWrap"), book: document.getElementById("bookBtn"),
+  pop: document.getElementById("pop"), bottom: document.getElementById("bottom"),
+  tabs: document.getElementById("tabs"), build: document.querySelector('.tab[data-tab="build"]'),
+  hollow: document.getElementById("popHollow")
+};
+const fade = (el, on) => { if (!el) return;
+  el.classList.toggle("gone", !on);                 // absent, then it fades in. Never greyed.
+};
+
+function refresh(){
+  soulsEl.textContent = fmt(S.souls);
+  const life = flameLife();
+  flameFill.style.width = Math.round(life * 100) + "%";
+  flameFill.style.background = life > 0.55 ? "#ffab3d" : life > 0.25 ? "#d0796a" : "#7a8a9a";
+  flameNum.textContent = Math.round(S.flame);
+  matWrap.hidden = !S.seen.material;
+  matEl.textContent = fmt(S.mat);
+  rateEl.textContent = avgRate().toFixed(1);
+  const atFire = S.pool.filter(a => a.state === "rest" || a.state === "wait").length;
+  popEl.fire.textContent = atFire;
+  popEl.away.textContent = S.pool.filter(a => a.state === "away").length;
+  popEl.hollow.textContent = hollows().length;
+  fade(HUD.top,    revealed("souls") || revealed("flameBar") || revealed("book"));
+  fade(HUD.soul,   revealed("souls"));
+  fade(HUD.rate,   revealed("souls"));
+  fade(HUD.flame,  revealed("flameBar"));
+  fade(HUD.book,   revealed("book"));
+  fade(HUD.pop,    revealed("pop"));
+  fade(HUD.hollow, revealed("hollowCount"));
+  fade(HUD.bottom, revealed("tabs"));
+  fade(HUD.build,  revealed("build"));
+  rows.forEach(u => u());
+}
+
+/* One line, in voice, fading. Never a box and never a button to dismiss. */
+function showTip(){
+  if (S.tipSeen) return; S.tipSeen = true;
+  if (!S.offline) S.notice = { txt:"The deeper ones pay more. They also die more.", t:0 };
+}
+
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
+    S.tab = t.dataset.tab; render();
+  });
+});
+
+/* ============================ start ============================ */
+
+function timeGone(sec){
+  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  if (h >= 1) return h + (h === 1 ? " hour" : " hours") + (m ? " and " + m + " minutes" : "");
+  if (m >= 1) return m + (m === 1 ? " minute" : " minutes");
+  return "a few moments";
+}
+
+function showReturn(rep){
+  const rows = [];
+  rows.push({ html:"<em>The fire burned without me for " + timeGone(rep.seconds) + ".</em>", onClick:null });
+  rows.push({ html: rep.souls > 0
+    ? "They kept paying while I was gone. <span>" + fmt(rep.souls) + " souls</span> in the tin."
+    : "Nobody paid. The tin is where I left it.", onClick:null });
+  if (rep.found) rows.push({ html: rep.found === 1 ? "One of them came up carrying something."
+    : rep.found + " of them came up carrying something.", onClick:null });
+  if (rep.scrap) rows.push({ html:"<span>" + rep.scrap + " scrap</span> in the pile, most of it bent.", onClick:null });
+  if (rep.hollowed.length){
+    rows.push({ html:"<b>" + (rep.hollowed.length === 1 ? "One did not come back."
+      : rep.hollowed.length + " did not come back.") + "</b>", onClick:null });
+    for (const h of rep.hollowed.filter(h => h.name))
+      rows.push({ html:"<em>" + h.name + ", the " + (h.sp || "one of them")
+        + ", who got as far as depth " + h.depth +
+        ". Sitting by the fire now, and not paying.</em>", onClick:null });
+    const nameless = rep.hollowed.filter(h => !h.name);
+    if (nameless.length){
+      const deepest = Math.max.apply(null, nameless.map(h => h.depth));
+      rows.push({ html:"<em>" + (nameless.length === 1 ? "One of the unnamed, at depth " + deepest
+        : nameless.length + " of the unnamed, none of them deeper than " + deepest) +
+        ". I never learned which was which.</em>", onClick:null });
+    }
+  } else rows.push({ html:"<em>Everyone who went down came back up. That happens.</em>", onClick:null });
+  if (rep.flameDied)
+    rows.push({ html:"<b>The fire went out while you were gone.</b><br><em>Nobody was feeding it.</em>",
+                onClick:null });
+  else rows.push({ html:"The flame is at <span>" + Math.round(S.flame) + "</span> of " + S.flameMax + ".",
+                   onClick:null });
+  rows.push({ html:"<b>Take up the tongs</b>",
+    onClick: () => { closeSheet(); if (rep.flameDied) showEnd(); else saveGame(); } });
+  openSheet("While you were gone", "Nothing waits for anybody here.", rows);
+}
+
+/* Almost nothing. A basin, a few feet of cracked stone, the keeper, and no HUD. */
+function openFirstFire(){
+  S.first = true; S.beat = 0; S.rests = 0; S.nudge = null; S.bookShown = false;
+  S.flame = 15; S.flameOn = false; S.tipSeen = false;
+  S.pool = []; S.arriveT = 0;
+  for (const k in S.rev) S.rev[k] = false;
+  S.notice = { txt:OPEN_LINE[0], t:0 };
+}
+
+function boot(){
+  let save = null;
+  try { save = migrate(JSON.parse(localStorage.getItem(SAVE_KEY))); }
+  catch (e){ save = null; }
+  resize();
+  if (save){
+    restore(save);
+    const gone = Math.max(0, Math.min(OFFLINE_CAP, (Date.now() - (save.at || Date.now())) / 1000));
+    if (gone > 60){
+      const rep = runOffline(gone);
+      render();
+      showReturn(rep);
+    } else render();
+  } else { openFirstFire(); render(); }
+  refresh();
+  requestAnimationFrame(() => document.body.classList.remove("boot"));
+  setInterval(saveGame, 5000);
+  window.addEventListener("pagehide", saveGame);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) saveGame(); });
+  requestAnimationFrame(frame);
+}
+
+boot();
+
+})();
+</script>
+</body>
+</html>
