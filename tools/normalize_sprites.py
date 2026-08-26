@@ -53,6 +53,53 @@ def content_box(img, threshold):
     return alpha.getbbox()
 
 
+def despeckle(img, threshold, min_blob):
+    """Erase alpha islands smaller than min_blob pixels.
+
+    Background removal leaves specks, and a speck is not a harmless cosmetic
+    problem here: a stray dot below the feet extends the bounding box, so the
+    figure gets scaled down to fit and then hung in the air with the speck
+    sitting on the baseline. Measuring has to happen on cleaned alpha.
+
+    Returns (cleaned image, islands removed, pixels removed).
+    """
+    if min_blob <= 0:
+        return img, 0, 0
+
+    w, h = img.size
+    solid = img.getchannel("A").point(lambda v: 255 if v >= threshold else 0).load()
+    seen = bytearray(w * h)
+    doomed = []
+
+    for sy in range(h):
+        for sx in range(w):
+            if seen[sy * w + sx] or not solid[sx, sy]:
+                continue
+            stack, blob = [(sx, sy)], []
+            seen[sy * w + sx] = 1
+            while stack:                                   # iterative: 256x256 overflows recursion
+                x, y = stack.pop()
+                blob.append((x, y))
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if 0 <= nx < w and 0 <= ny < h and not seen[ny * w + nx] and solid[nx, ny]:
+                        seen[ny * w + nx] = 1
+                        stack.append((nx, ny))
+            if len(blob) < min_blob:
+                doomed.append(blob)
+
+    if not doomed:
+        return img, 0, 0
+
+    out = img.copy()
+    px = out.load()
+    n = 0
+    for blob in doomed:
+        for x, y in blob:
+            px[x, y] = (0, 0, 0, 0)
+            n += 1
+    return out, len(doomed), n
+
+
 def collect(inputs):
     files = []
     for raw in inputs:
@@ -71,14 +118,20 @@ def collect(inputs):
 def normalize(path, args):
     """Returns (before, after) as (x0, y0, x1, y1, w, h) tuples, plus warnings."""
     img = Image.open(path).convert("RGBA")
+    warn = []
+
+    img, islands, lost = despeckle(img, args.alpha_threshold, args.min_blob)
+    if islands:
+        warn.append("%s: dropped %d speck%s (%d px) before measuring"
+                    % (path.name, islands, "" if islands == 1 else "s", lost))
+
     box = content_box(img, args.alpha_threshold)
     if box is None:
-        return None, None, ["%s is fully transparent, skipped" % path.name]
+        return None, None, warn + ["%s is fully transparent, skipped" % path.name]
 
     x0, y0, x1, y1 = box
     w, h = x1 - x0, y1 - y0
     content = img.crop(box)
-    warn = []
 
     if args.no_scale:
         new_w, new_h = w, h
@@ -129,6 +182,10 @@ def main():
                          "legitimately shorter, like sit and rest")
     ap.add_argument("--alpha-threshold", type=int, default=8, metavar="N",
                     help="alpha below N counts as empty when measuring content (default 8)")
+    ap.add_argument("--min-blob", type=int, default=48, metavar="N",
+                    help="erase disconnected islands smaller than N px before measuring; "
+                         "background removal leaves specks that otherwise drag the bounding "
+                         "box out and hang the figure in the air (default 48, 0 disables)")
     args = ap.parse_args()
 
     files = collect(args.input)

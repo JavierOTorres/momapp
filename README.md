@@ -130,11 +130,12 @@ nobody can say what they were for. The item descriptions are guesses.
 
 A species can be drawn from hand-made art instead of from code. Six poses per
 species — `stand`, `walk_a`, `walk_b`, `sit`, `rest`, `weary` — under
-`assets/sprites/`, named `<species>_<pose>.png`. **Frog is the only one wired
-up.** Anything with no files keeps its code-drawn figure, so the other five
-drop in one at a time and a missing file is never worse than the art already
-there. Adding a species is one key in `SPRITE_SPECIES`, its six files, its eye
-sockets in `SOCKETS`, and a re-run of `tools/embed_sprites.py`.
+`assets/sprites/`, named `<species>_<pose>.png`. **Frog and goat are wired up;
+cat, dog, crow and rabbit are still code art.** Anything with no files keeps its
+code-drawn figure, so the rest drop in one at a time and a missing file is never
+worse than the art already there. Adding a species is one key in
+`SPRITE_SPECIES`, its six files, its eye sockets in `SOCKETS`, and a re-run of
+`tools/embed_sprites.py`.
 
 Nothing that responds to the world is baked into a sprite. The idle bob, the
 firelight, the contact shadow, gear overlays, the death pips and depth marks
@@ -157,15 +158,49 @@ widths must stay free or a wide sitting pose gets squashed), centres it, and
 sits its bottom edge on a fixed baseline. It reports before and after bounding
 boxes so alignment is checked numerically rather than by eye.
 
-    pip install Pillow
-    python3 tools/normalize_sprites.py assets/sprites_src -o assets/sprites
-    python3 tools/normalize_sprites.py assets/sprites_src/frog_sit.png \
-        assets/sprites_src/frog_rest.png -o assets/sprites --no-scale
+It also erases disconnected specks under `--min-blob` (default 48px) before
+measuring. Background removal leaves them, and a speck is not cosmetic here: a
+stray dot below the feet drags the bounding box down, so the figure gets scaled
+to fit and then hung in the air with the speck sitting on the baseline. That is
+exactly what `goat_walk_a` arrived with — two 10px flecks, five rows clear of
+the hoof, inflating its height from 219 to 235.
 
-Poses that are legitimately shorter and squatter — sit and rest — take
-`--no-scale`, which aligns the baseline without rescaling. Feet on the same
-line is what matters; a sitting figure is meant to be shorter. The six frogs
-share a baseline exactly and the four upright poses share a height exactly.
+    pip install Pillow
+
+    # frog: upright poses to a common height, sit and rest left at their own
+    python3 tools/normalize_sprites.py \
+        assets/sprites_src/frog_{stand,walk_a,walk_b,weary}.png -o assets/sprites
+    python3 tools/normalize_sprites.py \
+        assets/sprites_src/frog_{sit,rest}.png -o assets/sprites --no-scale
+
+    # goat: one height for all six, raised to keep the horns above the figure
+    python3 tools/normalize_sprites.py \
+        assets/sprites_src/goat_*.png -o assets/sprites --height 198
+
+Two knobs decide how a species is framed, and both are per species.
+
+`--no-scale` aligns the baseline without rescaling, for poses that are
+legitimately shorter and squatter. The frog's sit and rest need it. The goat's
+do not: all six goat poses were drawn at one scale, and its crouch is already in
+the art — `goat_rest` drops 11% skull-to-foot while its horns keep the overall
+height the same, so uniform scaling preserves the crouch on its own.
+
+`--height` is what matches one species to another, and it is **not** the same
+number for each. The code art keeps a constant 48px figure and lets ears and
+horns stick out above it — that is why goats get a `lift` of 9. Sprites follow
+the same rule, so the measurement that must match across species is *skull top
+to feet*, not total silhouette. The frog's raised eye domes sit 8.3% above its
+skull; the goat's horns sit 16.1% above its own. That 7.3% gap is the whole
+adjustment: 185 x 1.073 = 198. The result:
+
+| pose | skull-to-foot |
+|---|---|
+| frog stand | 44.4px |
+| goat stand, walk_a, walk_b | 44.1px |
+| goat sit, weary | 43.8px |
+| goat rest | 40.0px (crouched, as drawn) |
+
+All twelve share a baseline exactly.
 
 Then bake the result into the single file:
 
@@ -177,7 +212,10 @@ bottom of `index.html`. It is generated — never hand-edit it. Only the species
 listed in `SPRITE_SPECIES` get embedded, so art for a species that is not wired
 up yet costs nothing; it still resolves to its `assets/sprites/` path, which
 works when the folder is served, so new art can be tried before it is baked in.
-The frog's six poses cost 259KB of art and 346KB encoded.
+Twelve poses cost 550KB of art and 734KB encoded, putting `index.html` at 915KB.
+All six species would land around 2.7MB — fine for a file read off disk, but if
+it ever needs to come down, the `lit` overlays in `derivePose` are the cheapest
+thing to drop.
 
 ## The loop
 
