@@ -6,17 +6,23 @@ home richer, poorer, or not really at all. You never fight, you never leave.
 
 ## Run it
 
-Serve the folder and open `index.html` — `python3 -m http.server` is enough.
-`index.html` plus `assets/` is the whole game: no build step, no dependencies,
-no network. Design target is a 390x844 portrait viewport (mobile first); it
-stays static so it can be wrapped with Capacitor. It saves to localStorage
-every five seconds and on page hide.
+Open `index.html` in a browser. Double-clicking it is enough — no server, no
+build step, no dependencies, no network. Design target is a 390x844 portrait
+viewport (mobile first); it stays a static single file so it can be wrapped
+with Capacitor. It saves to localStorage every five seconds and on page hide.
 
-Opening the file directly over `file://` still runs, but the browser taints the
-canvas and the hollow treatment falls back to a flat tint. Serve it.
+The sprite art lives in `assets/` for authoring, but the game does not read it
+at runtime: it is baked into `index.html` as data URIs. That is what keeps
+double-clicking working — a page opened over `file://` cannot load its own
+`assets/` folder in Safari, and where it can, the images come back cross-origin
+and taint the canvas. **After changing any art, re-run
+`tools/embed_sprites.py`**, or the game will keep drawing the old sprites.
+`tools/embed_sprites.py --check` says whether `index.html` is up to date.
 
-`tools/normalize_sprites.py` is the only other thing in the repo, and the game
-never calls it. See **Sprites** below.
+Note that `file://` and `http://localhost` are different origins, so a save made
+under one is not visible under the other. Pick one and stay on it.
+
+Neither tool in `tools/` is called by the game. See **Sprites** below.
 
 ## The first fire
 
@@ -127,7 +133,8 @@ species — `stand`, `walk_a`, `walk_b`, `sit`, `rest`, `weary` — under
 `assets/sprites/`, named `<species>_<pose>.png`. **Frog is the only one wired
 up.** Anything with no files keeps its code-drawn figure, so the other five
 drop in one at a time and a missing file is never worse than the art already
-there. Adding a species is one key in `SPRITE_SPECIES` and its six files.
+there. Adding a species is one key in `SPRITE_SPECIES`, its six files, its eye
+sockets in `SOCKETS`, and a re-run of `tools/embed_sprites.py`.
 
 Nothing that responds to the world is baked into a sprite. The idle bob, the
 firelight, the contact shadow, gear overlays, the death pips and depth marks
@@ -157,10 +164,20 @@ boxes so alignment is checked numerically rather than by eye.
 
 Poses that are legitimately shorter and squatter — sit and rest — take
 `--no-scale`, which aligns the baseline without rescaling. Feet on the same
-line is what matters; a sitting figure is meant to be shorter. Raw art lives in
-`assets/sprites_src/` and the normalized output in `assets/sprites/`; only the
-latter is loaded. The six frogs share a baseline exactly and the four upright
-poses share a height exactly.
+line is what matters; a sitting figure is meant to be shorter. The six frogs
+share a baseline exactly and the four upright poses share a height exactly.
+
+Then bake the result into the single file:
+
+    python3 tools/embed_sprites.py
+
+Raw art lives in `assets/sprites_src/`, normalized output in `assets/sprites/`,
+and the copy the game actually draws from is the `SPRITE_DATA` block at the
+bottom of `index.html`. It is generated — never hand-edit it. Only the species
+listed in `SPRITE_SPECIES` get embedded, so art for a species that is not wired
+up yet costs nothing; it still resolves to its `assets/sprites/` path, which
+works when the folder is served, so new art can be tried before it is baked in.
+The frog's six poses cost 259KB of art and 346KB encoded.
 
 ## The loop
 
