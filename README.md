@@ -22,11 +22,34 @@ and taint the canvas. **After changing any art, re-run
 Note that `file://` and `http://localhost` are different origins, so a save made
 under one is not visible under the other. Pick one and stay on it.
 
-**Skills and Build open as a full-screen sheet**, from the ⚒ button in the top
-bar, rather than living in a drawer. The drawer took 44% of a 390x844 phone
-permanently and left the sanctuary a letterbox; the scene is the thing worth
-looking at, so it gets the whole screen and the lists come over the top when
-asked for. The sheet is revealed by the same beat that used to reveal the drawer.
+**Skills, Build and the Archive open from three buttons at the bottom right**, and
+the lists rise as sheets over the scene. They used to be a drawer holding 44% of a
+390x844 phone permanently, which left the sanctuary a letterbox, and then buttons
+in the top bar, which is the hardest place to reach on a phone held one-handed and
+is where the three most-tapped things in the game were sitting. Skills is furthest
+from the corner because it is tapped most and that is the easiest reach.
+
+The buttons float with no bar or panel behind them: 52px circles, 12px apart, 20px
+in from the edges, `#1a2635` at 90% over a 2px `#3d444a` border with a `#c9a882`
+glyph. Nothing in the UI is brighter than the fire, so there is no white anywhere
+in it. The glyphs are inline SVG paths — a flame, a hammer, a closed book — rather
+than emoji, which drag a whole other art style onto the screen and cannot be
+coloured to the palette.
+
+Each button carries one piece of state and no more. A warm `#f0b429` dot appears
+at its upper right when something inside can actually be bought right now, using
+the same conditions the cards use so the dot can never disagree with the buttons
+behind it. **That is the only notification in the game.** The Archive additionally
+pulses once, slowly, after the first hollowing, and opens on that entry when
+tapped — it used to open itself, which took the screen away from a player who had
+just watched somebody go out. Once only, ever; `S.bookShown` is the latch.
+
+The sheets rise from the bottom over 300ms and stop at **75%**, so the thing that
+is dying stays in shot while you shop for it, and the scene behind is dimmed to
+50% but never stops animating. Dismissed by tapping outside, swiping the header
+down, or the close control. One at a time — except the list sheet, which is a
+sub-dialog and stacks on whatever opened it. Because a sheet at 75% covers the
+dock, switching between Skills and Build happens on the tab strip inside it.
 
 Neither tool in `tools/` is called by the game. See **Sprites** below.
 

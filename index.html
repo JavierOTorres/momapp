@@ -50,15 +50,66 @@
   }
   #flameBar i{display:block;height:100%;width:100%;background:var(--ember);transition:width .3s linear}
   #flameNum{display:block;font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
-  #bookBtn{
-    flex:0 0 auto;margin-left:6px;width:34px;height:34px;border-radius:10px;
-    border:3px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;
+  /* The three things the player taps most, put where a thumb actually reaches. The
+     top corners of a phone held one-handed are the worst place on the screen, and
+     that is where these used to live. Floating, no bar and no panel behind them, so
+     the scene stays a picture. Skills is furthest from the corner because it is
+     tapped most and that is the easiest reach of the three. */
+  #dock{
+    position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));
+    z-index:18;display:flex;gap:12px;align-items:center;
   }
-  #sheet{
-    position:fixed;inset:0;z-index:22;background:#0f1512;
-    display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  #dock.gone{opacity:0;pointer-events:none}
+  #dock button{
+    position:relative;width:52px;height:52px;border-radius:50%;padding:0;
+    background:rgba(26,38,53,0.90);border:2px solid #3d444a;
+    color:#c9a882;display:flex;align-items:center;justify-content:center;
+    transition:background .12s ease,opacity .35s ease,transform .12s ease;
   }
-  #sheet[hidden]{display:none}
+  #dock button:active{background:#2a3a52;transform:scale(0.94)}
+  #dock button[hidden]{display:none}
+  #dock svg{width:26px;height:26px;display:block}
+  /* The one notification in the game: something in there can be bought right now. */
+  #dock button i{
+    position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;
+    background:var(--gold);box-shadow:0 0 0 2px rgba(26,38,53,0.9);display:none;
+  }
+  #dock button.can i{display:block}
+  @keyframes dockPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(240,180,41,0)}
+    50%    {box-shadow:0 0 0 9px rgba(240,180,41,0.28)}
+  }
+  #dock button.pulse{animation:dockPulse 2.4s ease-in-out 1}
+
+  /* Modals rise from the bottom and stop at three quarters, so the thing that is
+     dying stays in shot while you shop for it. The scene behind keeps animating; it
+     is only dimmed. */
+  #scrim{
+    position:fixed;inset:0;z-index:19;background:rgba(6,12,20,0.5);
+    opacity:0;pointer-events:none;transition:opacity .3s ease;
+  }
+  #scrim.on{opacity:1;pointer-events:auto}
+  .modal{
+    position:fixed;left:0;right:0;bottom:0;height:75%;z-index:20;
+    background:var(--panel);border-top:3px solid var(--line);
+    border-radius:20px 20px 0 0;
+    display:flex;flex-direction:column;
+    padding:0 0 env(safe-area-inset-bottom);
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.22,.9,.3,1);
+    will-change:transform;
+  }
+  .modal.up{transform:translateY(0)}
+  #bottom #tabs{margin-top:14px}
+  .modalTop{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px 10px;
+    border-bottom:3px solid var(--line);
+  }
+  .modalTop h3{font-size:14px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
+  .grab{
+    position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:44px;height:4px;border-radius:2px;background:#3d444a;
+  }
+  #sheet{z-index:22}
   #sheetList{flex:1 1 auto;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
   #sheetList button{
     text-align:left;padding:10px 12px;border:3px solid var(--line);border-radius:14px;
@@ -68,11 +119,7 @@
   #sheetList button span{color:var(--gold);font-weight:700}
   #sheetList button em{color:var(--dim);font-style:italic}
   #sheetList button:disabled{opacity:.7}
-  #book{
-    position:fixed;inset:0;z-index:20;background:#0f1512;
-    display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-  }
-  #book[hidden]{display:none}
+
   .bookTop{
     display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:3px solid var(--line);
     background:var(--panel);
@@ -196,18 +243,17 @@
      drawer took 44% of the height permanently, which left the sanctuary itself a
      letterbox. It is the thing worth looking at, so it gets the whole screen and
      the lists come over the top when asked for. */
-  #bottom{
-    position:fixed;inset:0;z-index:21;
-    background:var(--panel);
-    display:flex;flex-direction:column;
-    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-  }
-  #bottom[hidden]{display:none}
+  /* The dock is 20px off the bottom and the modal covers three quarters, so while
+     one is open its own buttons are underneath it. Switching between Skills and
+     Build therefore has to happen inside, which is what the tab strip is for. */
   #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
-  #tabs .cClose{
-    flex:0 0 auto;width:52px;border:0;border-left:3px solid var(--line);
-    background:var(--panel-2);color:var(--dim);font:inherit;font-size:15px;
+  #tabs .tab{
+    flex:1;padding:11px 0;background:var(--panel-2);color:var(--dim);
+    border:0;border-right:3px solid var(--line);
+    font:inherit;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
   }
+  #tabs .tab:last-child{border-right:0}
+  #tabs .tab.on{background:var(--panel);color:var(--gold);box-shadow:inset 0 -4px 0 var(--ember)}
   .tab{
     flex:1;padding:13px 0;background:var(--panel-2);color:var(--dim);
     border:0;border-right:3px solid var(--line);
@@ -260,8 +306,7 @@
       <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
     <div id="rate"><b>0.0</b>souls/sec</div>
     <div id="flameWrap"><div id="flameBar"><i></i></div><span id="flameNum">100</span></div>
-    <button id="menuBtn" title="Skills and building" class="gone">⚒</button>
-    <button id="bookBtn" title="The keeper's notes">📕</button>
+
   </div>
   <div id="pop" class="gone">
     <span><i class="dFire"></i><em id="pFire">0</em> at fire</span>
@@ -315,7 +360,10 @@
     </div>
   </div>
 
-  <div id="sheet" hidden>
+  <div id="scrim"></div>
+
+  <div id="sheet" class="modal" hidden>
+    <i class="grab"></i>
     <div class="bookTop">
       <div><h3 id="sheetTitle"></h3><p id="sheetSub"></p></div>
       <button class="cClose" id="sheetX" style="margin-left:auto">✕</button>
@@ -323,7 +371,8 @@
     <div id="sheetList"></div>
   </div>
 
-  <div id="book" hidden>
+  <div id="book" class="modal" hidden>
+    <i class="grab"></i>
     <div class="bookTop">
       <div><h3>The keeper's notes</h3><p>Kept because no one else was going to.</p></div>
       <button class="cClose" id="bookX" style="margin-left:auto">✕</button>
@@ -331,14 +380,38 @@
     <div id="bookList"></div>
   </div>
 
-  <div id="bottom" hidden>
+  <div id="bottom" class="modal" hidden>
+    <i class="grab"></i>
     <div id="tabs">
       <button class="tab on" data-tab="skills">Skills</button>
       <button class="tab gone" data-tab="build">Build</button>
-      <button class="cClose" id="bottomX" title="Back to the fire">✕</button>
+      <button class="cClose" id="bottomX" title="Back to the fire"
+              style="flex:0 0 auto;width:52px;border-left:3px solid var(--line);background:var(--panel-2);color:var(--dim);font:inherit;font-size:15px">✕</button>
     </div>
     <div id="list"></div>
     <div class="note" id="note"></div>
+  </div>
+
+  <!-- Glyphs are paths, not emoji: emoji drag a whole other art style onto the
+       screen and cannot be coloured to the palette. -->
+  <div id="dock" class="gone">
+    <button id="dSkills" title="Skills" aria-label="Skills"><svg viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M12 3c3.6 3.6 5.6 6.2 5.6 9.1A5.6 5.6 0 0 1 12 21a5.6 5.6 0 0 1-5.6-8.9C6.4 9.2 8.4 6.6 12 3Z"/>
+      <path d="M12 12.4c1.5 1.6 2.2 2.7 2.2 3.8a2.2 2.2 0 0 1-4.4 0c0-1.1.7-2.2 2.2-3.8Z"/>
+    </svg><i></i></button>
+    <button id="dBuild" title="Build" aria-label="Build" hidden><svg viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M4 20.2 13.2 11"/>
+      <path d="M11.4 6.3 15 2.8l6.2 6.2-3.5 3.5z"/>
+      <path d="m10.2 7.5 6.3 6.3"/>
+    </svg><i></i></button>
+    <button id="dBook" title="The keeper's notes" aria-label="The keeper's notes"><svg viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M5 3.6h11.4a2 2 0 0 1 2 2v14.8H7a2 2 0 0 1-2-2Z"/>
+      <path d="M5 17.2h13.4"/>
+      <path d="M8.6 7.6h6.2"/>
+    </svg><i></i></button>
   </div>
 </div>
 
@@ -980,11 +1053,21 @@ const hollowWindow = () => vlv("ossu") >= 2 ? 60 : T.HOLLOW_WINDOW;
 /* They stand up and walk out on their own if nobody decides for them. */
 /* Beat 10. Whatever the player did about the first hollow, including nothing, the
    book opens once on the entry about it — the one moment they will want to know. */
+/* The Archive used to open itself here. It pulses once instead and waits to be
+   tapped, which says the same thing without taking the screen away from a player who
+   has just watched somebody go out. Once only, ever: S.bookShown is the latch. */
+let bookNudge = null;
+
 function hollowResolved(){
   if (!S.first || S.beat < 9 || S.bookShown) return;
   S.bookShown = true;
   if (S.offline){ beatTo(10); return; }
-  setTimeout(() => { openBook("Hollowing"); beatTo(10); }, 1500);
+  setTimeout(() => {
+    bookNudge = "Hollowing";
+    const b = document.getElementById("dBook");
+    if (b){ b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse"); }
+    beatTo(10);
+  }, 1500);
 }
 
 function depart(a, quiet){
@@ -3586,7 +3669,7 @@ function endRun(voluntary){
                 kept: living().length, hollowed: hollows().length,
                 minutes: Math.max(1, Math.round(S.elapsed / 60)), voluntary };
   S.flame = 0;
-  closeCounsel(); closeArtifact(); closeSheet(); bookEl.hidden = true;
+  closeCounsel(); closeArtifact(); closeSheet(); showModal(bookEl, false);
   setTimeout(showEnd, voluntary ? 900 : 2600);     // let the light go out first
 }
 
@@ -3808,7 +3891,58 @@ function drawGesture(dt){
 
 const sheetEl = document.getElementById("sheet");
 const sheetList = document.getElementById("sheetList");
-document.getElementById("sheetX").addEventListener("click", ()=>{ sheetEl.hidden = true; });
+/* One controller for all three. They rise from the bottom and stop at three
+   quarters, so the thing that is dying stays in shot while you shop for it, and the
+   scene behind is only dimmed -- it never stops. Primary modals replace each other;
+   the sheet is a sub-dialog and stacks on whatever opened it. */
+const scrimEl = document.getElementById("scrim");
+const modalStack = [];
+
+function closeModalEl(el){
+  const i = modalStack.indexOf(el);
+  if (i >= 0) modalStack.splice(i, 1);
+  el.classList.remove("up");
+  setTimeout(() => { if (!el.classList.contains("up")) el.hidden = true; }, 320);
+  if (!modalStack.length) scrimEl.classList.remove("on");
+}
+
+function showModal(el, on){
+  if (!on) return closeModalEl(el);
+  if (el !== sheetEl)
+    for (const m of modalStack.slice()) if (m !== el) closeModalEl(m);
+  if (!modalStack.includes(el)) modalStack.push(el);
+  el.hidden = false;
+  scrimEl.classList.add("on");
+  requestAnimationFrame(() => el.classList.add("up"));   // laid out first, then it slides
+}
+
+scrimEl.addEventListener("click", () => {
+  if (modalStack.length) closeModalEl(modalStack[modalStack.length - 1]);
+});
+
+/* Swiped down by the handle or the header. Bound there rather than to the whole
+   sheet so it never fights the list trying to scroll. */
+document.querySelectorAll(".modal").forEach(m => {
+  let y0 = null;
+  const grip = e => { y0 = e.touches ? e.touches[0].clientY : e.clientY; };
+  const move = e => {
+    if (y0 == null) return;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    if (y - y0 > 56){ y0 = null; closeModalEl(m); }
+  };
+  const drop = () => { y0 = null; };
+  for (const t of [m.querySelector(".grab"), m.querySelector(".bookTop"), m.querySelector("#tabs")]){
+    if (!t) continue;
+    t.addEventListener("touchstart", grip, { passive:true });
+    t.addEventListener("touchmove", move, { passive:true });
+    t.addEventListener("touchend", drop);
+    t.addEventListener("pointerdown", grip);
+    t.addEventListener("pointermove", move);
+    t.addEventListener("pointerup", drop);
+  }
+});
+
+document.getElementById("sheetX").addEventListener("click", ()=>{ showModal(sheetEl, false); });
 
 function openSheet(title, sub, rows){
   document.getElementById("sheetTitle").textContent = title;
@@ -3820,9 +3954,9 @@ function openSheet(title, sub, rows){
     if (r.onClick) b.onclick = () => { r.onClick(); };
     sheetList.appendChild(b);
   }
-  sheetEl.hidden = false;
+  showModal(sheetEl, true);
 }
-const closeSheet = () => { sheetEl.hidden = true; };
+const closeSheet = () => { showModal(sheetEl, false); };
 
 function gearSummary(a){
   const bits = A_SLOTS.map(k => {
@@ -4153,8 +4287,8 @@ function openBook(focus){
     el.onclick = e.go;
     bookList.appendChild(el);
   }
-  bookEl.hidden = false;
-  if (want) want.scrollIntoView({ block:"center" });
+  showModal(bookEl, true);
+  if (want) setTimeout(() => want.scrollIntoView({ block:"center" }), 340);
 }
 function openDead(){
   const d = S.meta.dead;
@@ -4169,7 +4303,7 @@ function openDead(){
 
 let armed = false;
 function openBook2(){
-  bookEl.hidden = true;
+  showModal(bookEl, false);
   openSheet("Let it go out", "The fire is at " + Math.round(S.flame) + ".", [
     { html:"<em>Ending it now keeps what the run was worth. Waiting keeps nothing but the waiting.</em>",
       onClick:null },
@@ -4179,14 +4313,33 @@ function openBook2(){
   ]);
 }
 
-document.getElementById("bookBtn").addEventListener("click", () => openBook());
-document.getElementById("bookX").addEventListener("click", ()=>{ bookEl.hidden = true; });
+document.getElementById("bookX").addEventListener("click", ()=>{ showModal(bookEl, false); });
 
 const skillShown = k => !S.first ? true
   : k === "flame"  ? true
   : k === "word"   ? S.rev.skWord
   : k === "circle" ? S.rev.skCircle
   : S.rev.skEcho;                     // paying double means nothing before depth does
+
+/* Can anything in there be bought this second? Deliberately the same conditions the
+   cards themselves use, so the dot can never disagree with the buttons behind it. */
+function skillsAffordable(){
+  for (const n of NODES){
+    if (!skillShown(n.key)) continue;
+    if ((!n.max || S.lv[n.key] < n.max) && S.souls >= cost(n)) return true;
+  }
+  if (revealed("skRite") && hollows().length && S.souls >= rekCost(hollows()[0])) return true;
+  return false;
+}
+function buildAffordable(){
+  for (let i = 0; i < plotCount(); i++){
+    const key = S.plots[i];
+    if (!key) return VENDORS.some(v => S.souls >= v.cost[1] && S.mat >= v.mat[1]);
+    const v = VMAP[key], nx = vlv(key) + 1;
+    if (nx <= 3 && S.souls >= v.cost[nx] && S.mat >= v.mat[nx]) return true;
+  }
+  return false;
+}
 
 function render(){
   listEl.innerHTML = ""; rows = [];
@@ -4278,9 +4431,12 @@ function evictReserved(){                 // a vendor taking a seat turns whoeve
 const HUD = {
   top: document.getElementById("top"),
   soul: document.getElementById("soulWrap"), rate: document.getElementById("rate"),
-  flame: document.getElementById("flameWrap"), book: document.getElementById("bookBtn"),
+  flame: document.getElementById("flameWrap"),
   pop: document.getElementById("pop"), bottom: document.getElementById("bottom"),
-  menu: document.getElementById("menuBtn"),
+  dock: document.getElementById("dock"),
+  dSkills: document.getElementById("dSkills"),
+  dBuild: document.getElementById("dBuild"),
+  dBook: document.getElementById("dBook"),
   tabs: document.getElementById("tabs"), build: document.querySelector('.tab[data-tab="build"]'),
   hollow: document.getElementById("popHollow")
 };
@@ -4305,10 +4461,17 @@ function refresh(){
   fade(HUD.soul,   revealed("souls"));
   fade(HUD.rate,   revealed("souls"));
   fade(HUD.flame,  revealed("flameBar"));
-  fade(HUD.book,   revealed("book"));
+
   fade(HUD.pop,    revealed("pop"));
   fade(HUD.hollow, revealed("hollowCount"));
-  fade(HUD.menu,   revealed("tabs"));   // the sheet is opened, not always present
+  fade(HUD.dock,   revealed("tabs") || revealed("book"));
+  HUD.dBuild.hidden = !revealed("build");
+  HUD.dBook.hidden  = !revealed("book");
+  HUD.dSkills.hidden = !revealed("tabs");
+  /* The only notification in the game: a warm dot when something in there can
+     actually be bought right now. Nothing else ever asks for attention. */
+  HUD.dSkills.classList.toggle("can", revealed("tabs") && skillsAffordable());
+  HUD.dBuild.classList.toggle("can", revealed("build") && buildAffordable());
   fade(HUD.build,  revealed("build"));
   rows.forEach(u => u());
 }
@@ -4319,11 +4482,19 @@ function showTip(){
   if (!S.offline) S.notice = { txt:"The deeper ones pay more. They also die more.", t:0 };
 }
 
-function openPanel(on){
-  HUD.bottom.hidden = !on;
+function openPanel(on, tab){
+  if (tab) S.tab = tab;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === S.tab));
   if (on) render();
+  showModal(HUD.bottom, on);
 }
-HUD.menu.addEventListener("click", () => openPanel(true));
+HUD.dSkills.addEventListener("click", () => openPanel(true, "skills"));
+HUD.dBuild.addEventListener("click", () => openPanel(true, "build"));
+HUD.dBook.addEventListener("click", () => {
+  const focus = bookNudge;                       // armed once, by the first hollowing
+  bookNudge = null; HUD.dBook.classList.remove("pulse");
+  openBook(focus || undefined);
+});
 document.getElementById("bottomX").addEventListener("click", () => openPanel(false));
 
 document.querySelectorAll(".tab").forEach(t => {
