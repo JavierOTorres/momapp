@@ -24,9 +24,8 @@ under one is not visible under the other. Pick one and stay on it.
 
 Neither tool in `tools/` is called by the game. See **Sprites** below.
 
-`assets/background/` and `assets/props/` hold art that is **not wired up yet** —
-nothing in the game reads them. See **Props and background** below for what is
-still needed before they can be.
+`assets/background/` and `assets/props/` are wired up and embedded the same way
+the sprites are. See **Props and background** below.
 
 ## The first fire
 
@@ -230,47 +229,68 @@ thing to drop.
 
 ## Props and background
 
-`assets/background/bg_sanctuary.png` and the eleven `assets/props/prop_*.png`
-are in place and named to the manifest, but **nothing renders them yet** and
-they do not meet the contract the manifest sets for them. Three things are
-outstanding, and the first needs new exports rather than code.
+The temple itself: one back wall and eleven pieces of fallen stone, embedded like
+the sprites and drawn on the same terms. If any of it fails to load the
+code-drawn columns come back and the wall simply is not there, so a bad file is
+never worse than what was already on screen.
 
-**Resolution.** The manifest asks for props at roughly 512 on the longest side
-and the background at 1024x1024. Everything arrived at 256x256. The camera
-reaches 1.83x zoom at the opening, which on a 3x display is 5.48 device pixels
-per world pixel, so a prop drawn at its stated in-game height is magnified well
-past its source:
+**The light builds it.** Nothing here is drawn at a dying fire. The wall fades in
+from a light radius of 58 and the props from 72, the same threshold the code
+columns used, so the opening is still a flame alone in the dark and the temple
+assembles as the fire grows.
 
-| prop | in-game height | content | device px needed | upscale |
+**Everything is lit by the fire, not by itself.** This was the whole of the work.
+Art arrives evenly lit, which is the one thing nothing else in this scene is. The
+wall gets the firelight falloff painted back over it — cheap, because it is drawn
+before the ground, when the only things on the canvas are the wall and the void
+behind it. Each prop carries a darkened twin built at load, and proximity
+cross-fades the lit original over it, which is what the code columns got for free
+by being painted in palette colours in the first place. Their luminance was never
+the problem: the props sit at median 70 against `C.stone` 48 and `C.stoneLit` 67,
+already darker than the character sprites at 103.
+
+**Placement is in units of the light radius**, not angles, so the ring grows with
+the flame the way the seats and dais already do. Angles were the obvious first
+try and the wrong control surface — the seats occupy a ring 1.18 radii wide,
+which at this viewport already reaches the frame edge, so the only free ground is
+behind the seats and in front of them, and polar offsets kept flinging the
+columns off-screen. Anything standing behind the dais is drawn *before* it, or
+its base paints over the stone and it reads as standing on the dais rather than
+behind it.
+
+`tools/clean_art.py` does for props what the normalizer does for characters:
+strips the magenta chroma-key halo the generators leave on outlines, despeckles,
+and crops tight. The crop is the important one — a prop is placed by its ground
+contact, so a transparent row underneath floats it by exactly that much, and all
+eleven arrived floating between 7px and 85px. The background is exempt from the
+crop, since the empty space above its wall is what carries its position.
+
+    python3 tools/clean_art.py assets/props_src -o assets/props
+    python3 tools/clean_art.py assets/background_src -o assets/background --no-crop
+    python3 tools/embed_sprites.py
+
+### The one thing not fixed
+
+The art is 256x256. The manifest asks for 512 on the longest side for props and
+1024x1024 for the background, and that gap cannot be closed in code — no amount
+of resampling puts back detail that was never exported. Measured against the live
+camera at the flame levels where props are actually drawn:
+
+| fire | light radius | zoom | column_upright needs / has | upscale |
 |---|---|---|---|---|
-| column_upright | 130 | 101x241 | 712 | 3.0x |
-| column_leaning | 120 | 138x244 | 658 | 2.7x |
-| statue_headless | 110 | 102x237 | 603 | 2.5x |
-| head_fallen | 55 | 253x119 | 301 | 2.5x |
-| relief | 80 | 243x193 | 438 | 2.3x |
-| statue_slab | 90 | 184x243 | 493 | 2.0x |
+| just lit | 75 | 1.58 | 618 / 240 | 2.6x |
+| growing | 96 | 1.38 | 540 / 240 | 2.3x |
+| established | 149 | 0.99 | 386 / 240 | 1.6x |
 
-The small ground props (rubble, root, moss, water) land between 1.4x and 1.8x,
-which is survivable. The tall stone is not: those are the pieces the eye rests
-on. The background is 4x short on each axis and stretches across the whole
-frame, so it is the worst case of all.
+So it is softest exactly when the temple first appears and settles to 1.6x once
+the fire is up, which is where a player spends most of their time. Re-exporting
+at the manifest sizes is a drop-in: clean_art.py and the embedder pick the new
+files up with no code change.
 
-**Tight crop.** The manifest requires props tight-cropped with zero transparent
-rows below the lowest pixel. None of the eleven are — every one is a 256x256
-canvas with the art floating inside it. That matters because a prop is placed by
-its ground contact: transparent rows underneath it float it off the ground, the
-same failure the goat's stray specks caused. Trivial to fix in a tool pass once
-the final exports land.
-
-**Magenta.** Five props carry chroma-key residue around their outlines:
-column_stump 85px, column_leaning 46px, statue_slab 29px, column_upright 13px,
-relief 6px. The background is clean — the empty space above its wall came
-through as real transparency, which is better than the manifest asked for.
-
-One to check rather than fix: `prop_column_stump` is described as a snapped
-column base at in-game height 45, but its art is 175x234 — nearly the same tall,
-rooted, broken-slab shape as `prop_statue_slab`. At height 45 it would render
-about 34px wide. Either the art or the height is not what was intended.
+`prop_column_stump` is a second, smaller mismatch. The manifest calls it a
+snapped column base at height 45, but the art is a 175x234 rooted slab, which at
+45 renders 34px wide. It is drawn at 78 instead, sized to what the art actually
+is. If the stubby version turns up, set it back to 45 and nothing else changes.
 
 ## The loop
 

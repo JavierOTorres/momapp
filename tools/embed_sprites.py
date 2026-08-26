@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "index.html"
 SPRITES = ROOT / "assets" / "sprites"
+EXTRA = [ROOT / "assets" / "props", ROOT / "assets" / "background"]
 
 START = "/* sprite-data:start */"
 END = "/* sprite-data:end */"
@@ -39,6 +40,11 @@ def wired_species(html):
     return re.findall(r'"([^"]+)"', m.group(1))
 
 
+def encode(f):
+    raw = f.read_bytes()
+    return len(raw), base64.b64encode(raw).decode("ascii")
+
+
 def build(species):
     entries, total, missing = [], 0, []
     for key in species:
@@ -47,10 +53,17 @@ def build(species):
             if not f.is_file():
                 missing.append(f.relative_to(ROOT).as_posix())
                 continue
-            raw = f.read_bytes()
-            total += len(raw)
-            b64 = base64.b64encode(raw).decode("ascii")
+            n, b64 = encode(f)
+            total += n
             entries.append('  "%s_%s": "data:image/png;base64,%s"' % (key, pose, b64))
+    # props and the background go in whole, keyed by filename
+    for folder in EXTRA:
+        if not folder.is_dir():
+            continue
+        for f in sorted(folder.glob("*.png")):
+            n, b64 = encode(f)
+            total += n
+            entries.append('  "%s": "data:image/png;base64,%s"' % (f.stem, b64))
     body = "const SPRITE_DATA = {\n" + ",\n".join(entries) + "\n};" if entries \
         else "const SPRITE_DATA = {};"
     return body, total, missing
@@ -83,7 +96,10 @@ def main():
 
     INDEX.write_text(updated)
     n = len(species) * len(POSES) - len(missing)
-    print("embedded %d sprite%s for %s" % (n, "" if n == 1 else "s", ", ".join(species) or "nothing"))
+    extra = sum(len(list(f.glob("*.png"))) for f in EXTRA if f.is_dir())
+    print("embedded %d character sprite%s (%s) and %d prop/background file%s"
+          % (n, "" if n == 1 else "s", ", ".join(species) or "nothing",
+             extra, "" if extra == 1 else "s"))
     print("  art      %8d bytes" % total)
     print("  encoded  %8d bytes" % (len(body) - 30))
     print("  index    %8d -> %d bytes" % (len(html), len(updated)))
