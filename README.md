@@ -24,6 +24,10 @@ under one is not visible under the other. Pick one and stay on it.
 
 Neither tool in `tools/` is called by the game. See **Sprites** below.
 
+`assets/background/` and `assets/props/` hold art that is **not wired up yet** —
+nothing in the game reads them. See **Props and background** below for what is
+still needed before they can be.
+
 ## The first fire
 
 A new player used to arrive into flame decay, hollowing, gear binding, routing,
@@ -223,6 +227,50 @@ Twelve poses cost 550KB of art and 734KB encoded, putting `index.html` at 915KB.
 All six species would land around 2.7MB — fine for a file read off disk, but if
 it ever needs to come down, the `lit` overlays in `derivePose` are the cheapest
 thing to drop.
+
+## Props and background
+
+`assets/background/bg_sanctuary.png` and the eleven `assets/props/prop_*.png`
+are in place and named to the manifest, but **nothing renders them yet** and
+they do not meet the contract the manifest sets for them. Three things are
+outstanding, and the first needs new exports rather than code.
+
+**Resolution.** The manifest asks for props at roughly 512 on the longest side
+and the background at 1024x1024. Everything arrived at 256x256. The camera
+reaches 1.83x zoom at the opening, which on a 3x display is 5.48 device pixels
+per world pixel, so a prop drawn at its stated in-game height is magnified well
+past its source:
+
+| prop | in-game height | content | device px needed | upscale |
+|---|---|---|---|---|
+| column_upright | 130 | 101x241 | 712 | 3.0x |
+| column_leaning | 120 | 138x244 | 658 | 2.7x |
+| statue_headless | 110 | 102x237 | 603 | 2.5x |
+| head_fallen | 55 | 253x119 | 301 | 2.5x |
+| relief | 80 | 243x193 | 438 | 2.3x |
+| statue_slab | 90 | 184x243 | 493 | 2.0x |
+
+The small ground props (rubble, root, moss, water) land between 1.4x and 1.8x,
+which is survivable. The tall stone is not: those are the pieces the eye rests
+on. The background is 4x short on each axis and stretches across the whole
+frame, so it is the worst case of all.
+
+**Tight crop.** The manifest requires props tight-cropped with zero transparent
+rows below the lowest pixel. None of the eleven are — every one is a 256x256
+canvas with the art floating inside it. That matters because a prop is placed by
+its ground contact: transparent rows underneath it float it off the ground, the
+same failure the goat's stray specks caused. Trivial to fix in a tool pass once
+the final exports land.
+
+**Magenta.** Five props carry chroma-key residue around their outlines:
+column_stump 85px, column_leaning 46px, statue_slab 29px, column_upright 13px,
+relief 6px. The background is clean — the empty space above its wall came
+through as real transparency, which is better than the manifest asked for.
+
+One to check rather than fix: `prop_column_stump` is described as a snapped
+column base at in-game height 45, but its art is 175x234 — nearly the same tall,
+rooted, broken-slab shape as `prop_statue_slab`. At height 45 it would render
+about 34px wide. Either the art or the height is not what was intended.
 
 ## The loop
 
