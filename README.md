@@ -156,11 +156,79 @@ the furthest thing in the room and the dais is the brightest surface after the
 fire, so that pair has to come apart.
 
 The hand-made sprites were drawn in the old muted colours. Rather than redraw
-them, they are **re-tinted at load**: the hue rotation and saturation and value
-scaling that carries a species' `art` colour to its new `body` colour, applied
-per pixel, with the outline left alone because it carries no hue and lifting it
-would soften the one thing holding the style together. Frog lands on `#73843e`
-against a target of `#6f8a3e`, goat on `#a58c6c` against `#a08d6e`.
+them, they are **re-tinted at load** by a two-point remap. A single hue-and-
+saturation shift was the first attempt and it is not enough: it lands the body
+colour and then drags every lighter tone with it by the same factor, which took
+the frog's face plate to an acid green nothing asked for. The art has two tones,
+a body and a plate lifted off it, so both get anchored — read the sprite's own
+dark and light tones off a luminance histogram, remap every pixel along that axis
+onto the species' `body` and `plate`, leave the outline alone. Shading inside a
+tone survives as position along the axis. It lands within a unit or two:
+
+| | frog body | frog plate | goat body | goat plate |
+|---|---|---|---|---|
+| target | `#6f8a3e` | `#90b351` | `#a08d6e` | `#d0b78f` |
+| result | `#708c3f` | `#90b351` | `#a99574` | `#d1b890` |
+
+### The frame
+
+The fire sits at **55% of the scene height**, set explicitly rather than by
+centring the scene bounds — the bounds are weighted by everything above the fire,
+which is what left the sanctuary riding high with dead floor beneath it. The ring
+fills more of the width (the camera's margin dropped from 24 to 10), and three
+pieces of stone sit at the very bottom edge, closer to the camera than the ring
+and cropped by the frame. Those are drawn near-silhouette and cold, because they
+are outside the firelight: dark foreground, warm lit middle, dark backdrop.
+
+The fire **spreads rather than climbs**. Width and height grow at different rates
+on purpose; at the same rate it stayed a spike however much fuel went in. Measured
+across the flame's own silhouette:
+
+| Kindled Flame | 0 | 2 | 4 | 8 |
+|---|---|---|---|---|
+| width / height | 0.50 | 0.79 | **1.05** | **1.52** |
+
+Wider than tall from 4, which is what the spec asked for, over three or more
+visible logs.
+
+`prop_relief` is **out of the rotation**. Free-standing it read as a billboard in
+open space and competed with the backdrop wall, which carries carved figures of
+its own. The file is still there and still embedded; if it returns it belongs
+flush against the wall as architecture.
+
+The **grain overlay is gone**. It earned its place when every shape was flat code
+art; over real sprites it only muddied the warm-to-cool separation.
+
+The **relics lie on the floor**, centred at the bottom of the ring, with contact
+shadows and no shelf, border or panel. They used to be a rack parked off to one
+side, which read as a UI tray that happened to be inside the picture. Tapping one
+still opens the list.
+
+### The room is alive
+
+Nothing here is a mechanic and none of it costs an asset. It exists so that a
+player who does nothing for a minute has something to watch, which is the whole
+difference between a room and a diagram.
+
+- The fire **cracks** every eight to fifteen seconds — a flare, a spray of sparks,
+  and the backdrop wall brightens with it. It cracks less often as it dies.
+- **Embers** rise off the flame and cool as they go; **dust** drifts slowly, sparse
+  and only where the light reaches. The light radius itself is never quite steady.
+- The keeper has **business of their own**: crouching to feed the fire, walking the
+  ring, stopping to look at a statue, and — when someone has hollowed — standing
+  with them while the window runs down.
+- Animals **shift, glance up and turn toward whoever just walked in**. The glance
+  is a swap into the `sit` pose that already exists and the turn is the mirror the
+  sprites already have, so both cost a flag.
+- **Roots and moss sway**, the pool carries a **reflection of the fire**, and once
+  every couple of minutes **something in a doorway moves**. It is never identified
+  and nothing comes of it.
+- On a hollowing the **whole room drops for half a second** and comes back.
+
+Measured over sixty seconds of no input at all, the frame-to-frame change never
+falls to zero: 2.5 to 11.7 mean pixel delta across ten samples. Nothing is drawn
+over the scene but the event lines, the floating payment numbers, and the pips,
+which now sit tucked under the feet rather than floating below them.
 
 A hollow keeps its silhouette exactly — same species, same garment shape — and
 loses everything else: the face plate goes dark, the eyes become empty sockets,

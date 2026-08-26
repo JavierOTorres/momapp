@@ -755,7 +755,7 @@ const CAM = { z:1, cy:0, oy:0, set:false };
 function sceneBounds(){
   const onStage = S.pool.some(a => a.state !== "away");
   const R = lightR();
-  let halfW = onStage ? RING_R + 24 : Math.max(R * 1.35, 66);
+  let halfW = onStage ? RING_R + 10 : Math.max(R * 1.35, 66);
   let top   = onStage ? fy - RING_R * 0.52 - 66 : fy - Math.max(R * 0.62, 52);
   let bot   = Math.max(emberY() + 12, fy + (onStage ? RING_R * 0.52 + 48 : R * 0.5 + 26));
   for (let i = 0; i < plotCount(); i++){          // built ground has to stay in shot
@@ -781,7 +781,12 @@ function camera(dt){
   const availH = Math.max(80, H - barH);
   const z = Math.max(0.85, Math.min(3.2, Math.min((W - 10) / (b.halfW * 2),
                                                   availH / Math.max(60, b.bot - b.top))));
-  const cy = (b.top + b.bot) / 2, oy = barH + availH / 2;
+  /* Put the fire itself at 55% of the scene, slightly below centre: it leaves
+     headroom for the backdrop and drops the ring where a thumb rests. Centring the
+     scene *bounds* instead is what left the sanctuary riding high with dead floor
+     under it, because the bounds are weighted by everything above the fire. */
+  const cy = (b.top + b.bot) / 2;
+  const oy = Math.max(barH + 40, H * 0.55 - (fy - cy) * z);
   if (!CAM.set){ CAM.z = z; CAM.cy = cy; CAM.oy = oy; CAM.set = true; }
   else {
     const k = Math.min(1, dt * 1.6);              // the pull-back is a drift, never a cut
@@ -833,7 +838,14 @@ function recruit(){
               garb:pickGarb(sp.key),
               tone:TONES[(S.nextId - 1) % TONES.length], state:"walkin", t:0,
               x:0, y:0, dir:1, exit:0, bob:Math.random() * 6, queue:0 };
-  edgeSpawn(a); S.pool.push(a); return a;
+  edgeSpawn(a);
+  /* Whoever is already seated notices. Some of them turn toward the door, the rest
+     carry on, and it is only a flag and the mirror the sprites already have. */
+  for (const o of S.pool)
+    if (o.state === "rest" && Math.random() < 0.45){
+      o.lookT = 2.2 + Math.random(); o.look = a.x > o.x ? 1 : -1;
+    }
+  S.pool.push(a); return a;
 }
 
 function earn(n, x, y, doubled){
@@ -996,6 +1008,7 @@ function depart(a, quiet){
 
 function goHollow(a){                     // the thing the whole system exists to produce
   a.state = "hollow"; a.t = 0; a.hollowT = 0; S.seen.hollow = true;
+  dimT = 0.55;                                    // the whole room drops, and comes back
   S.flame = Math.max(0, S.flame - (T.HOLLOW_HIT + peakOf(a) * T.HOLLOW_HIT_PER_DEPTH));
   const others = hollows().filter(o => o !== a);
   while (others.length >= T.HOLLOW_CAP) depart(others.shift(), true);   // never a wall of grey
@@ -1044,6 +1057,15 @@ function updatePool(dt){
   for (const a of S.pool){
     if (a.state === "hollow") continue;
     a.bob += dt * 9;
+    /* Small, cheap, and none of it is a mechanic: a seated animal shifts, looks up,
+       and turns toward whoever just walked in. The glance is a pose swap into art
+       that already exists, so it costs nothing. */
+    a.stir = Math.max(0, (a.stir || 0) - dt);
+    a.lookT = Math.max(0, (a.lookT || 0) - dt);
+    if ((a.idleT = (a.idleT || Math.random() * 7) - dt) <= 0){
+      a.idleT = 5 + Math.random() * 11;
+      a.stir = 1;
+    }
     if (a.state === "walkin"){
       if (a.slot < 0 && !claimSlot(a)){ a.state = "wait"; a.t = 0.4; continue; }
       const p = slotPos(a.slot), dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
@@ -1535,8 +1557,9 @@ function drawGround(time){
     const rl = r.len * reach;
     const x1 = x0 + Math.cos(r.a) * rl, y1 = y0 + Math.sin(r.a) * rl * 0.45;
     ctx.strokeStyle = C.root; ctx.lineWidth = LW.inner + 1.5;
+    const sway = Math.sin(time * 0.55 + r.a * 3) * 2.4;   // almost imperceptible, never still
     ctx.beginPath(); ctx.moveTo(x0, y0);
-    ctx.quadraticCurveTo((x0 + x1) / 2 + r.k * 10, (y0 + y1) / 2 - 6, x1, y1);
+    ctx.quadraticCurveTo((x0 + x1) / 2 + r.k * 10 + sway, (y0 + y1) / 2 - 6, x1, y1);
     ctx.globalAlpha = 0.5 + 0.5 * seen(R); ctx.stroke(); ctx.globalAlpha = 1;
   }
 
@@ -1553,8 +1576,9 @@ function drawGround(time){
     ctx.beginPath(); ctx.moveTo(fx - R, fy - 10 + i * 22); ctx.lineTo(fx + R, fy - 16 + i * 22); ctx.stroke();
   }
   ctx.globalAlpha = 1; ctx.restore();
-  shape(()=>ctx.ellipse(fx - R * 0.55, fy + 30, R * 0.30, R * 0.13, 0.3, 0, 6.2832), C.moss, 0);
-  shape(()=>ctx.ellipse(fx + R * 0.62, fy + 8, R * 0.22, R * 0.10, -0.2, 0, 6.2832), C.moss, 0);
+  const mw = Math.sin(time * 0.42) * 0.03;              // the moss moves, barely
+  shape(()=>ctx.ellipse(fx - R * 0.55, fy + 30, R * 0.30, R * 0.13, 0.3 + mw, 0, 6.2832), C.moss, 0);
+  shape(()=>ctx.ellipse(fx + R * 0.62, fy + 8, R * 0.22, R * 0.10, -0.2 - mw, 0, 6.2832), C.moss, 0);
 
   // worn relief, too far gone to read
   ctx.globalAlpha = 0.5; ctx.strokeStyle = C.relief; ctx.lineWidth = LW.detail;
@@ -1640,6 +1664,96 @@ function rimLight(cx, cy, w, h, r){
   ctx.restore();
 }
 
+/* ===================== the room is alive =====================
+   None of this is a mechanic and none of it costs an asset. It exists so that a
+   player who does nothing for a minute has something to watch, which is the
+   difference between a room and a diagram. */
+let popT   = 5 + Math.random() * 8;   // seconds until the fire next cracks
+let popFl  = 0;                       // how much of that crack is still lighting the room
+let motes  = [];                      // embers off the flame, and dust in the light
+let emT    = 0, dustT = 0;
+let doorT  = 70 + Math.random() * 120;// something in a doorway, very rarely
+let doorFx = 0;
+let dimT   = 0;                       // the half second the room loses when someone hollows
+let flick  = 1;                       // the light is never perfectly steady
+
+function tickLife(dt, time){
+  const life = flameLife();
+  flick = 0.986 + 0.022 * (0.5 + 0.5 * Math.sin(time * 6.7)) + (Math.random() - 0.5) * 0.010;
+
+  popT -= dt * (0.35 + 0.65 * life);            // a dying fire cracks less often
+  if (popT <= 0){
+    popT = 8 + Math.random() * 7;
+    popFl = 1; flare = Math.max(flare, 0.45 * life);
+    const n = 6 + (Math.random() * 7 | 0);
+    for (let i = 0; i < n; i++)
+      S.sparks.push({ x:fx + (Math.random() - 0.5) * 26, y:fy - 16,
+                      vx:(Math.random() - 0.5) * 95, vy:-55 - Math.random() * 75,
+                      t:0, life:0.7 + Math.random() * 0.7 });
+  }
+  popFl = Math.max(0, popFl - dt * 2.4);
+
+  emT += dt;                                     // embers, more of them on a bigger fire
+  const gap = 0.16 / Math.max(0.18, life);
+  while (emT > gap){
+    emT -= gap;
+    if (motes.length < 110 && life > 0.06)
+      motes.push({ x:fx + (Math.random() - 0.5) * 30, y:fy - 18 - Math.random() * 22,
+                   vx:(Math.random() - 0.5) * 11, vy:-18 - Math.random() * 24,
+                   t:0, life:1.5 + Math.random() * 1.9, ember:true, r:1.5 + Math.random() });
+  }
+
+  dustT += dt;                                   // dust: sparse, slow, only where light reaches
+  while (dustT > 0.45){
+    dustT -= 0.45;
+    const R = lightR();
+    if (motes.length < 110 && life > 0.15)
+      motes.push({ x:fx + (Math.random() - 0.5) * R * 1.8, y:fy + 60 - Math.random() * R * 1.2,
+                   vx:(Math.random() - 0.5) * 4.5, vy:-2.5 - Math.random() * 4.5,
+                   t:0, life:5 + Math.random() * 6, ember:false, r:0.9 + Math.random() * 0.9 });
+  }
+
+  for (let i = motes.length - 1; i >= 0; i--){
+    const m = motes[i]; m.t += dt;
+    if (m.t > m.life){ motes.splice(i, 1); continue; }
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (m.ember) m.vy += 6 * dt;                 // they slow as they rise and cool
+    else m.x += Math.sin(m.t * 0.8 + m.r) * 3 * dt;
+  }
+
+  doorT -= dt;
+  if (doorT <= 0){ doorT = 110 + Math.random() * 170; doorFx = 1.8; }
+  if (doorFx > 0) doorFx = Math.max(0, doorFx - dt);
+  if (dimT > 0) dimT = Math.max(0, dimT - dt);
+}
+
+/* Embers over the fire and dust in the air. Drawn after the figures, because both
+   are between the player and the room. */
+function drawMotes(){
+  const life = flameLife();
+  for (const m of motes){
+    const k = m.t / m.life;
+    const a = (m.ember ? 0.9 : 0.26) * Math.sin(Math.PI * Math.min(1, k * 1.12)) * (0.25 + 0.75 * life);
+    if (a <= 0.012) continue;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = m.ember ? (k > 0.62 ? "#b83f1c" : "#ffab3d") : "#b9cbd6";
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* A doorway in the back wall, and once every couple of minutes something in it
+   shifts. It is never identified and nothing comes of it. */
+function drawDoorway(){
+  if (doorFx <= 0 || !PROP_ART.ready) return;
+  const k = Math.sin(Math.PI * Math.min(1, (1.8 - doorFx) / 1.8));
+  const x = fx - 20 + (1 - doorFx / 1.8) * 26, y = 132;
+  ctx.globalAlpha = 0.55 * k;
+  ctx.fillStyle = "#060c14";
+  ctx.beginPath(); ctx.ellipse(x, y, 11, 26, 0, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
 /* Firelight as coloured light, not as a glow. The dais was grey stone with a faint
    halo; it should read as warmly lit stone, which means laying the fire's colour over
    the ground and letting the stone show through it rather than repainting it.
@@ -1648,7 +1762,7 @@ function rimLight(cx, cy, w, h, r){
 function drawFireWash(){
   const R = lightR(), life = flameLife();
   const w = 0.18 + 0.62 * life;
-  const g = ctx.createRadialGradient(fx, fy + 18, R * 0.10, fx, fy + 18, R * 1.55);
+  const g = ctx.createRadialGradient(fx, fy + 18, R * 0.10, fx, fy + 18, R * 1.55 * flick);
   g.addColorStop(0,    "rgba(122,74,40," + (0.66 * w).toFixed(3) + ")");
   g.addColorStop(0.40, "rgba(74,53,39,"  + (0.52 * w).toFixed(3) + ")");
   g.addColorStop(0.78, "rgba(42,42,46,"  + (0.30 * w).toFixed(3) + ")");
@@ -1675,6 +1789,10 @@ function drawFire(time){
   const life = flameLife();                      // 0 dead, 1 roaring
   const grow = 1 + S.lv.flame * 0.11;            // Kindled Flame builds the fire itself
   const size = grow * (0.42 + 0.58 * life);      // dying pulls it back toward its base
+  /* Width and height grow at different rates on purpose. A fed fire should spread
+     across its logs, not climb: at the same rate on both axes it stayed a spike
+     however much fuel went in. Past Kindled Flame 4 it comes out wider than tall. */
+  const hSize = (1 + S.lv.flame * 0.035) * (0.42 + 0.58 * life);
   const speed = 0.35 + 0.65 * life;
   const pulse = 1 + Math.sin(time * 3.4 * speed) * 0.06 * life + flare;
   const R = lightR() * pulse;
@@ -1688,27 +1806,35 @@ function drawFire(time){
   g.addColorStop(1, "rgba(255,157,61,0)");
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy - 12, R, 0, 6.2832); ctx.fill();
 
-  const logs = 2 + Math.floor(S.lv.flame / 4);   // the structure grows, not just the flame
+  const logs = 3 + Math.floor(S.lv.flame / 3);   // the structure grows, not just the flame
   ctx.save(); ctx.translate(fx, fy + 8);
   for (let i = 0; i < logs; i++){
-    ctx.rotate(i === 0 ? -0.42 : 0.84 / Math.max(1, logs - 1));
-    rrect(0, i * 2, 56 * (1 + S.lv.flame * 0.045), 13, 6, i % 2 ? "#332f24" : "#2c2a21", 4);
+    ctx.rotate(i === 0 ? -0.46 : 0.92 / Math.max(1, logs - 1));
+    rrect(0, i * 2, 62 * (1 + S.lv.flame * 0.055), 13, 6, i % 2 ? "#332f24" : "#2c2a21", 4);
   }
   ctx.restore();
 
+  /* A bonfire, not a candle. The flame used to grow only upward, so a well-fed fire
+     was a tall thin spike over a small pile; it spreads sideways faster than it
+     climbs now, and past Kindled Flame 4 it is wider than it is tall. */
+  const spread = 1 + Math.min(1.15, S.lv.flame * 0.19);
   const tongues = S.flame <= 0 ? 0
-                : Math.max(1, Math.min(5, 1 + Math.round(S.lv.flame / 3) + (life > 0.5 ? 1 : 0)));
-  const w1 = 26 * size, h1 = 62 * size + Math.sin(time * 5.1 * speed) * 4 * life;
+                : Math.max(1, Math.min(5, 2 + Math.round(S.lv.flame / 3) + (life > 0.5 ? 1 : 0)));
+  const w1 = 26 * size * spread, h1 = 62 * hSize + Math.sin(time * 5.1 * speed) * 4 * life;
+  /* In symmetric pairs, each one shorter and sitting lower than the pair inside it.
+     Alternating single offsets put the tongues at different distances left and right,
+     which at this width read as a lopsided fan rather than as a fire. */
   for (let i = 0; i < tongues; i++){
-    const off = i === 0 ? 0 : (i % 2 ? 1 : -1) * (9 + i * 4) * size;
-    const sc = i === 0 ? 1 : 0.52 - i * 0.05;
-    teardrop(fx + off + Math.sin(time * (2.2 + i) * speed) * 2, fy - 2,
-             w1 * sc, h1 * sc * (0.8 + 0.2*life), hot, Math.max(2.4, 5 * size));
+    const pair = Math.ceil(i / 2), sideT = i === 0 ? 0 : (i % 2 ? 1 : -1);
+    const off = sideT * (11 + pair * 7) * size * spread * 0.62;
+    const sc = i === 0 ? 1 : 0.74 - pair * 0.16;
+    teardrop(fx + off + Math.sin(time * (2.2 + i) * speed) * 2, fy - 2 + pair * 3.5,
+             w1 * sc * 0.72, h1 * sc * (0.8 + 0.2*life), hot, Math.max(2.4, 5 * size));
   }
-  teardrop(fx + Math.sin(time * 3.7 * speed) * 3, fy - 4, w1 * 0.62, h1 * 0.66, mid,
+  teardrop(fx + Math.sin(time * 3.7 * speed) * 3, fy - 4, w1 * 0.52, h1 * 0.66, mid,
            Math.max(2, 4 * size));
   if (life > 0.05)
-    teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.30, h1 * 0.36, tip,
+    teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.26, h1 * 0.36, tip,
              Math.max(1.5, 3 * size));
 }
 
@@ -1818,29 +1944,58 @@ function sprCanvas(draw){
 }
 
 /* The hand-made sprites were drawn in the old muted body colours. Rather than redraw
-   them, shift them: the same hue rotation and saturation and value scaling that takes
-   a species' `art` colour to its new `body` colour, applied to every pixel. The
-   outline is left alone -- it carries no hue, and lifting it would soften the one
-   thing holding the whole style together. */
-function tintSprite(img, from, to){
+   them, remap them onto the new ones.
+
+   A single hue-and-saturation shift was the first attempt and it is not enough: it
+   lands the body colour correctly and then drags every lighter tone with it by the
+   same factor, which took the frog's face plate to an acid green the palette never
+   asked for. What the art actually has is two tones -- a body and a plate lifted off
+   it -- so the fix is to anchor both. Read the sprite's own dark and light tones off
+   a luminance histogram, then remap every pixel along that axis onto the species'
+   `body` and `plate`. Shading inside a tone survives, because it survives as position
+   along the axis. Outlines are left alone: they carry no hue, and lifting them would
+   soften the one thing holding the whole style together. */
+function tintSprite(img, from, to, plate){
   const n = SPR_GEO.size, c = document.createElement("canvas");
   c.width = c.height = n;
   const g = c.getContext("2d", { willReadFrequently: true });
   g.drawImage(img, 0, 0, n, n);
-  if (!from || from === to) return c;
+  if (!from || !to || !plate) return c;
   let d = null;
   try { d = g.getImageData(0, 0, n, n); } catch (e){ return c; }   // tainted: leave as drawn
-  const a = hexHsl(from), b = hexHsl(to);
-  const dh = b[0] - a[0];
-  const ks = a[1] > 0.02 ? b[1] / a[1] : 1;
-  const kl = a[2] > 0.02 ? b[2] / a[2] : 1;
-  const px = d.data;
+  const px = d.data, lum = (r, gg, b) => r * 0.30 + gg * 0.59 + b * 0.11;
+
+  const solid = [];
+  for (let i = 0; i < px.length; i += 4){
+    if (px[i + 3] < 200) continue;
+    const l = lum(px[i], px[i + 1], px[i + 2]);
+    if (l < 40) continue;                          // outline, not a tone
+    solid.push(l);
+  }
+  if (solid.length < 200) return c;
+  solid.sort((p, q) => p - q);
+  const lo = solid[Math.floor(solid.length * 0.18)];
+  const hi = solid[Math.floor(solid.length * 0.88)];
+  if (hi - lo < 6) return c;                       // one flat tone: nothing to anchor
+
+  const rgb = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+  const tb = rgb(to), tp = rgb(plate);
+
   for (let i = 0; i < px.length; i += 4){
     if (!px[i + 3]) continue;
-    const h = rgb2hsl(px[i], px[i + 1], px[i + 2]);
-    if (h[2] < 0.14) continue;                    // outline
-    const o = hsl2rgb(h[0] + dh, Math.min(1, h[1] * ks), Math.min(1, h[2] * kl));
-    px[i] = o[0]; px[i + 1] = o[1]; px[i + 2] = o[2];
+    const l = lum(px[i], px[i + 1], px[i + 2]);
+    if (l < 40){                                   // the outline and its antialiasing
+      continue;
+    }
+    if (l <= lo){                                  // below the body tone: ramp into the outline
+      const k = Math.max(0, l) / Math.max(1, lo);
+      px[i] = tb[0] * k; px[i + 1] = tb[1] * k; px[i + 2] = tb[2] * k;
+    } else {
+      const t = Math.min(1.25, (l - lo) / (hi - lo));
+      px[i]     = Math.min(255, tb[0] + (tp[0] - tb[0]) * t);
+      px[i + 1] = Math.min(255, tb[1] + (tp[1] - tb[1]) * t);
+      px[i + 2] = Math.min(255, tb[2] + (tp[2] - tb[2]) * t);
+    }
   }
   g.putImageData(d, 0, 0);
   return c;
@@ -1931,7 +2086,7 @@ function loadSprites(){
       if (--left > 0 || !ok) return;
       const sp = SPMAP[key] || {};
       const tinted = {};
-      for (const p of POSES) tinted[p] = tintSprite(img[p], sp.art, sp.body);
+      for (const p of POSES) tinted[p] = tintSprite(img[p], sp.art, sp.body, sp.plate);
       const art = {};
       for (const p of POSES) art[p] = derivePose(tinted[p]);
       art.hollow = deriveHollow(tinted.sit, key);
@@ -1963,7 +2118,8 @@ function poseOf(a, time){
     return (Math.floor((time + a.id * 0.11) / WALK_S) & 1) ? "walk_b" : "walk_a";
   const weary = a.deaths >= 2;
   if (a.state === "rest"){                        // seated: alert only while something waits on them
-    const alert = !!(a.find || a.choice) || S.nudge === a.id;
+    const alert = !!(a.find || a.choice) || S.nudge === a.id
+                  || (a.stir || 0) > 0.55 || (a.lookT || 0) > 0;   // ...or something caught their eye
     if (!alert) return "rest";
     return weary ? "weary" : "sit";
   }
@@ -2065,9 +2221,10 @@ const PROP_H = {
    reaches further into a building that was always there. What the light changes is
    how much of it you can see, and that is the reveal ramp below. */
 const PROP_RING = [
-  // flush against the wall, at its base line: the relief is a wall panel, not a
-  // free-standing block, and hanging it anywhere else is what made it float
-  { k:"relief",          x: 104, y: 216 },
+  /* prop_relief is deliberately absent. Free-standing it reads as a billboard in
+     open space, and it competes with the backdrop wall, which already carries carved
+     figures of its own. The file stays; if it comes back it belongs flush against
+     the wall as architecture, never on its own in the room. */
   // standing on the floor in front of the wall
   { k:"statue_headless", x: 300, y: 252 },
   { k:"statue_slab",     x:  42, y: 246 },
@@ -2089,6 +2246,33 @@ const PROP_RING = [
    not measured off the dais, which grows: tying it to the dais made a column flip
    from behind to in front as the fire came up. */
 const PROP_BEHIND_Y = 235;
+
+/* Stone at the very bottom of the frame, closer to the camera than the ring and
+   cropped by the edge. It is what makes the floor read as receding rather than as
+   an empty band: dark foreground, warm lit middle, dark backdrop. These sit well
+   outside the firelight, so they are drawn near-silhouette and cold, never lit. */
+const PROP_FORE = [
+  { k:"rubble",       x:  52, y: 650, h: 132 },
+  { k:"column_stump", x: 340, y: 676, h: 200 },
+  { k:"root",         x: 208, y: 664, h: 104 }
+];
+
+function drawForeground(){
+  if (!PROP_ART.ready) return;
+  const R = lightR();
+  const seen = Math.max(0, Math.min(1, (R - 74) / 46));
+  if (seen <= 0.02) return;
+  for (const p of PROP_FORE){
+    const dark = PROP_ART.dark[p.k];
+    if (!dark) continue;
+    const img = PROP_ART.img[p.k];
+    const w = p.h * (img.naturalWidth / img.naturalHeight);
+    if (Math.abs(p.x - fx) - w / 2 > worldHalfW() + 40) continue;
+    ctx.globalAlpha = 0.90 * seen;
+    ctx.drawImage(dark, p.x - w / 2, p.y - p.h, w, p.h);
+    ctx.globalAlpha = 1;
+  }
+}
 
 /* The wall stands behind everything at a fixed size in world units, wide enough to
    cover the frame at the widest the camera ever pulls back (measured: 458 units).
@@ -2191,7 +2375,7 @@ function drawBackWall(){
   const vis = Math.max(0, Math.min(1, (R - 74) / 46));
   if (vis <= 0.02) return;
   const w = WALL.w, h = w * (c.height / c.width), x0 = fx - w / 2, y0 = WALL.bottom - h;
-  ctx.globalAlpha = 0.88 * vis;                     // fades up from nothing, never pops in
+  ctx.globalAlpha = (0.88 + 0.14 * popFl) * vis;    // fades up from nothing, and breathes on a pop
   ctx.drawImage(c, x0, y0, w, h);
   ctx.globalAlpha = 1;
 
@@ -2246,7 +2430,7 @@ function drawProps(time, behind){
     const d = Math.hypot(x - fx, (y - fy) * 0.6);
     const vis = Math.max(0, Math.min(1, (R * 1.7 - d) / 45));
     if (vis <= 0.02) continue;
-    near.push({ img, dark: PROP_ART.dark[p.k], warm: PROP_ART.warm[p.k], x, y, h: PROP_H[p.k], vis });
+    near.push({ k:p.k, img, dark:PROP_ART.dark[p.k], warm:PROP_ART.warm[p.k], x, y, h:PROP_H[p.k], vis });
   }
   near.sort((m, n) => m.y - n.y);                  // nearer stone overlaps what is behind it
   for (const it of near){
@@ -2267,6 +2451,15 @@ function drawProps(time, behind){
     if (it.warm){                                  // near stone takes the fire's colour
       ctx.globalAlpha = (0.15 + 0.85 * vis) * 0.34 * lit;
       ctx.drawImage(it.warm, it.x - w / 2, it.y - h, w, h);
+    }
+    if (it.k === "water"){                         // and the pool carries a reflection of it
+      const t = performance.now() / 1000;
+      ctx.globalAlpha = vis * (0.10 + 0.34 * lit) * (0.6 + 0.4 * Math.sin(t * 2.3));
+      ctx.fillStyle = C.fireBody;
+      ctx.beginPath();
+      ctx.ellipse(it.x + Math.sin(t * 0.9) * 2, it.y - h * 0.34,
+                  w * 0.24, h * 0.16 * (0.7 + 0.3 * Math.sin(t * 3.1)), 0, 0, 6.2832);
+      ctx.fill();
     }
   }
   ctx.globalAlpha = 1;
@@ -2399,8 +2592,16 @@ function drawAdventurer(a, time){
     const rest = a.state === "rest";
     const bob = rest ? Math.sin(time * 1.6 * (a.rate || 1)) * 1.2
                      : Math.sin(a.bob) * 2.2;        // 11. nothing synchronised
-    drawAnimal(a, a.x, a.y + bob, { seated:rest, dir:a.dir || 1, time,
+    const stir = a.stir || 0;
+    const lean = stir > 0 ? Math.sin(stir * Math.PI) * Math.sin(time * 7) * 0.045 : 0;
+    /* Turning to look is the sprite mirror they already have, so it costs one flag. */
+    const dir = (a.lookT || 0) > 0 && rest ? (a.look > 0 ? 1 : -1) : (a.dir || 1);
+    if (lean){
+      ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(lean); ctx.translate(-a.x, -a.y);
+    }
+    drawAnimal(a, a.x, a.y + bob, { seated:rest, dir, time,
                                     wag:Math.sin(time * 1.1 * (a.rate || 1) + a.id) * 3 });
+    if (lean) ctx.restore();
   }
   const sp = spOf(a), lift = sp.key === "rabbit" ? 16 : sp.key === "cat" || sp.key === "goat" ? 9 : 0;
   const top = a.y - (a.state === "rest" ? 52 : 58) - lift;
@@ -2419,15 +2620,15 @@ function drawAdventurer(a, time){
     ctx.stroke();
     ctx.restore();
   }
-  drawPips(a.x, a.y + 16, a.deaths, hollowAt(a), a.state === "hollow");
+  drawPips(a.x, a.y + 11, a.deaths, hollowAt(a), a.state === "hollow");
 }
 
 
 function drawPips(x, y, deaths, cap, hollow){
   if (!revealed("pips")) return;
-  const gap = 9, x0 = x - (cap - 1) * gap / 2;
+  const gap = 7, x0 = x - (cap - 1) * gap / 2;   // tucked under the feet, not floating below
   for (let i = 0; i < cap; i++)
-    circle(x0 + i*gap, y, 3.4, i < deaths ? (hollow ? "#454b48" : "#f2682c") : "#2a2136", 2.5);
+    circle(x0 + i*gap, y, 2.7, i < deaths ? (hollow ? "#454b48" : "#f2682c") : "#26303f", 2);
 }
 
 function drawBlacksmith(time, px, py){
@@ -2499,7 +2700,7 @@ function drawStrip(time){
 const K = { x:0, y:0, tx:0, ty:0, mode:"idle", t:0, dir:1, placed:false };
 
 function keeperGoTo(x, y, mode){ K.tx = x; K.ty = y; K.mode = mode || "attend"; K.t = 0; }
-function keeperIdle(){ keeperGoTo(fx - 62, fy + 30, "idle"); }
+function keeperIdle(){ keeperGoTo(fx - (FIRE_TAP_R + 24), fy + 30, "idle"); }
 
 /* Vendors are built in the same language: a head, a body block, two pegs.
    Hooded, because none of them are animals the player recruits. */
@@ -2517,12 +2718,49 @@ function hooded(x, y, h, w, cloak, hood, dir, eyes){
   rimLight(x, y - 20 - h * 0.42, w * 1.05, h * 0.84, 11);
 }
 
+/* Between interactions the keeper has business of their own. It is all cosmetic --
+   nothing here touches a number -- but a keeper who only ever moves when tapped is
+   furniture, and standing with a hollow while its window runs down says more than
+   any line of writing in the game. */
+let keepIdle = 6 + Math.random() * 10;
+
+function keeperBusiness(){
+  const h = hollows()[0];
+  if (h && Math.random() < 0.55){            // someone is going out. Stand with them.
+    keeperGoTo(h.x + (h.x > fx ? -32 : 32), h.y + 6, "vigil");
+    return 14 + Math.random() * 10;
+  }
+  const roll = Math.random();
+  if (roll < 0.34){                          // crouch and feed the fire, from beside it
+    keeperGoTo(fx + (Math.random() < 0.5 ? -1 : 1) * (FIRE_TAP_R + 26), fy + 30, "tend");
+    return 9 + Math.random() * 7;
+  }
+  if (roll < 0.62 && PROP_ART.ready){        // stop and look at one of the statues
+    const p = PROP_RING.find(q => q.k === "statue_headless") || PROP_RING[0];
+    keeperGoTo(p.x - 40, p.y + 26, "attend");
+    return 8 + Math.random() * 8;
+  }
+  /* Otherwise walk the ring. Kept off the middle on both axes so the route never
+     runs through the fire, which a straight-line walk otherwise does. */
+  const a = Math.random() * Math.PI * 2;
+  const rx = Math.cos(a), ry = Math.sin(a);
+  const push = Math.max(0.55, Math.abs(rx));
+  keeperGoTo(fx + Math.sign(rx || 1) * push * RING_R * 0.92,
+             fy + 24 + ry * RING_R * 0.42, "idle");
+  return 7 + Math.random() * 9;
+}
+
 function updateKeeper(dt){
-  if (!K.placed){ K.x = fx - 62; K.y = fy + 30; K.tx = K.x; K.ty = K.y; K.placed = true; }
+  if (!K.placed){ K.x = fx - 92; K.y = fy + 30; K.tx = K.x; K.ty = K.y; K.placed = true; }
   if (S.sel != null){                        // stands with whoever you are counselling
     const who = S.pool.find(o => o.id === S.sel);
     if (who && who.state !== "away") keeperGoTo(who.x + (who.x > fx ? -34 : 34), who.y + 6, "attend");
-  } else if (K.mode !== "idle" && (K.t += dt) > 6) keeperIdle();
+    keepIdle = 6 + Math.random() * 8;
+  } else if (K.mode !== "idle" && (K.t += dt) > 6){
+    keeperIdle(); keepIdle = 5 + Math.random() * 6;
+  } else if ((keepIdle -= dt) <= 0){
+    keepIdle = keeperBusiness();
+  }
   const dx = K.tx - K.x, dy = K.ty - K.y, d = Math.hypot(dx, dy);
   if (d > 2){ const sp = Math.min(d, 54 * dt); K.x += dx/d * sp; K.y += dy/d * sp; K.dir = dx >= 0 ? 1 : -1; }
 }
@@ -2546,7 +2784,7 @@ function drawKeeper(time){
   shape(()=>ctx.ellipse(K.x + K.dir * 4, hy + hh * 0.10, hw * 0.30, hh * 0.30, 0, 0, 6.2832),
         "#0d1113", LW.outer);                                          // nothing inside it
   rimLight(K.x, hy, hw, hh, 14);
-  const tend = K.mode === "tend" && !walking;                          // leans in to feed the fire
+  const tend = (K.mode === "tend" || K.mode === "vigil") && !walking;  // leans in to feed the fire
   ctx.save();
   ctx.translate(K.x + K.dir * 17, bodyY - 2);
   ctx.rotate(K.dir * (tend ? 0.5 + Math.sin(time * 2.2) * 0.22 : 0.15 + Math.sin(time * 0.9) * 0.06));
@@ -2555,23 +2793,39 @@ function drawKeeper(time){
   ctx.restore();
 }
 
-function relicPos(i){ return { x: fx + 92 + i * 30, y: fy + 76 }; }
-function relicBounds(){ return { x0: fx + 74, x1: fx + 172, y: fy + 76 }; }
+/* What outlived the people carrying it, lying on the temple floor where it was set
+   down. It used to be a shelf parked off to one side, which read as a UI tray that
+   happened to be inside the picture. No shelf, no border, no background: objects on
+   stone, centred on the floor in front of the ring, with contact shadows so they sit
+   on it. Tapping one still opens the list. */
+const RELIC_Y = 468, RELIC_GAP = 34;
+function relicPos(i){
+  const n = Math.max(1, S.relic.length);
+  return { x: fx + (i - (n - 1) / 2) * RELIC_GAP, y: RELIC_Y };
+}
+function relicBounds(){
+  const half = (Math.max(1, S.relic.length) - 1) / 2 * RELIC_GAP + 22;
+  return { x0: fx - half, x1: fx + half, y: RELIC_Y };
+}
 
 function drawReliquary(time){
   if (!S.relic.length && !S.seen.relic) return;
-  const x0 = fx + 78, y = fy + 76;
-  rrect(x0 + 46, y + 12, 108, 7, 3, "#2b3136", 3);            // the shelf, and no label on it
   S.relic.forEach((r, i) => {
     const p = relicPos(i), g = r.art;
     const mat = { common:"#4d545a", fine:"#c9a227", rare:"#4c5a38" }[g.rarity];
-    const bob = Math.sin(time * 1.6 + i) * 1;
-    if (g.slot === "weapon") rrect(p.x, p.y + bob, 7, 26, 3, mat, 2.5);
-    else if (g.slot === "armour")
-      shape(()=>{ ctx.moveTo(p.x-9, p.y-12+bob); ctx.lineTo(p.x+9, p.y-12+bob);
-                  ctx.lineTo(p.x, p.y+12+bob); ctx.closePath(); }, mat, 2.5);
-    else circle(p.x, p.y + bob, 9, mat, 2.5);
-    if (g.cursed) circle(p.x, p.y - 17 + bob, 3, C.cursed, 2);   // a mark, not a word
+    const f = firePull(p.x, p.y - 8);
+    const lit = f ? f.near * f.life : 0;
+    const col = mix(mix(mat, "#1b2b44", 0.40 * (1 - lit)), C.lit, 0.22 * lit);
+    const bob = Math.sin(time * 1.1 + i * 1.7) * 0.7;         // settled, not floating
+    contact(p.x, p.y + 3, 13, 0.42);
+    if (g.slot === "weapon"){                                  // laid down, not stood up
+      ctx.save(); ctx.translate(p.x, p.y - 3 + bob); ctx.rotate(0.42 + (i % 3) * 0.16);
+      rrect(0, 0, 6, 26, 3, col, 2.5); ctx.restore();
+    } else if (g.slot === "armour"){
+      shape(()=>{ ctx.moveTo(p.x-9, p.y-11+bob); ctx.lineTo(p.x+9, p.y-11+bob);
+                  ctx.lineTo(p.x, p.y+2+bob); ctx.closePath(); }, col, 2.5);
+    } else circle(p.x, p.y - 5 + bob, 8, col, 2.5);
+    if (g.cursed) circle(p.x, p.y - 20 + bob, 3, C.cursed, 2);   // a mark, not a word
   });
   ctx.textAlign = "center";
 }
@@ -2705,6 +2959,7 @@ function frame(now){
   if (S.flameOn && !S.ending) tickFlame(dt);
   updatePool(dt);
   updateKeeper(dt);
+  tickLife(dt, time);
   tickCraft(dt);
   while (S.earnLog.length && S.earnLog[0].t < S.elapsed - 60) S.earnLog.shift();
   flare = Math.max(0, flare - dt * 1.6);
@@ -2718,6 +2973,7 @@ function frame(now){
   ctx.save();
   ctx.translate(W / 2, cam.oy); ctx.scale(cam.z, cam.z); ctx.translate(-fx, -cam.cy);
   drawBackWall();
+  drawDoorway();
   if (PROP_ART.ready) drawFloor();
   if (PROP_ART.ready) drawProps(time, true);      // the stone standing behind the dais
   drawGround(time);
@@ -2733,9 +2989,17 @@ function frame(now){
   front.forEach(a => drawAdventurer(a, time));
   if (K.y > fy) drawKeeper(time);
   drawEmbers();
+  drawMotes();
+  drawForeground();                               // nearest stone, cropped by the frame
   drawReliquary(time);
   drawFx(dt);
   ctx.restore();
+  /* Somebody has gone out. The room goes with them for half a second and comes back. */
+  if (dimT > 0){
+    ctx.globalAlpha = Math.sin(Math.PI * Math.min(1, dimT / 0.55)) * 0.62;
+    ctx.fillStyle = "#080f18"; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
   drawStrip(time);                                // the road bar is chrome, not scenery
 
   if (S.notice){
@@ -2780,7 +3044,10 @@ function frame(now){
     }
   }
 
-  drawGrain();
+  /* The grain overlay is gone. It earned its place when every shape was flat code
+     art; over real sprites it just muddies the warm-to-cool separation the lighting
+     pass exists to create. Dust motes carry the air instead, and they are sparse,
+     slow, and only where the fire reaches. */
   drawGesture(dt);
 
   uiT += dt;
@@ -2802,7 +3069,7 @@ cv.addEventListener("pointerdown", e => {
   const w = toWorld(x, y), wx = w.x, wy = w.y;  // everything below is world space
 
   const rb = relicBounds();                     // the shelf opens when tapped
-  if (S.relic.length && Math.abs(wy - rb.y) < 26 && wx > rb.x0 - 14 && wx < rb.x1){ openShelf(); return; }
+  if (S.relic.length && Math.abs(wy - rb.y) < 28 && wx > rb.x0 - 14 && wx < rb.x1 + 14){ openShelf(); return; }
 
   /* A figure owns a tight circle of their own; the fire owns the rest of its ground.
      Nobody may sit inside the fire's clear radius, so the fire is always tappable. */
