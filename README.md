@@ -6,10 +6,17 @@ home richer, poorer, or not really at all. You never fight, you never leave.
 
 ## Run it
 
-Open `index.html` in a browser. One file, no build step, no dependencies, no
-network. Design target is a 390x844 portrait viewport (mobile first); it stays
-a static single file so it can be wrapped with Capacitor later. It saves to
-localStorage every five seconds and on page hide.
+Serve the folder and open `index.html` — `python3 -m http.server` is enough.
+`index.html` plus `assets/` is the whole game: no build step, no dependencies,
+no network. Design target is a 390x844 portrait viewport (mobile first); it
+stays static so it can be wrapped with Capacitor. It saves to localStorage
+every five seconds and on page hide.
+
+Opening the file directly over `file://` still runs, but the browser taints the
+canvas and the hollow treatment falls back to a flat tint. Serve it.
+
+`tools/normalize_sprites.py` is the only other thing in the repo, and the game
+never calls it. See **Sprites** below.
 
 ## The first fire
 
@@ -112,6 +119,48 @@ the light reaches them, which was always legible without a label.
 
 The artifacts are human relics, which is why they come up filthy and why
 nobody can say what they were for. The item descriptions are guesses.
+
+## Sprites
+
+A species can be drawn from hand-made art instead of from code. Six poses per
+species — `stand`, `walk_a`, `walk_b`, `sit`, `rest`, `weary` — under
+`assets/sprites/`, named `<species>_<pose>.png`. **Frog is the only one wired
+up.** Anything with no files keeps its code-drawn figure, so the other five
+drop in one at a time and a missing file is never worse than the art already
+there. Adding a species is one key in `SPRITE_SPECIES` and its six files.
+
+Nothing that responds to the world is baked into a sprite. The idle bob, the
+firelight, the contact shadow, gear overlays, the death pips and depth marks
+are all still drawn in code, on top. A sprite's baseline lands exactly where
+the code figure's feet land, so nothing about positioning changes when a
+species switches over.
+
+Pose follows state: walking alternates `walk_a` and `walk_b` every 250ms,
+desynchronised per figure; standing with no seat is `stand`; seated is `rest`,
+or `sit` while a find or a choice is waiting on them; two deaths or more
+overrides stand and sit with `weary`. Hollows have no art yet and are derived
+from the sit pose — drained to the hollow colour, sockets over the eyes, tilted
+a few degrees, no bob. Real hollow sprites will be a manifest change.
+
+Sprites come out of image generation framed inconsistently, which in game reads
+as the figure changing size and hopping every time it changes pose.
+`tools/normalize_sprites.py` fixes that: it finds the alpha bounding box,
+scales the content to a uniform **height** (never a uniform bounding box —
+widths must stay free or a wide sitting pose gets squashed), centres it, and
+sits its bottom edge on a fixed baseline. It reports before and after bounding
+boxes so alignment is checked numerically rather than by eye.
+
+    pip install Pillow
+    python3 tools/normalize_sprites.py assets/sprites_src -o assets/sprites
+    python3 tools/normalize_sprites.py assets/sprites_src/frog_sit.png \
+        assets/sprites_src/frog_rest.png -o assets/sprites --no-scale
+
+Poses that are legitimately shorter and squatter — sit and rest — take
+`--no-scale`, which aligns the baseline without rescaling. Feet on the same
+line is what matters; a sitting figure is meant to be shorter. Raw art lives in
+`assets/sprites_src/` and the normalized output in `assets/sprites/`; only the
+latter is loaded. The six frogs share a baseline exactly and the four upright
+poses share a height exactly.
 
 ## The loop
 
