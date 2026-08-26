@@ -1951,23 +1951,24 @@ const PROP_H = {
    reaches further into a building that was always there. What the light changes is
    how much of it you can see, and that is the reveal ramp below. */
 const PROP_RING = [
-  // the backdrop, standing against the wall behind the fire: seen first
-  { k:"statue_headless", x: 290, y: 205 },
-  { k:"relief",          x:  95, y: 195 },
-  { k:"statue_slab",     x:  25, y: 230 },
-  // the columns, out at the sides: seen once the fire is properly up
-  { k:"column_upright",  x: 372, y: 250 },
-  { k:"column_leaning",  x:  18, y: 300 },
-  // fallen stone in the corners, furthest out, last to come out of the dark.
-  // The centre of the foreground stays empty: the seats open onto it and the road
-  // bar crosses it, and vertical distance is compressed, so anything low and
-  // central lights brighter than the architecture and reads as clutter.
-  { k:"moss",            x: 380, y: 395 },
-  { k:"root",            x:  30, y: 430 },
-  { k:"column_stump",    x: 352, y: 452 },
-  { k:"head_fallen",     x:  78, y: 482 },
-  { k:"rubble",          x: 332, y: 508 },
-  { k:"water",           x: 152, y: 542 }
+  // flush against the wall, at its base line: the relief is a wall panel, not a
+  // free-standing block, and hanging it anywhere else is what made it float
+  { k:"relief",          x: 104, y: 216 },
+  // standing on the floor in front of the wall
+  { k:"statue_headless", x: 300, y: 252 },
+  { k:"statue_slab",     x:  42, y: 246 },
+  // columns further forward, out at the sides where the light thins
+  { k:"column_upright",  x: 366, y: 286 },
+  { k:"column_leaning",  x:  28, y: 308 },
+  // fallen stone on the floor in front of the dais, kept out of the centre: the
+  // seats open onto it, the road bar crosses it, and vertical distance is
+  // compressed so anything low and central outshines the architecture behind
+  { k:"moss",            x: 388, y: 404 },
+  { k:"root",            x:  26, y: 424 },
+  { k:"column_stump",    x: 350, y: 442 },
+  { k:"head_fallen",     x:  88, y: 474 },
+  { k:"rubble",          x: 312, y: 502 },
+  { k:"water",           x: 146, y: 544 }
 ];
 
 /* Anything above this line stands behind the dais and is drawn before it. Fixed,
@@ -1978,7 +1979,12 @@ const PROP_BEHIND_Y = 235;
 /* The wall stands behind everything at a fixed size in world units, wide enough to
    cover the frame at the widest the camera ever pulls back (measured: 458 units).
    Its base is tucked below the dais so it never shows a cut-off bottom edge. */
-const WALL = { w:400, bottom:330 };
+/* The wall stands at the back of the room, so its base has to sit further away than
+   the back edge of the dais -- at 330 it was standing in the middle of the floor,
+   which is why nothing in front of it lined up. FLOOR_BACK is that base line and
+   everything on the ground is placed forward of it. */
+const WALL = { w:360, bottom:218 };
+const FLOOR_BACK = 214;
 
 const PROP_ART = { img:{}, dark:{}, wall:null };
 
@@ -2070,6 +2076,25 @@ function drawBackWall(){
 /* Drawn in two passes. Anything standing behind the dais has to go down before the
    dais does, or its base paints over the stone and it reads as standing on top of
    it rather than behind it. */
+/* The temple floor. Without it the only ground in the scene was the dais, so a prop
+   standing anywhere else hung in blackness and read as floating. It is lit the same
+   way everything else is -- visible where the fire reaches, gone where it does not --
+   so it costs no art and needs no edge, it just falls away into the dark. */
+function drawFloor(){
+  const R = lightR(), life = flameLife();
+  /* Held to the same threshold as the wall, so the room arrives as one thing and
+     the opening stays what it is meant to be: a flame alone, on nothing. */
+  const seen = Math.max(0, Math.min(1, (R - 74) / 46));
+  if (seen <= 0.02) return;
+  const g = ctx.createRadialGradient(fx, fy + 30, R * 0.25, fx, fy + 30, R * 2.0);
+  const k = (0.35 + 0.65 * life) * seen;
+  g.addColorStop(0,    "rgba(31,40,35," + (0.95 * k).toFixed(3) + ")");
+  g.addColorStop(0.55, "rgba(23,30,26," + (0.80 * k).toFixed(3) + ")");
+  g.addColorStop(1,    "rgba(15,21,18,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(fx - 460, FLOOR_BACK, 920, 620);
+}
+
 function drawProps(time, behind){
   const R = lightR();
   const near = [];
@@ -2540,6 +2565,7 @@ function frame(now){
   ctx.save();
   ctx.translate(W / 2, cam.oy); ctx.scale(cam.z, cam.z); ctx.translate(-fx, -cam.cy);
   drawBackWall();
+  if (PROP_ART.ready) drawFloor();
   if (PROP_ART.ready) drawProps(time, true);      // the stone standing behind the dais
   drawGround(time);
   drawColumns(time);

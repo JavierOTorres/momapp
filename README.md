@@ -277,6 +277,21 @@ the stone and reads as standing on the dais rather than behind it. That line is
 fixed rather than measured off the dais, which grows — tying it to the dais made a
 column flip from behind to in front as the fire came up.
 
+**There is a floor.** Before it, the only ground in the scene was the dais, so
+anything standing anywhere else hung in blackness and read as floating however
+carefully it was positioned — the relief in particular, which is a wall panel and
+was hovering in mid-air. The floor is a radial wash from the fire rather than art:
+visible where the fire reaches, gone where it does not, so it needs no edge and
+falls away into the dark on its own. It arrives on the same threshold as the wall,
+so the room appears as one thing.
+
+That fixed the placement, because it gave the scene a back. `WALL.bottom` is the
+base of the wall and `FLOOR_BACK` is the line the floor starts at; everything on
+the ground is placed forward of it. The wall used to sit at 330, in front of the
+dais's own back edge — the wall was standing in the middle of the room, which is
+why nothing in front of it lined up. It sits at 218 now, and the relief hangs flush
+at its base instead of floating.
+
 **The centre of the foreground stays empty on purpose.** Vertical distance is
 compressed, so anything low in the frame counts as close to the fire and comes up
 brighter than the architecture behind it. An earlier layout put six of the eleven
