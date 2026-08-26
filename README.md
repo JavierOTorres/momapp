@@ -1,4 +1,4 @@
-# Sanctuary — v5
+# Sanctuary — v5.1
 
 Idle/tycoon prototype. You keep the sanctuary; undead adventurers rest at your
 bonfire, walk back out into something that will probably kill them, and come
@@ -11,6 +11,62 @@ network. Design target is a 390x844 portrait viewport (mobile first); it stays
 a static single file so it can be wrapped with Capacitor later. It saves to
 localStorage every five seconds and on page hide.
 
+## The first fire
+
+A new player used to arrive into flame decay, hollowing, gear binding, routing,
+gates, plots, adjacency, six vendors and ash all at once. The opening is now an
+**authored first cycle** rather than a tutorial layer: no modals, no arrows, no
+skippable overlay, and every word of teaching is a single line in the keeper's
+voice that fades. Three rules hold throughout.
+
+- **The HUD assembles itself.** Every element starts absent — collapsed, not
+  greyed — and fades in the moment it first becomes true. The game opens on a
+  full-bleed canvas with no top bar, no counts, no tabs and no book.
+- **Reveals are gated; input never is.** Anyone who works out an action early
+  can take it. The Counsel card, for instance, is tappable from the first
+  arrival, long before the sequence points at it.
+- **It runs on the first cycle only.** Every fire after the first opens whole.
+
+The game opens on almost nothing: a dark screen, the flame at **15** and
+blue-grey, a light radius of a few feet, the keeper alone, and no interface. The
+only thing on screen that moves is the fire, and it is the only lit thing on a
+dark screen — which is the entire tutorial for the tap.
+
+| Beat | Fires when | What arrives |
+|---|---|---|
+| 1 Ember | first tap | Tapping adds **1.5 intensity, not souls** — the one time in the game the flame goes up. Ember pips appear after the third tap, once the limit has been felt. |
+| 2 Light | intensity 40 | The light widens; the dais, the first columns and the moss come out of the dark. |
+| 3 Arrival | intensity 60 | The first adventurer walks in from outside the frame. The soul counter fades in on the first soul actually paid. |
+| 4 Skill | third rest | The Skills tab, holding **only Kindled Flame**, and the Archive icon. Buying it grows the fire, widens the light and adds a seat; Word of Sanctuary and Widen the Circle arrive with the purchase. |
+| 5 Road | pool reaches 3 | The first expedition leaves and the road bar fades in with it. Nobody goes down before there are three of them. |
+| 6 Depth | first return | The flame bar arrives — now there is something to protect — and the returning adventurer **glows faintly until tapped, once, ever**. Soul Echo appears with depth. |
+| 7 Find | first artifact | The find, the dusting gesture, and equipping on the same card. |
+| 8 Death | first failure | Death pips, on everyone from then on. |
+Beats 7 and 8 are the only two driven by what happens down there rather than by a threshold, so either can land first. Each owns its own flag instead of a position in the counter, so neither is swallowed when the other arrives early.
+
+| 9 Hollow | first hollowing | The full moment: the drop, the drain ring, the line. Both prices on tap. Whatever the player does, including nothing, is correct. |
+| 10 Build | that hollow resolves | The Archive opens once, unprompted, on the entry about hollowing — then the Build tab, with the plots visible and only the Blacksmith affordable. |
+
+Three places the first cycle cheats, and only the first cycle. The keeper feeds
+the fire at **0.55 intensity a second** during beats 1-3, so a player who never
+taps still sees somebody arrive inside 90 seconds; the first Kindled Flame costs
+**3 souls** instead of 10, so it is affordable on exactly the third rest that
+triggers it; and the opening pool carries **+0.07 survival**, which expires the
+instant the first one hollows. Everything after that is the ordinary game.
+
+That last one needs its own note, because it does less than it looks like. The
+survival cap is 92%, so at depth 0 with no scars the grace is swallowed whole —
+the headline number a new player reads on the Counsel card is **92% with it or
+without it**. It only bites where the cap is not binding: deep runs and scarred
+adventurers, which is exactly where hollowing comes from. Over 150 simulated
+first cycles that moves the first hollow from a median of **6.6 minutes** (p10
+4.9, p90 9.3) to **8.3** (p10 5.3, p90 11.6), which puts the median inside the
+spec's 8-12 minute window. The spread stays wide either way: one live
+playthrough landed the first hollow at 4.1 minutes and another at 6.4, both
+legitimate low-tail draws rather than a mistuning. Reducing the death scar
+instead was tried and is a weaker lever — 0.10 down to 0.06 only reaches a
+median of 7.6.
+
 ## What it looks like
 
 A ruined human temple, swallowed by forest, kept by animals. The people who
@@ -19,10 +75,17 @@ at the centre of a dais built for larger bodies; broken columns stand at the
 edge of the light and fall into the dark as the flame dies, so the building
 disappears around you over a run.
 
-Every figure is a **head with legs**: a 30x32 head, a 12x22 body block under
-it, two 8x6 peg legs with daylight between them, 48 pixels in all. The head is
-always wider than the body — that one relationship is what keeps them from
-reverting to robes. Eyes sit on an inset face plate, lighter than the head and
+The camera sits close. It frames whatever is actually lit — the fire alone at
+the opening, the seated ring once there is one — and **pulls back as the light
+grows**, so the sanctuary grows into the screen instead of shrinking inside it.
+The world has fixed coordinates and the camera absorbs every change in stage
+height as the HUD assembles itself, so nothing in the scene moves when a panel
+appears.
+
+Every figure is a **head with legs**: a **28 tall by 36 wide** head, a 12x20
+body block under it, two 8x6 peg legs with daylight between them, 48 pixels in
+all. The head is wider than it is tall and wider than the body on every figure
+and every build variation — square heads were why the style did not read. Eyes sit on an inset face plate, lighter than the head and
 shaped by species: wide and low for frog, narrow for crow, squared for goat.
 Ears, horns and beaks attach outside the plate. Every shape carries the same
 3px near-black outline, with no interior weight hierarchy. The keeper is built
@@ -53,7 +116,8 @@ nobody can say what they were for. The item descriptions are guesses.
 ## The loop
 
 - **Souls**, one integer currency, with an honest trailing-60s average rate.
-- **The bonfire.** A recruit arrives every 5s until the pool holds **8** —
+- **The bonfire.** After the first cycle it opens at full flame. A recruit
+  arrives every 5s until the pool holds **8** —
   12 with Widen the Circle fully paid, 14 behind the Wider Fire unlock. The
   light seats **5**, rising to 8. Each guest takes a seat, pays on sitting
   down, rests 20s, then leaves for a **30-second expedition**. Fewer and
@@ -216,6 +280,20 @@ road it sits at -0.18, effectively flat. With all eight out it loses 0.98 a
 minute. The pressure is that they are on the road, not that the circle is
 small.
 
+**v5.1's pacing, measured.** Beats 1-3 land at **25 seconds** for someone who
+taps and about **82** for someone who never does, against the spec's 90-second
+ceiling. The full ten-beat sequence, played live end to end: beat 4 at 37s,
+beat 5 at 47s, the flame bar and depth at 80s, the first find at 81s, the first
+death at 3.2m, the first hollow at 4.1m and Build at 4.6m — a low-tail run; the
+simulated median puts beat 9 at 8.3 minutes.
+
+**v5.1 needed one balance change, and it was the seat.** Beat 4 promises that
+buying the first Kindled Flame "adds a seat", and it did not: the seat term
+floored `flame level / 2`, so level 1 bought nothing visible but a wider light.
+Rounding it instead gives the first purchase a seat and shifts every odd level
+one earlier. Re-simulated over 40 runs that moves the run from 40.2 to **37.9
+minutes** — still inside the 35-50 window, so nothing else was retuned.
+
 **Let Them Go stays small**, 1 to 2 ash by depth, against roughly 113 for a full
 run — under the 15% ceiling even used on every hollow, and doubled by the
 Ossuary because that is what the Ossuary is for.
@@ -242,6 +320,12 @@ an escape — holds either way, and a Counsel-heavy player never chokes at all
 in half the simulated runs.
 
 ## The test
+
+Hand it to someone who has never seen it and say nothing at all. **At ten
+minutes, do they know what the game is about without having asked anything?**
+Any question they ask is a missing beat.
+
+Then, still:
 
 One full cycle on a phone. **Can you tell every single one of them apart
 without tapping anything?** If not, the roster is still too large, however good

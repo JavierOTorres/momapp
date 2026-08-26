@@ -90,6 +90,14 @@
   .dFire{background:var(--ember)} .dAway{background:var(--cold)} .dHollow{background:#454b48}
 
   /* ---------- sanctuary ---------- */
+  /* Nothing in the HUD exists until it is true; then it arrives. */
+  #top,#top>*,#pop,#pop>span,#bottom,.tab{transition:opacity .55s ease,height .45s ease,padding .45s ease}
+  body.boot #top,body.boot #top>*,body.boot #pop,body.boot #bottom,body.boot .tab{transition:none}
+  .gone{opacity:0;pointer-events:none}
+  #top.gone,#pop.gone{height:0;padding:0;overflow:hidden;border:0}
+  #bottom.gone{flex:0 0 0;height:0;min-height:0;padding:0;overflow:hidden;border:0}
+  .tab.gone{display:none}
+
   #stage{flex:1 1 auto;position:relative;min-height:0;background:var(--bg)}
   canvas{display:block;width:100%;height:100%}
 
@@ -189,17 +197,6 @@
     background:var(--panel);border-top:3px solid var(--line);
     display:flex;flex-direction:column;
   }
-  #tip{
-    flex:0 0 auto;display:flex;align-items:center;gap:10px;
-    padding:9px 12px;background:#232b2e;border-bottom:3px solid var(--line);
-    font-size:12px;font-weight:700;color:var(--gold);
-  }
-  #tip[hidden]{display:none}
-  #tip span{flex:1 1 auto;line-height:1.35}
-  #tipX{
-    flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:3px solid var(--line);
-    background:var(--panel);color:var(--dim);font:inherit;font-size:11px;
-  }
   #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
   .tab{
     flex:1;padding:13px 0;background:var(--panel-2);color:var(--dim);
@@ -246,19 +243,19 @@
   .note{font-size:11px;font-weight:600;color:var(--dim);text-align:center;padding:2px 6px 6px;line-height:1.4}
 </style>
 </head>
-<body>
+<body class="boot">
 <div id="app">
-  <div id="top">
+  <div id="top" class="gone">
     <div id="soulWrap"><div id="souls">0</div><div id="soulLabel">souls</div>
       <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
     <div id="rate"><b>0.0</b>souls/sec</div>
     <div id="flameWrap"><div id="flameBar"><i></i></div><span id="flameNum">100</span></div>
     <button id="bookBtn" title="The keeper's notes">📕</button>
   </div>
-  <div id="pop">
+  <div id="pop" class="gone">
     <span><i class="dFire"></i><em id="pFire">0</em> at fire</span>
     <span><i class="dAway"></i><em id="pAway">0</em> on expedition</span>
-    <span><i class="dHollow"></i><em id="pHollow">0</em> hollow</span>
+    <span id="popHollow"><i class="dHollow"></i><em id="pHollow">0</em> hollow</span>
   </div>
 
   <div id="stage">
@@ -323,14 +320,10 @@
     <div id="bookList"></div>
   </div>
 
-  <div id="bottom">
-    <div id="tip" hidden>
-      <span>Deeper adventurers pay more, and die more.</span>
-      <button id="tipX">✕</button>
-    </div>
+  <div id="bottom" class="gone">
     <div id="tabs">
       <button class="tab on" data-tab="skills">Skills</button>
-      <button class="tab" data-tab="build">Build</button>
+      <button class="tab gone" data-tab="build">Build</button>
     </div>
     <div id="list"></div>
     <div class="note" id="note"></div>
@@ -356,6 +349,7 @@
 const T = {
   POOL:8, SLOTS:16, AWAY:30, REST:20, WALK:62,
   SURV_BASE:0.98, SURV_SMITH:0.12, SURV_HERB:0.08, DEPTH_PEN:0.05, DEATH_PEN:0.10,
+  FIRST_GRACE:0.07,
   SURV_MIN:0.15, SURV_MAX:0.92,
   HOLLOW_AT:3, HOLLOW_AT_HERB:4,
   DEPTH_PAY:0.5,
@@ -378,6 +372,11 @@ const S = {
   souls:0, lv:{flame:0, word:0, echo:0, circle:0}, rekindles:0,
   embers:T.MAX_EMBERS, emberT:0, arriveT:0, taps:0, tab:"skills",
   pool:[], nextId:1, sel:null, tipSeen:false, notice:null, bells:0,
+  first:true, beat:0, rests:0, nudge:null, bookShown:false,
+  rev:{ embers:false, souls:false, arrivals:false, tabs:false, book:false, road:false,
+        flameBar:false, pop:false, hollowCount:false, pips:false, build:false,
+        sawFind:false, sawDeath:false,
+        skWord:false, skCircle:false, skEcho:false, skRite:false },
   seen:{ depth:false, death:false, hollow:false, artifact:false, ident:false, curse:false, material:false, relic:false },
   mat:0, relic:[], lost:[], nextArt:1,
   v:{ smith:0, herb:0, quart:0, carto:0, ossu:0, tink:0 }, plots:[null,null,null,null,null,null,null],
@@ -408,9 +407,9 @@ const ARCHIVE = [
     + "ten of them at a time, and one comes back every two seconds. Early on that is most of the "
     + "money. Later it is a thing to do with my hands." },
   { name:"Expeditions", open:()=>true, body:
-    "They rest twenty seconds, pay, and go down for thirty. The track on the left is how I know "
-    + "where they are. The number on the marker is how deep. The pips beside it are how many "
-    + "times they have already died." },
+    "They rest twenty seconds, pay, and go down for thirty. The bar under the count is how I "
+    + "know where they are: one length of it for each place, "
+    + "and a mark on it for everyone who is down there." },
   { name:"The bell", open:()=>true, body:
     "Rung, it brings one of them straight back up. They arrive alive, no deeper than they went, "
     + "and they owe me nothing, which is the point and also the cost. It asks more of me every "
@@ -424,10 +423,13 @@ const ARCHIVE = [
     + "for good. The red pips under a figure are how many they have taken. Nothing lifts a scar "
     + "but the rite, and the rite is not cheap." },
   { name:"Hollowing", open:()=>S.seen.hollow, body:
-    "The third death does it. The fourth, if the herbalist is here. Afterwards they sit where I "
-    + "put them, grey, and they do not pay and they do not leave. There are eight places at the "
-    + "fire. The smith keeps two and the herbalist one. Count what is left and you will see the "
-    + "shape of the end." },
+    "The third death does it. The fourth, if the herbalist is here. They drop where they stand "
+    + "and the colour goes out of them, and the fire takes a hard knock the moment it happens — "
+    + "harder for the ones who got deep. Then there is a ring draining on the ground beside them, "
+    + "and half a minute to decide. Bring them back with the rite, or let them go, or do nothing: "
+    + "if the ring runs out they stand up and walk into the dark on their own, and I write them "
+    + "down either way. I have never had more than three of them sitting here at once. The "
+    + "fourth one always leaves first." },
   { name:"The rite of rekindling", open:()=>S.seen.hollow, body:
     "It brings one of them back from grey: no depth, no scars, no memory of it that I can see. "
     + "The price climbs every time and my income does not climb with it. I have not decided yet "
@@ -437,8 +439,9 @@ const ARCHIVE = [
     + "The herbalist takes one place, gives eight points, and buys everyone a fourth death. They "
     + "are worth their room. Everything at this fire costs room." },
   { name:"Standing beside each other", open:()=>true, body:
-    "Two of them on neighbouring ground start working together, and it shows as a line between "
-    + "the plots. The smith beside the tinker: half again as much scrap out of anything broken. "
+    "Two of them on neighbouring ground start working together. Nothing on the ground says so — "
+    + "it is written on their card in the Build tab, and here. "
+    + "The smith beside the tinker: half again as much scrap out of anything broken. "
     + "The herbalist beside the ossuary: letting one go lifts a death off somebody still standing. "
     + "The quartermaster beside the cartographer: routed adventurers travel a tenth faster again. "
     + "The smith beside the quartermaster: reforged weapons ask less scrap. The herbalist beside "
@@ -457,10 +460,12 @@ const ARCHIVE = [
     + "something out of the gate itself. Fail and they are thrown back, take a death, and drop "
     + "what they had. Tap the head of the strip to see the whole road." },
   { name:"The flame", open:()=>true, body:
-    "It burns down on its own and the circle holds it up: everyone living feeds it, everyone grey "
-    + "eats it, and only those who can reach a seat feed it fully. A full circle roughly holds. "
-    + "Two hollows and it starts going. When it reaches nothing the fire is out and the run is "
-    + "finished, and what the run was worth comes back as ash." },
+    "It burns down on its own and the circle holds it up: everyone living feeds it, and only "
+    + "those who can reach a seat feed it fully — the ones out on the road feed it at a third. A "
+    + "full circle roughly holds. What takes it down is losing somebody: the moment one of them "
+    + "goes grey the fire drops all at once, and further for the ones who got deep. When it "
+    + "reaches nothing the fire is out and the run is finished, and what the run was worth comes "
+    + "back as ash." },
   { name:"Counsel", open:()=>S.seen.depth, body:
     "Sitting with one of them tells me what they are worth and how close they are. Sending them "
     + "shallow means one layer short of where they have been: better odds, a thinner purse, and "
@@ -514,7 +519,8 @@ const NODES = [
     desc:()=> "+5% chance a rest pays double, cap 50%.  Now " + Math.round(echoChance()*100) + "%." }
 ];
 
-const cost      = n => Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
+const cost      = n => (S.first && n.key === "flame" && S.lv.flame === 0) ? 3
+                     : Math.floor(n.base * Math.pow(n.growth, S.lv[n.key]));
 const perRest   = () => 1 + S.lv.flame + (built("smith") ? 2 : 0);
 const interval  = () => 5 * Math.pow(0.9, S.lv.word);
 const echoChance= () => Math.min(0.5, 0.05 * S.lv.echo);
@@ -536,8 +542,8 @@ function awayScale(a){                                     // supplies make the 
   return Math.max(0.5, f);
 }
 const lightR    = () => (104 + S.lv.flame * 9) * (0.5 + 0.5 * flameLife());
-const ringCap   = () => Math.max(T.RING_MIN, Math.round(
-                    Math.min(T.RING_MAX, T.RING_BASE + Math.floor(S.lv.flame / 2)) * (0.45 + 0.55 * flameLife())));
+const ringCap   = () => Math.max(T.RING_MIN, Math.round(   // the first level has to buy a seat
+                    Math.min(T.RING_MAX, T.RING_BASE + Math.round(S.lv.flame / 2)) * (0.45 + 0.55 * flameLife())));
 const vendorSeats = () => VENDORS.reduce((n, v) => n + (built(v.key) && inLight(plotOf(v.key)) ? v.seats : 0), 0);
 const usableSeats = () => Math.max(1, ringCap() - vendorSeats());
 
@@ -557,8 +563,14 @@ const payFor    = a => Math.max(1, Math.round(perRest() * (1 + runDepth(a) * T.D
 const runDepth  = a => a.route != null ? Math.min(a.depth, locFloor(a.route) + 1)
                      : a.shallow ? Math.max(0, a.depth - 1) : a.depth;
 const spSurv    = a => a && a.sp ? (spOf(a).survival || 0) : 0;
+/* The sequence has to run eight to twelve minutes and the first hollow measured at
+   a median of 6.6, so the opening pool is a little harder to kill. The survival cap
+   swallows this at depth 0, which is the point: the number a new player reads is
+   unchanged and only the deep, scarred runs that actually cause hollowing get the
+   help. It expires the moment the first one hollows, and only the first fire. */
+const grace     = () => (S.first && !S.everHollowed) ? T.FIRST_GRACE : 0;
 const survival  = (d, deaths, a) => Math.max(T.SURV_MIN, Math.min(T.SURV_MAX,
-                    T.SURV_BASE + (built("smith") ? T.SURV_SMITH * vEff("smith") : 0) + (built("herb") ? T.SURV_HERB * vEff("herb") : 0)
+                    grace() + T.SURV_BASE + (built("smith") ? T.SURV_SMITH * vEff("smith") : 0) + (built("herb") ? T.SURV_HERB * vEff("herb") : 0)
                     - d * T.DEPTH_PEN - deaths * (a ? deathPenFor(a) : T.DEATH_PEN)
                     + mods(a).surv + spSurv(a)));
 const hollows   = () => S.pool.filter(a => a.state === "hollow");
@@ -572,18 +584,22 @@ const avgRate   = () => {                 // never divide by a window too short 
 
 const cv = document.getElementById("cv");
 const ctx = cv.getContext("2d");
-let W = 0, H = 0, fx = 0, fy = 0;
+/* fx and fy are world coordinates and never move. The stage changes height as the
+   HUD assembles itself, and the camera absorbs all of it. */
+let W = 0, H = 0;
+const fx = 195, fy = 300;
 
 function resize(){
   const r = cv.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  if (Math.abs(r.width - W) < 1 && Math.abs(r.height - H) < 1) return;   // the panel animates
   W = r.width; H = r.height;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  fx = W / 2; fy = H * 0.57;
 }
 window.addEventListener("resize", resize);
 if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);   // a panel reflow is not a resize
 
 /* One palette, one set of line weights. Outer contour 3, interior 1.5, detail 1. */
 const C = {
@@ -669,15 +685,62 @@ const OUTLINE = "#141014";
 
 const SPMAP = {}; SPECIES.forEach(sp => SPMAP[sp.key] = sp);
 const spOf = a => SPMAP[a.sp] || SPECIES[0];
-const BUILDS = [{ h:1, w:1 }, { h:1.12, w:0.92 }, { h:0.9, w:1.12 }];
+const BUILDS = [{ h:1, w:1 }, { h:1.06, w:0.95 }, { h:0.95, w:1.06 }];
 
 const TONES = [ ["#6f8fd6","#41598f"], ["#c86f8f","#8a3f5c"], ["#7fbf8a","#4a7d57"],
                 ["#c9a227","#5c4a1c"], ["#9b7fd0","#5f4a8c"], ["#d0796a","#8c4638"],
                 ["#5fbec4","#2f7d82"], ["#d9c48a","#9c5a22"], ["#b96fc4","#7a3f85"],
                 ["#a8c95c","#6c8a30"], ["#8894b0","#525b74"], ["#c45f5f","#832f2f"] ];
 const slotUsed = new Array(T.RING_MAX).fill(null);
-const FIRE_TAP_R = 78;                    // nobody may sit inside this
+const FIRE_TAP_R = 66;                    // nobody may sit inside this
 let RING_R = 108;                         // recomputed each frame: the seats sit at the light's edge
+
+const emberY = () => fy + RING_R * 0.52 + 34;
+
+/* 6. The camera. The lit area fills the frame and the dark is the edge it pushes
+   against, not the majority of the screen. As the light grows the frame widens to
+   match, so the sanctuary grows into the screen instead of shrinking inside it. */
+const CAM = { z:1, cy:0, oy:0, set:false };
+
+function sceneBounds(){
+  const onStage = S.pool.some(a => a.state !== "away");
+  const R = lightR();
+  let halfW = onStage ? RING_R + 24 : Math.max(R * 1.35, 66);
+  let top   = onStage ? fy - RING_R * 0.52 - 66 : fy - Math.max(R * 0.62, 52);
+  let bot   = Math.max(emberY() + 12, fy + (onStage ? RING_R * 0.52 + 48 : R * 0.5 + 26));
+  for (let i = 0; i < plotCount(); i++){          // built ground has to stay in shot
+    if (!S.plots[i]) continue;
+    const pp = plotPos(i);
+    halfW = Math.max(halfW, Math.abs(pp.x - fx) + 28);
+    bot = Math.max(bot, pp.y + 26); top = Math.min(top, pp.y - 40);
+  }
+  if (K.placed){                                  // the keeper is never half out of frame
+    halfW = Math.max(halfW, Math.abs(K.x - fx) + 42);
+    top = Math.min(top, K.y - 68); bot = Math.max(bot, K.y + 14);
+  }
+  if (S.relic.length || S.seen.relic){
+    const rb = relicBounds();
+    halfW = Math.max(halfW, rb.x1 - fx + 12); bot = Math.max(bot, rb.y + 24);
+  }
+  return { halfW, top, bot };
+}
+
+function camera(dt){
+  const b = sceneBounds();
+  const barH = revealed("road") ? stripGeom().y + stripGeom().h + 10 : 10;
+  const availH = Math.max(80, H - barH);
+  const z = Math.max(0.85, Math.min(3.2, Math.min((W - 10) / (b.halfW * 2),
+                                                  availH / Math.max(60, b.bot - b.top))));
+  const cy = (b.top + b.bot) / 2, oy = barH + availH / 2;
+  if (!CAM.set){ CAM.z = z; CAM.cy = cy; CAM.oy = oy; CAM.set = true; }
+  else {
+    const k = Math.min(1, dt * 1.6);              // the pull-back is a drift, never a cut
+    CAM.z += (z - CAM.z) * k; CAM.cy += (cy - CAM.cy) * k; CAM.oy += (oy - CAM.oy) * k;
+  }
+  return CAM;
+}
+const worldHalfW = () => (W / 2) / CAM.z;
+function toWorld(x, y){ return { x: fx + (x - W / 2) / CAM.z, y: CAM.cy + (y - CAM.oy) / CAM.z }; }
 
 function slotPos(i){
   const n = Math.max(1, ringCap());
@@ -694,9 +757,9 @@ function claimSlot(a){
 }
 function releaseSlot(a){ if (a.slot >= 0){ slotUsed[a.slot] = null; a.slot = -1; } }
 function edgeSpawn(a){
-  const left = Math.random() < 0.5;
-  a.x = left ? -30 : W + 30; a.y = fy + 40 + Math.random() * 12;
-  a.dir = left ? 1 : -1; a.exit = left ? W + 40 : -40;
+  const left = Math.random() < 0.5, off = worldHalfW() + 34;
+  a.x = fx + (left ? -off : off); a.y = fy + 40 + Math.random() * 12;
+  a.dir = left ? 1 : -1; a.exit = fx + (left ? off : -off);
 }
 
 const rand = arr => arr[(Math.random() * arr.length) | 0];
@@ -725,6 +788,7 @@ function recruit(){
 
 function earn(n, x, y, doubled){
   S.souls += n; S.runEarned += n;
+  if (S.first && !S.rev.souls){ S.rev.souls = true; refresh(); }
   S.earnLog.push({ t:S.elapsed, n });
   if (S.offline) return;
   S.floats.push({ x, y, t:0, txt:"+" + n, col: doubled ? "#ffe9b8" : "#d8d2c4" });
@@ -740,6 +804,7 @@ function sitDown(a){
     const doubled = Math.random() < echoChance();
     earn(payFor(a) * (doubled ? 2 : 1), a.x, a.y - 26, doubled);
   }
+  if (S.first && S.beat < 4 && ++S.rests >= 3) beatTo(4);
   if (a.pending){ say(a, a.pending); a.pending = null; }
   a.shallow = false;                    // the discount is spent on this rest
   for (let k = 0; k < 4; k++) sparks(a.x, a.y - 10, 0.7);
@@ -748,6 +813,9 @@ function sitDown(a){
 function resolveExpedition(a){
   const d = runDepth(a), survived = Math.random() < survival(d, a.deaths, a);
   a.shallow = false;
+  if (S.first && !S.rev.flameBar){        // they are back, so now there is something to protect
+    S.rev.flameBar = true; S.flameOn = true; refresh();
+  }
   if (survived){
     if (a.depth === d){
       const wouldBe = d + 1;
@@ -757,6 +825,9 @@ function resolveExpedition(a){
       const leap = spOf(a).depth || 0;                      // the reckless take two at a time
       a.depth = Math.min(wouldBe + (leap && Math.random() < 0.35 ? 1 : 0), deepestAllowed());
       if (a.depth > (a.peak || 0)) a.peak = a.depth;
+    }
+    if (S.first && S.beat < 6 && a.depth > 0){    // glows at the fire until tapped, once, ever
+      S.nudge = a.id; beatTo(6);
     }
     if (a.depth === 1 && !S.tipSeen){ S.seen.depth = true; showTip(); }
     if (a.depth >= T.NAME_AT_DEPTH && !a.name){
@@ -770,6 +841,7 @@ function resolveExpedition(a){
     a.packed = false; a.skipped = false; a.route = null;
   } else {
     a.deaths++; S.seen.death = true;
+    beatEvent(8);                                 // pips, on everyone from now on
     if (a.deaths === 1) a.pending = oneOf(LINES.firstDeath);
     const hollowing = a.deaths >= hollowAt(a);
     if (!hollowing) loseGear(a, d, false);   // dropped at the depth that took them
@@ -780,9 +852,79 @@ function resolveExpedition(a){
   edgeSpawn(a); a.state = "walkin";
 }
 
+/* ================== the first fire ==================
+   Not a tutorial layer: the first cycle, authored. Every element of the HUD starts
+   absent and arrives the moment it first becomes true. The sequence gates what is
+   revealed, never what is permitted, and every word of it is one line in the
+   keeper's voice that fades. It runs on the first cycle only. */
+
+const revealed = k => !S.first || !!S.rev[k];
+
+const OPEN_LINE = {
+  0: "The fire is nearly out, and nobody has come this way in a long time.",
+  2: "It was bigger than the fire once. Some of it is still standing.",
+  3: "Someone found the light. They do not look like they were going anywhere.",
+  5: "They go down. There is a down, and it runs further than I have been.",
+  7: "The people who built this left their things behind. Nobody knows what for.",
+  8: "Something down there had a go at them first. They came back anyway."
+};
+
+/* 7 and 8 are driven by what actually happens down there, and either can land
+   first. Each owns a flag so neither is swallowed by the other arriving early. */
+function beatEvent(n){                             // true the one time it fires
+  if (!S.first) return false;
+  const key = n === 7 ? "sawFind" : "sawDeath";
+  if (S.rev[key]) return false;
+  S.rev[key] = true;
+  if (n === 8) S.rev.pips = true;
+  if (!S.offline && OPEN_LINE[n]) S.notice = { txt:OPEN_LINE[n], t:0 };
+  S.beat = Math.max(S.beat, n);
+  render(); refresh(); saveGame();
+  return true;
+}
+
+function beatTo(n){
+  if (!S.first || S.beat >= n) return;
+  S.beat = n;
+  const line = OPEN_LINE[n];
+  if (line && !S.offline) S.notice = { txt:line, t:0 };
+  switch (n){
+    case 2: break;                                  // the light does its own talking
+    case 3: S.rev.arrivals = true; break;
+    case 4: S.rev.tabs = true; S.rev.book = true; break;
+    case 5: S.rev.road = true; S.rev.pop = true; break;
+    case 6: S.rev.skEcho = true; break;             // depth exists, so paying by depth can
+    case 9: S.rev.hollowCount = true; S.rev.skRite = true; break;
+    case 10: S.rev.build = true; break;
+  }
+  render(); refresh(); saveGame();
+}
+
+/* Beats 1-3 have to land inside ninety seconds even for somebody who never taps,
+   so the keeper feeds it too — slowly enough that a tap is plainly worth more. */
+const OPEN_TREND = 0.55, TAP_INTENSITY = 1.5;
+
+function tickOpening(dt){
+  if (!S.first) return;
+  if (S.beat < 3){
+    S.flame = Math.min(S.flameMax, S.flame + OPEN_TREND * dt);
+    if (S.flame >= 40) beatTo(2);
+    if (S.flame >= 60) beatTo(3);
+  }
+}
+
 const hollowWindow = () => vlv("ossu") >= 2 ? 60 : T.HOLLOW_WINDOW;
 
 /* They stand up and walk out on their own if nobody decides for them. */
+/* Beat 10. Whatever the player did about the first hollow, including nothing, the
+   book opens once on the entry about it — the one moment they will want to know. */
+function hollowResolved(){
+  if (!S.first || S.beat < 9 || S.bookShown) return;
+  S.bookShown = true;
+  if (S.offline){ beatTo(10); return; }
+  setTimeout(() => { openBook("Hollowing"); beatTo(10); }, 1500);
+}
+
 function depart(a, quiet){
   if (!a || a.state !== "hollow") return;
   const ash = letGoAsh(a);
@@ -799,6 +941,7 @@ function depart(a, quiet){
     S.notice = { txt:(a.name ? a.name + " walked out on their own." : "One of them walked out."), t:0 };
     S.floats.push({ x:a.x, y:a.y - 46, t:0, txt:"+" + ash + " ash", col:"#a9a3b5" });
   }
+  hollowResolved();
 }
 
 function goHollow(a){                     // the thing the whole system exists to produce
@@ -819,6 +962,7 @@ function goHollow(a){                     // the thing the whole system exists t
                      cycle: S.meta.cycles + 1 });
   if (S.offline) S.offline.hollowed.push({ name:a.name || null, depth:a.depth, sp:a.sp });
   const first = !S.everHollowed; S.everHollowed = true;
+  if (first) beatTo(9);
   say(a, oneOf(first ? LINES.firstHollow : LINES.hollow));
   S.notice = { txt:"Someone has gone hollow.", t:0 };
   for (let k = 0; k < 22; k++)
@@ -863,7 +1007,13 @@ function updatePool(dt){
       if (a.t <= 0){ a.t = 0.4; if (claimSlot(a)) a.state = "walkin"; }
     } else if (a.state === "rest"){
       a.t -= dt;
-      if (a.t <= 0){ releaseSlot(a); a.state = "walkout"; if (S.sel === a.id) closeCounsel(); }
+      if (a.t <= 0){
+        if (S.first && S.beat < 5){                 // they stay until there are three
+          if (living().length < 3){ a.t = T.REST; sitDown(a); continue; }
+          beatTo(5);
+        }
+        releaseSlot(a); a.state = "walkout"; if (S.sel === a.id) closeCounsel();
+      }
     } else if (a.state === "walkout"){
       a.x += Math.sign(a.exit - a.x) * speed * dt;
       a.y += (fy + 46 - a.y) * Math.min(1, dt);
@@ -972,8 +1122,9 @@ function dropFor(a){
   }
   a.find = art; art.owner = a.id;
   S.seen.artifact = true;
+  const firstEver = beatEvent(7);                 // the first one gets its own line
   if (S.offline){ S.offline.found++; return; }
-  S.notice = { txt:"Something came up with them.", t:0 };
+  if (!firstEver) S.notice = { txt:"Something came up with them.", t:0 };
 }
 
 const gearIn = (a, slot) => (a.gear && a.gear[slot]) || null;
@@ -1135,7 +1286,7 @@ const plotCount = () => Math.min(7, 4 + Math.floor(S.lv.flame / 3));
 function plotPos(i){
   const n = Math.max(4, plotCount());
   const a = -Math.PI / 2 + (i / n) * Math.PI * 2 + 0.55;
-  const r = 100 + (i % 3) * 30;                     // fixed ground; the light is what moves
+  const r = 92 + (i % 3) * 32;                      // fixed ground; the light is what moves
   return { x: fx + Math.cos(a) * r, y: fy + Math.sin(a) * r * 0.46 + 10, r };
 }
 const inLight = i => i >= 0 && plotPos(i).r <= lightR() * 1.12;
@@ -1319,18 +1470,20 @@ function drawGround(time){
   const R = lightR(), life = flameLife();
   const seen = t => Math.max(0, Math.min(1, (R * 1.5 - t) / 60));   // fades out past the light
 
-  ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, H);
-
-  // moss and standing water beyond the flagstones
-  shape(()=>ctx.ellipse(fx, fy + 30, Math.min(W * 0.46, 184), 76, 0, 0, 6.2832), "#141a15", 0);
-  shape(()=>ctx.ellipse(fx, fy + 28, Math.min(W * 0.40, 158), 62, 0, 0, 6.2832), C.mossDark, 0);
-  shape(()=>ctx.ellipse(fx - 54, fy + 62, 46, 13, 0.2, 0, 6.2832), C.water, 0);
+  /* At a low fire the temple is not dim, it is absent. The light is what builds it. */
+  const reach = 0.34 + 0.66 * life;
+  shape(()=>ctx.ellipse(fx, fy + 30, 184 * reach, 76 * reach, 0, 0, 6.2832), "#141a15", 0);
+  shape(()=>ctx.ellipse(fx, fy + 28, 158 * reach, 62 * reach, 0, 0, 6.2832), C.mossDark, 0);
+  if (life > 0.3)
+    shape(()=>ctx.ellipse(fx - 54 * reach, fy + 62 * reach, 46 * reach, 13 * reach, 0.2, 0, 6.2832),
+          C.water, 0);
 
   // roots coming up through the joints, thickest at the outer edge
   ctx.lineCap = "round";
   for (const r of ROOTS){
     const x0 = fx + Math.cos(r.a) * (R * 0.9), y0 = fy + Math.sin(r.a) * (R * 0.42) + 16;
-    const x1 = x0 + Math.cos(r.a) * r.len, y1 = y0 + Math.sin(r.a) * r.len * 0.45;
+    const rl = r.len * reach;
+    const x1 = x0 + Math.cos(r.a) * rl, y1 = y0 + Math.sin(r.a) * rl * 0.45;
     ctx.strokeStyle = C.root; ctx.lineWidth = LW.inner + 1.5;
     ctx.beginPath(); ctx.moveTo(x0, y0);
     ctx.quadraticCurveTo((x0 + x1) / 2 + r.k * 10, (y0 + y1) / 2 - 6, x1, y1);
@@ -1376,10 +1529,10 @@ function drawColumns(time){                          // stand at the edge of the
   for (const c of COLUMNS){
     const dist = R * 1.34;
     const x = fx + Math.cos(c.a) * dist, y = fy + Math.sin(c.a) * dist * 0.30 + 30;
-    if (x < -40 || x > W + 40) continue;
-    const vis = Math.max(0, Math.min(1, (R - 58) / 90));
+    if (Math.abs(x - fx) > worldHalfW() + 60) continue;
+    const vis = Math.max(0, Math.min(1, (R - 72) / 62));
     if (vis <= 0.02) continue;
-    ctx.globalAlpha = 0.35 + 0.65 * vis;
+    ctx.globalAlpha = 0.15 + 0.85 * vis;
     contact(x, y + 2, c.w * 1.3, 0.4);
     if (c.fallen){
       shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(1.2);
@@ -1456,11 +1609,13 @@ function drawFire(time){
     const off = i === 0 ? 0 : (i % 2 ? 1 : -1) * (9 + i * 4) * size;
     const sc = i === 0 ? 1 : 0.52 - i * 0.05;
     teardrop(fx + off + Math.sin(time * (2.2 + i) * speed) * 2, fy - 2,
-             w1 * sc, h1 * sc * (0.8 + 0.2*life), hot, 5);
+             w1 * sc, h1 * sc * (0.8 + 0.2*life), hot, Math.max(2.4, 5 * size));
   }
-  teardrop(fx + Math.sin(time * 3.7 * speed) * 3, fy - 4, w1 * 0.62, h1 * 0.66, mid, 4);
-  if (life > 0.12)
-    teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.30, h1 * 0.36, tip, 3);
+  teardrop(fx + Math.sin(time * 3.7 * speed) * 3, fy - 4, w1 * 0.62, h1 * 0.66, mid,
+           Math.max(2, 4 * size));
+  if (life > 0.05)
+    teardrop(fx + Math.sin(time * 4.9 * speed) * 2, fy - 5, w1 * 0.30, h1 * 0.36, tip,
+             Math.max(1.5, 3 * size));
 }
 
 /* 4 + 7 + 8. Species read as silhouettes. A hollow keeps its silhouette exactly
@@ -1469,7 +1624,7 @@ function drawFire(time){
 /* A head with legs, not a robe with a head.
    Head 30x32, body 12x22, legs 8x6 with 6px between them: 48px in total.
    The head must always be wider than the body or it reverts to a cone. */
-const FIG = { head:{ w:32, h:30 }, body:{ w:22, h:12 }, leg:{ w:6, h:8, gap:6 }, total:48 };
+const FIG = { head:{ w:36, h:28 }, body:{ w:20, h:12 }, leg:{ w:6, h:8, gap:6 }, total:48 };
 
 function ear(x, y, w, h, tilt, fill){
   shape(()=>{ ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
@@ -1566,10 +1721,10 @@ function drawAnimal(a, x, y, opts){
             mix(body, OUTLINE, 0.18), LW.outer);
 
   facePlate(x, hy + hh * 0.10, hw, hh, sp.key, plate);
-  if (sp.key === "crow")                            // the beak sits on the plate
-    shape(()=>{ ctx.moveTo(x - 4, hy + hh * 0.16); ctx.lineTo(x + 4, hy + hh * 0.16);
-      ctx.lineTo(x, hy + hh * 0.40); ctx.closePath(); }, "#6b6152", LW.outer);
-  drawEyes(x, hy + hh * (sp.key === "frog" ? 0.02 : 0.06), hw,
+  if (sp.key === "crow")                            // the beak sits below the eyes, not through them
+    shape(()=>{ ctx.moveTo(x - 3.5, hy + hh * 0.30); ctx.lineTo(x + 3.5, hy + hh * 0.30);
+      ctx.lineTo(x, hy + hh * 0.56); ctx.closePath(); }, "#c9a06a", LW.outer);
+  drawEyes(x, hy + hh * (sp.key === "frog" ? 0.02 : 0.04), hw,
            hollow ? "hollow" : a.deaths >= 2 ? "weary" : "normal", plate);
 
   if (gear.weapon){                                 // scavenged, and too big for them
@@ -1591,6 +1746,13 @@ function drawAnimal(a, x, y, opts){
 }
 
 function drawAdventurer(a, time){
+  if (S.nudge === a.id && a.state === "rest"){    // the only attention-directing thing in the game
+    const pulse = 0.5 + 0.5 * Math.sin(time * 2.6);
+    const g = ctx.createRadialGradient(a.x, a.y - 24, 6, a.x, a.y - 24, 46);
+    g.addColorStop(0, "rgba(255,233,184," + (0.20 + 0.16 * pulse).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(255,233,184,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y - 24, 46, 0, 6.2832); ctx.fill();
+  }
   if (a.state === "hollow"){ drawAnimal(a, a.x, a.y, { seated:true, dir:1 }); }
   else {
     const rest = a.state === "rest";
@@ -1621,13 +1783,14 @@ function drawAdventurer(a, time){
 
 
 function drawPips(x, y, deaths, cap, hollow){
+  if (!revealed("pips")) return;
   const gap = 9, x0 = x - (cap - 1) * gap / 2;
   for (let i = 0; i < cap; i++)
     circle(x0 + i*gap, y, 3.4, i < deaths ? (hollow ? "#454b48" : "#f2682c") : "#2a2136", 2.5);
 }
 
 function drawBlacksmith(time, px, py){
-  const x = px != null ? px : Math.min(fx + RING_R * 0.86, W - 58);
+  const x = px != null ? px : fx + RING_R * 0.86;
   const y = py != null ? py : fy + 26, swing = Math.sin(time*5.2);
   rrect(x + 34, y - 4, 26, 9, 4, "#2b3136", 4);
   shape(()=>{ ctx.moveTo(x+26, y-8); ctx.lineTo(x+42, y-8); ctx.lineTo(x+39, y-18);
@@ -1660,6 +1823,7 @@ function drawHerbalist(time, px, py){
 /* The road, as a bar under the status line: how many are in each place,
    and a marker per adventurer sinking as they go. */
 function drawStrip(time){
+  if (!revealed("road")) return;
   const g = stripGeom(), list = away(), n = LOC.length, band = g.w / n;
   const base = g.y + g.h - 5;
   rrect(g.x + g.w / 2, g.y + g.h / 2, g.w + 10, g.h + 8, 11, "rgba(15,21,18,0.82)", 0);
@@ -1776,6 +1940,7 @@ function drawPlots(time){
   for (let i = 0; i < n; i++){
     const p = plotPos(i), key = S.plots[i], lit = inLight(i);
     if (!key){                                        // a footprint someone else laid
+      if (!revealed("build")) continue;
       ctx.setLineDash([4, 6]);
       shape(()=>ctx.ellipse(p.x, p.y, 22, 11, 0, 0, 6.2832), "rgba(23,27,30,0.45)", 2);
       ctx.setLineDash([]);
@@ -1788,18 +1953,32 @@ function drawPlots(time){
     else {
       hooded(p.x, p.y, 26, 26, v.tint, mix(v.tint, "#0a0e0b", 0.45), p.x > fx ? -1 : 1, true);
       rrect(p.x, p.y - 10, 17, 19, 6, mix(v.tint, "#0a0e0b", 0.25), 3);
-      ctx.font = "12px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(v.glyph, p.x, p.y - 30);
+      rrect(p.x, p.y - 46, 20, 9, 4, v.tint, LW.outer);   // their colour on a board, not their name
     }
     /* Inner and outer read from where the light falls. Adjacency is in the Build tab. */
   }
 }
 
 function drawEmbers(){
-  const n = T.MAX_EMBERS, gap = 15, x0 = fx + 16 - (n-1)*gap/2, y = fy + 94;
+  if (!revealed("embers")) return;
+  const n = T.MAX_EMBERS, gap = 15, x0 = fx - (n-1)*gap/2, y = emberY();
   for (let i = 0; i < n; i++)
     circle(x0 + i*gap, y, 4.5, i < Math.floor(S.embers) ? "#ffab3d" : "#232c20", 3);
   /* No text on the scene. The pips are the whole instruction. */
+}
+
+/* The keeper's lines are sentences, and a phone is 390 wide. */
+function wrapText(txt, max){
+  if (ctx.measureText(txt).width <= max) return [txt];
+  const words = String(txt).split(" "), out = [];
+  let line = "";
+  for (const w of words){
+    const next = line ? line + " " + w : w;
+    if (ctx.measureText(next).width > max && line){ out.push(line); line = w; }
+    else line = next;
+  }
+  if (line) out.push(line);
+  return out;
 }
 
 function drawFx(dt){
@@ -1820,7 +1999,8 @@ function drawFx(dt){
     ctx.globalAlpha = q.t < 0.5 ? q.t/0.5 : Math.min(1, (4.2 - q.t)/1.1);
     ctx.font = "600 11px ui-rounded, system-ui, sans-serif";
     const w = ctx.measureText(q.txt).width + 16;
-    const bx = Math.max(w/2 + 4, Math.min(W - w/2 - 4, q.x));   // never off the edge
+    const lim = Math.max(20, worldHalfW() - w/2 - 6);
+    const bx = Math.max(fx - lim, Math.min(fx + lim, q.x));     // never off the edge
     rrect(bx, q.y, w, 20, 9, "rgba(20,15,28,0.9)", 2);
     ctx.fillStyle = "#a9a3b5"; ctx.fillText(q.txt, bx, q.y + 4);
     ctx.globalAlpha = 1;
@@ -1873,13 +2053,14 @@ function frame(now){
   let guard = 0;
   while (S.arriveT >= iv && guard++ < 20){
     S.arriveT -= iv;
-    if (living().length < poolCap()) recruit();
+    if (revealed("arrivals") && living().length < poolCap()) recruit();
   }
 
   S.emberT += dt;
   while (S.emberT >= T.EMBER_REGEN){ S.emberT -= T.EMBER_REGEN; S.embers = Math.min(T.MAX_EMBERS, S.embers + 1); }
 
-  RING_R = Math.min(W / 2 - 32, Math.max(FIRE_TAP_R + 46, lightR() * 1.18));
+  RING_R = Math.min(168, Math.max(FIRE_TAP_R + 30, lightR() * 1.18));
+  tickOpening(dt);
   if (S.flameOn && !S.ending) tickFlame(dt);
   updatePool(dt);
   updateKeeper(dt);
@@ -1891,6 +2072,10 @@ function frame(now){
     if (Math.random() < 0.12 + 0.88 * flameLife()) sparks(fx + (Math.random()-0.5)*14, fy - 18, 0.8); }
 
   ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, H);   // the dark, before any transform
+  const cam = camera(dt);
+  ctx.save();
+  ctx.translate(W / 2, cam.oy); ctx.scale(cam.z, cam.z); ctx.translate(-fx, -cam.cy);
   drawGround(time);
   drawColumns(time);
   const onStage = S.pool.filter(a => a.state !== "away");
@@ -1904,8 +2089,9 @@ function frame(now){
   if (K.y > fy) drawKeeper(time);
   drawEmbers();
   drawReliquary(time);
-  drawStrip(time);
   drawFx(dt);
+  ctx.restore();
+  drawStrip(time);                                // the road bar is chrome, not scenery
 
   if (S.notice){
     S.notice.t += dt;
@@ -1913,10 +2099,12 @@ function frame(now){
     else {
       const n = S.notice;
       ctx.globalAlpha = n.t < 0.3 ? n.t / 0.3 : Math.min(1, (4.5 - n.t) / 1.2);
-      ctx.font = "800 15px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.lineWidth = 5; ctx.strokeStyle = "#0a0e0b";
-      const ny = stripGeom().y + stripGeom().h + 24;    // clear of the road bar
-      ctx.strokeText(n.txt, fx, ny); ctx.fillStyle = "#a9a3b5"; ctx.fillText(n.txt, fx, ny);
+      ctx.font = "800 14px ui-rounded, system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.lineWidth = 5; ctx.strokeStyle = "#0a0e0b"; ctx.fillStyle = "#a9a3b5";
+      let ny = (revealed("road") ? stripGeom().y + stripGeom().h : 8) + 26;
+      for (const ln of wrapText(n.txt, W - 30)){       // a line, never a line running off the edge
+        ctx.strokeText(ln, W / 2, ny); ctx.fillText(ln, W / 2, ny); ny += 18;
+      }
       ctx.globalAlpha = 1;
     }
   }
@@ -1964,28 +2152,40 @@ cv.addEventListener("pointerdown", e => {
   const x = e.clientX - r.left, y = e.clientY - r.top;
 
   const sg = stripGeom();                       // the whole bar opens the road
-  if (y < sg.y + sg.h + 8){ openMap(); return; }
+  if (revealed("road") && y < sg.y + sg.h + 8){ openMap(); return; }
+
+  const w = toWorld(x, y), wx = w.x, wy = w.y;  // everything below is world space
 
   const rb = relicBounds();                     // the shelf opens when tapped
-  if (S.relic.length && Math.abs(y - rb.y) < 26 && x > rb.x0 - 14 && x < rb.x1){ openShelf(); return; }
+  if (S.relic.length && Math.abs(wy - rb.y) < 26 && wx > rb.x0 - 14 && wx < rb.x1){ openShelf(); return; }
 
   /* A figure owns a tight circle of their own; the fire owns the rest of its ground.
      Nobody may sit inside the fire's clear radius, so the fire is always tappable. */
-  let hit = null, best = 26;
+  let hit = null, best = 28;
   for (const a of S.pool){
     if (a.state !== "rest" && a.state !== "hollow") continue;
-    const d = Math.hypot(x - a.x, y - (a.y - 16));
+    const d = Math.hypot(wx - a.x, wy - (a.y - 16));
     if (d < best){ best = d; hit = a; }
   }
-  if (hit){ S.sel = hit.id; showCounsel(hit);
+  if (hit){ S.sel = hit.id; S.nudge = null; showCounsel(hit);
             keeperGoTo(hit.x + (hit.x > fx ? -34 : 34), hit.y + 6, "attend"); return; }
-  const dx = (x - fx) / 56, dy = (y - (fy - 6)) / 50;
+  const dx = (wx - fx) / 52, dy = (wy - (fy - 6)) / 48;
   if (dx*dx + dy*dy > 1){ closeCounsel(); return; }
   S.taps++;
   if (S.embers < 1){ S.floats.push({ x:fx, y:fy - 46, t:0, txt:"no embers", col:"#7d8a85" }); return; }
   keeperGoTo(fx - 52, fy + 26, "tend");
-  S.embers--; earn(1, fx + (Math.random()-0.5)*20, fy - 46, false); flare = 0.5;
+  S.embers--; flare = 0.5;
   for (let k = 0; k < 5; k++) sparks(fx + (Math.random()-0.5)*16, fy - 22, 0.6);
+  if (S.first && S.beat < 3){                     // the one time in the game it goes up
+    S.flame = Math.min(S.flameMax, S.flame + TAP_INTENSITY);
+    S.floats.push({ x:fx + (Math.random()-0.5)*20, y:fy - 46, t:0, txt:"+1.5", col:"#ffab3d" });
+    beatTo(1);
+    if (S.taps >= 3) S.rev.embers = true;
+    if (S.flame >= 40) beatTo(2);
+    if (S.flame >= 60) beatTo(3);
+    return;
+  }
+  earn(1, fx + (Math.random()-0.5)*20, fy - 46, false);
 });
 
 /* ============================ counsel card ============================ */
@@ -2268,6 +2468,7 @@ function letThemGo(a){
     }
   }
   S.floats.push({ x:fx, y:fy - 50, t:0, txt:"+" + ash + " ash", col:"#a9a3b5" });
+  hollowResolved();
   render(); saveGame(); return true;
 }
 
@@ -2280,6 +2481,7 @@ function rekindle(a){
   releaseSlot(a); a.deaths = 0; a.depth = 0; a.shallow = false;
   edgeSpawn(a); a.state = "walkin";
   for (let k = 0; k < 14; k++) sparks(a.x, a.y - 10, 1.1);
+  hollowResolved();
   render(); return true;
 }
 
@@ -2535,6 +2737,8 @@ function newCycle(){
   S.peakDepth = 0; S.runEarned = 0; S.elapsed = 0; S.earnLog = [];
   S.floats = []; S.sparks = []; S.says = []; S.notice = null;
   S.sel = null; S.ending = false; S.endInfo = null;
+  S.first = false; S.nudge = null; S.tipSeen = true;   // every fire after the first opens whole
+  S.tab = "skills"; CAM.set = false;
   for (let i = 0; i < slotUsed.length; i++) slotUsed[i] = null;
   if (has("names") && S.meta.dead.length){        // one of them is called back
     const d = S.meta.dead[(Math.random() * S.meta.dead.length) | 0];
@@ -2863,7 +3067,9 @@ function serialize(){
     unlocked:S.unlocked, log:S.log.slice(-30),
     v:S.v, plots:S.plots, spent:S.spent, marked:S.marked,
     freeRiteUsed:S.freeRiteUsed, reforgedThisCycle:S.reforgedThisCycle,
-    everHollowed:S.everHollowed, elapsed:S.elapsed,
+    everHollowed:S.everHollowed, elapsed:S.elapsed, flameOn:S.flameOn,
+    first:S.first, beat:S.beat, rests:S.rests, rev:S.rev,
+    nudge:S.nudge, bookShown:S.bookShown,
     pool: S.pool.map(a => ({
       id:a.id, depth:a.depth, deaths:a.deaths, shallow:a.shallow, state:a.state, t:a.t, name:a.name || null,
       slot:a.slot, sp:a.sp, garb:a.garb, build:a.build || 0, rate:a.rate || 1, peak:a.peak || 0, route:a.route == null ? null : a.route,
@@ -2902,6 +3108,14 @@ function restore(save){
   S.embers = save.embers != null ? save.embers : T.MAX_EMBERS;
   S.taps = save.taps || 0; S.tipSeen = !!save.tipSeen;
   S.everHollowed = !!save.everHollowed; S.elapsed = save.elapsed || 0;
+  /* A save written before the first fire was authored has already seen everything. */
+  S.first = save.first != null ? !!save.first : false;
+  S.beat = save.beat || 0; S.rests = save.rests || 0;
+  S.nudge = save.nudge != null ? save.nudge : null;
+  S.bookShown = !!save.bookShown;
+  S.rev = Object.assign({}, S.rev, save.rev || {});
+  S.flameOn = save.flameOn != null ? !!save.flameOn : true;
+  S.tab = revealed("build") ? S.tab : "skills";
   S.flameMax = save.flameMax || T.FLAME_MAX;
   S.flame = save.flame != null ? save.flame : S.flameMax;
   S.peakDepth = save.peakDepth || 0; S.runEarned = save.runEarned || 0;
@@ -2947,9 +3161,11 @@ function runOffline(seconds){
   for (let t = 0; t < seconds; t += step){
     S.arriveT += step;
     const iv = interval();
-    while (S.arriveT >= iv){ S.arriveT -= iv; if (living().length < poolCap()) recruit(); }
+    while (S.arriveT >= iv){ S.arriveT -= iv;
+      if (revealed("arrivals") && living().length < poolCap()) recruit(); }
     updatePool(step);
     tickCraft(step);
+    tickOpening(step);
     if (S.flameOn && !S.ending) tickFlame(step);
     if (S.ending){ report.flameDied = true; break; }
   }
@@ -2997,14 +3213,16 @@ function card(o){
 }
 
 const bookEl = document.getElementById("book"), bookList = document.getElementById("bookList");
-function openBook(){
+function openBook(focus){
   bookList.innerHTML = "";
+  let want = null;
   for (const e of ARCHIVE){
     const open = e.open(), el = document.createElement("div");
     el.className = "entry" + (open ? "" : " locked");
     el.innerHTML = "<h4></h4><p></p>";
     el.querySelector("h4").textContent = e.name;
     el.querySelector("p").textContent = open ? e.body : "Nothing written here yet.";
+    if (focus && e.name === focus) want = el;
     bookList.appendChild(el);
   }
   const extras = [
@@ -3024,6 +3242,7 @@ function openBook(){
     bookList.appendChild(el);
   }
   bookEl.hidden = false;
+  if (want) want.scrollIntoView({ block:"center" });
 }
 function openDead(){
   const d = S.meta.dead;
@@ -3048,22 +3267,31 @@ function openBook2(){
   ]);
 }
 
-document.getElementById("bookBtn").addEventListener("click", openBook);
+document.getElementById("bookBtn").addEventListener("click", () => openBook());
 document.getElementById("bookX").addEventListener("click", ()=>{ bookEl.hidden = true; });
+
+const skillShown = k => !S.first ? true
+  : k === "flame"  ? true
+  : k === "word"   ? S.rev.skWord
+  : k === "circle" ? S.rev.skCircle
+  : S.rev.skEcho;                     // paying double means nothing before depth does
 
 function render(){
   listEl.innerHTML = ""; rows = [];
+  if (S.tab === "build" && !revealed("build")) S.tab = "skills";
   if (S.tab === "skills"){
-    NODES.forEach(n => card({
+    NODES.filter(n => skillShown(n.key)).forEach(n => card({
       glyph:n.glyph, tint:"#2b3136", name:n.name, level:S.lv[n.key], level2:()=>S.lv[n.key],
       desc:n.desc,
       label:()=> n.max && S.lv[n.key] >= n.max ? "Full" : fmt(cost(n)),
       enabled:()=> (!n.max || S.lv[n.key] < n.max) && S.souls >= cost(n),
       done:()=> !!(n.max && S.lv[n.key] >= n.max),
       onBuy(){ if (n.max && S.lv[n.key] >= n.max) return;
-               const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++; render(); }
+               const p = cost(n); if (S.souls < p) return; S.souls -= p; S.lv[n.key]++;
+               if (S.first && n.key === "flame"){ S.rev.skWord = true; S.rev.skCircle = true; }
+               render(); }
     }));
-    card({
+    if (revealed("skRite")) card({
       glyph:"✨", tint:"#4a3c2c", name:"Rite of Rekindling", level:S.rekindles, level2:()=>S.rekindles,
       desc:()=> hollows().length
         ? "Brings the shallowest of them back at depth 0, deaths forgiven. Tap a hollow to choose "
@@ -3135,6 +3363,18 @@ function evictReserved(){                 // a vendor taking a seat turns whoeve
   }
 }
 
+const HUD = {
+  top: document.getElementById("top"),
+  soul: document.getElementById("soulWrap"), rate: document.getElementById("rate"),
+  flame: document.getElementById("flameWrap"), book: document.getElementById("bookBtn"),
+  pop: document.getElementById("pop"), bottom: document.getElementById("bottom"),
+  tabs: document.getElementById("tabs"), build: document.querySelector('.tab[data-tab="build"]'),
+  hollow: document.getElementById("popHollow")
+};
+const fade = (el, on) => { if (!el) return;
+  el.classList.toggle("gone", !on);                 // absent, then it fades in. Never greyed.
+};
+
 function refresh(){
   soulsEl.textContent = fmt(S.souls);
   const life = flameLife();
@@ -3148,12 +3388,23 @@ function refresh(){
   popEl.fire.textContent = atFire;
   popEl.away.textContent = S.pool.filter(a => a.state === "away").length;
   popEl.hollow.textContent = hollows().length;
+  fade(HUD.top,    revealed("souls") || revealed("flameBar") || revealed("book"));
+  fade(HUD.soul,   revealed("souls"));
+  fade(HUD.rate,   revealed("souls"));
+  fade(HUD.flame,  revealed("flameBar"));
+  fade(HUD.book,   revealed("book"));
+  fade(HUD.pop,    revealed("pop"));
+  fade(HUD.hollow, revealed("hollowCount"));
+  fade(HUD.bottom, revealed("tabs"));
+  fade(HUD.build,  revealed("build"));
   rows.forEach(u => u());
 }
 
-const tipEl = document.getElementById("tip");
-function showTip(){ if (S.tipSeen) return; S.tipSeen = true; tipEl.hidden = false; }
-document.getElementById("tipX").addEventListener("click", ()=>{ tipEl.hidden = true; });
+/* One line, in voice, fading. Never a box and never a button to dismiss. */
+function showTip(){
+  if (S.tipSeen) return; S.tipSeen = true;
+  if (!S.offline) S.notice = { txt:"The deeper ones pay more. They also die more.", t:0 };
+}
 
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
@@ -3205,6 +3456,15 @@ function showReturn(rep){
   openSheet("While you were gone", "Nothing waits for anybody here.", rows);
 }
 
+/* Almost nothing. A basin, a few feet of cracked stone, the keeper, and no HUD. */
+function openFirstFire(){
+  S.first = true; S.beat = 0; S.rests = 0; S.nudge = null; S.bookShown = false;
+  S.flame = 15; S.flameOn = false; S.tipSeen = false;
+  S.pool = []; S.arriveT = 0;
+  for (const k in S.rev) S.rev[k] = false;
+  S.notice = { txt:OPEN_LINE[0], t:0 };
+}
+
 function boot(){
   let save = null;
   try { save = migrate(JSON.parse(localStorage.getItem(SAVE_KEY))); }
@@ -3218,7 +3478,9 @@ function boot(){
       render();
       showReturn(rep);
     } else render();
-  } else render();
+  } else { openFirstFire(); render(); }
+  refresh();
+  requestAnimationFrame(() => document.body.classList.remove("boot"));
   setInterval(saveGame, 5000);
   window.addEventListener("pagehide", saveGame);
   document.addEventListener("visibilitychange", () => { if (document.hidden) saveGame(); });
