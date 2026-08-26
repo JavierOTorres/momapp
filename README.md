@@ -22,6 +22,12 @@ and taint the canvas. **After changing any art, re-run
 Note that `file://` and `http://localhost` are different origins, so a save made
 under one is not visible under the other. Pick one and stay on it.
 
+**Skills and Build open as a full-screen sheet**, from the ⚒ button in the top
+bar, rather than living in a drawer. The drawer took 44% of a 390x844 phone
+permanently and left the sanctuary a letterbox; the scene is the thing worth
+looking at, so it gets the whole screen and the lists come over the top when
+asked for. The sheet is revealed by the same beat that used to reveal the drawer.
+
 Neither tool in `tools/` is called by the game. See **Sprites** below.
 
 `assets/background/` and `assets/props/` are wired up and embedded the same way
@@ -249,24 +255,37 @@ by being painted in palette colours in the first place. Their luminance was neve
 the problem: the props sit at median 70 against `C.stone` 48 and `C.stoneLit` 67,
 already darker than the character sprites at 103.
 
-**Placement is in units of the light radius**, not angles, so the ring grows with
-the flame the way the seats and dais already do. Angles were the obvious first
-try and the wrong control surface — the seats occupy a ring 1.18 radii wide,
-which at this viewport already reaches the frame edge, so the only free ground is
-behind the seats and in front of them, and polar offsets kept flinging the
-columns off-screen. Anything standing behind the dais is drawn *before* it, or
-its base paints over the stone and it reads as standing on the dais rather than
-behind it.
+**The ruin does not move. The light reveals it.** Props sit at fixed world
+coordinates. Two earlier versions placed them in polar angles and then in units of
+the light radius, and both were wrong for the same reason: growing the fire pushed
+the stone outward, so a player watching the temple slide away from them as they
+invested in it. What a bigger fire changes is how much of a building that was
+always there you can see. Each piece fades in as the light passes it, on the same
+vertically-compressed distance `firePull` uses, so the ruin comes out of the dark
+from the fire outward:
 
-**The centre of the foreground stays empty on purpose.** `firePull` compresses
-vertical distance, so anything low in the frame counts as close to the fire and
-comes up brighter than the architecture behind it. The first layout put six of
-the eleven props along the bottom, where they lit at 52-69% against columns at
-21-26% — debris outshining the temple, across the ground the seats open onto and
-the road bar sits over. Fallen stone now sits in the corners, and the falloff
-carries a 1.7 gamma so the far pieces drop into the dark instead of landing in
-the same mid band as the dais. Measured over the same frame, mid-grey went from
-29.8% to 23.2% and dark from 34.4% to 40.6%.
+| light radius | 60 | 75 | 95 | 120 | 150 |
+|---|---|---|---|---|---|
+| pieces visible | 0 | 2 | 4 | 11 | 11 |
+
+Nothing shows at the opening radius of 60 — the first screen is a flame alone in
+the dark and stays that way. The backdrop arrives around the intensity-40 beat,
+the columns once the fire is properly up, the fallen stone in the corners last.
+
+Anything above `PROP_BEHIND_Y` is drawn *before* the dais, or its base paints over
+the stone and reads as standing on the dais rather than behind it. That line is
+fixed rather than measured off the dais, which grows — tying it to the dais made a
+column flip from behind to in front as the fire came up.
+
+**The centre of the foreground stays empty on purpose.** Vertical distance is
+compressed, so anything low in the frame counts as close to the fire and comes up
+brighter than the architecture behind it. An earlier layout put six of the eleven
+props along the bottom, where they lit at 52-69% against columns at 21-26% —
+debris outshining the temple, across the ground the seats open onto and the road
+bar sits over. Fallen stone sits in the corners now, and the falloff carries a 1.7
+gamma so far pieces drop into the dark instead of landing in the same mid band as
+the dais. Over one frame that moved mid-grey from 29.8% to 23.2% and dark from
+34.4% to 40.6%.
 
 `tools/clean_art.py` does for props what the normalizer does for characters:
 strips the magenta chroma-key halo the generators leave on outlines, despeckles,

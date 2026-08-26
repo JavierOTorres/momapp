@@ -91,11 +91,11 @@
 
   /* ---------- sanctuary ---------- */
   /* Nothing in the HUD exists until it is true; then it arrives. */
-  #top,#top>*,#pop,#pop>span,#bottom,.tab{transition:opacity .55s ease,height .45s ease,padding .45s ease}
-  body.boot #top,body.boot #top>*,body.boot #pop,body.boot #bottom,body.boot .tab{transition:none}
+  #top,#top>*,#pop,#pop>span,.tab{transition:opacity .55s ease,height .45s ease,padding .45s ease}
+  body.boot #top,body.boot #top>*,body.boot #pop,body.boot .tab{transition:none}
   .gone{opacity:0;pointer-events:none}
   #top.gone,#pop.gone{height:0;padding:0;overflow:hidden;border:0}
-  #bottom.gone{flex:0 0 0;height:0;min-height:0;padding:0;overflow:hidden;border:0}
+
   .tab.gone{display:none}
 
   #stage{flex:1 1 auto;position:relative;min-height:0;background:var(--bg)}
@@ -192,12 +192,22 @@
   .cNote{font-size:10.5px;font-weight:600;color:var(--dim);text-align:center;margin-top:6px;line-height:1.35}
 
   /* ---------- bottom panel ---------- */
+  /* Skills and Build are a full-screen sheet, not a drawer. On a 390x844 phone the
+     drawer took 44% of the height permanently, which left the sanctuary itself a
+     letterbox. It is the thing worth looking at, so it gets the whole screen and
+     the lists come over the top when asked for. */
   #bottom{
-    flex:0 0 auto;height:44%;min-height:296px;
-    background:var(--panel);border-top:3px solid var(--line);
+    position:fixed;inset:0;z-index:21;
+    background:var(--panel);
     display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
+  #bottom[hidden]{display:none}
   #tabs{display:flex;flex:0 0 auto;border-bottom:3px solid var(--line)}
+  #tabs .cClose{
+    flex:0 0 auto;width:52px;border:0;border-left:3px solid var(--line);
+    background:var(--panel-2);color:var(--dim);font:inherit;font-size:15px;
+  }
   .tab{
     flex:1;padding:13px 0;background:var(--panel-2);color:var(--dim);
     border:0;border-right:3px solid var(--line);
@@ -250,6 +260,7 @@
       <div id="matWrap" hidden><span id="mat">0</span> scrap</div></div>
     <div id="rate"><b>0.0</b>souls/sec</div>
     <div id="flameWrap"><div id="flameBar"><i></i></div><span id="flameNum">100</span></div>
+    <button id="menuBtn" title="Skills and building" class="gone">⚒</button>
     <button id="bookBtn" title="The keeper's notes">📕</button>
   </div>
   <div id="pop" class="gone">
@@ -320,10 +331,11 @@
     <div id="bookList"></div>
   </div>
 
-  <div id="bottom" class="gone">
+  <div id="bottom" hidden>
     <div id="tabs">
       <button class="tab on" data-tab="skills">Skills</button>
       <button class="tab gone" data-tab="build">Build</button>
+      <button class="cClose" id="bottomX" title="Back to the fire">✕</button>
     </div>
     <div id="list"></div>
     <div class="note" id="note"></div>
@@ -1932,31 +1944,41 @@ const PROP_H = {
    radii wide, which at this viewport already reaches the frame edge, so the only
    free ground is behind the seats and in front of them. Explicit offsets make that
    easy to aim at; angles kept flinging the columns off-screen. */
+/* Fixed positions in world space, as offsets from the fire. The ruin does not
+   move. An earlier version placed these in units of the light radius, which meant
+   growing the fire pushed the stone outwards -- a player watching the temple slide
+   away from them as they invested in it, when the whole point is that a bigger fire
+   reaches further into a building that was always there. What the light changes is
+   how much of it you can see, and that is the reveal ramp below. */
 const PROP_RING = [
-  // behind the seats, standing against the wall
-  { k:"statue_headless", rx: 0.52, ry:-0.74 },
-  { k:"relief",          rx:-0.68, ry:-0.72 },
-  { k:"statue_slab",     rx:-1.45, ry:-0.40 },
-  // at the edge of the light, half in the dark, as the columns always were
-  { k:"column_upright",  rx: 1.15, ry:-0.30 },
-  { k:"column_leaning",  rx:-1.02, ry:-0.06 },
-  // fallen stone, pushed out to the corners. The centre of the foreground stays
-  // empty on purpose: it is the brightest ground in the frame, the seats open onto
-  // it, and the road bar sits across it. Debris there read as clutter no matter how
-  // it was lit, because vertical distance is compressed, so anything low in the
-  // frame is close to the fire and comes up brighter than the architecture behind.
-  { k:"root",            rx:-1.32, ry: 0.24 },
-  { k:"moss",            rx: 1.38, ry: 0.36 },
-  { k:"water",           rx:-1.38, ry: 0.56 },
-  { k:"column_stump",    rx: 1.02, ry: 0.64 },
-  { k:"head_fallen",     rx:-0.95, ry: 0.74 },
-  { k:"rubble",          rx: 0.85, ry: 0.86 }
+  // the backdrop, standing against the wall behind the fire: seen first
+  { k:"statue_headless", x: 290, y: 205 },
+  { k:"relief",          x:  95, y: 195 },
+  { k:"statue_slab",     x:  25, y: 230 },
+  // the columns, out at the sides: seen once the fire is properly up
+  { k:"column_upright",  x: 372, y: 250 },
+  { k:"column_leaning",  x:  18, y: 300 },
+  // fallen stone in the corners, furthest out, last to come out of the dark.
+  // The centre of the foreground stays empty: the seats open onto it and the road
+  // bar crosses it, and vertical distance is compressed, so anything low and
+  // central lights brighter than the architecture and reads as clutter.
+  { k:"moss",            x: 380, y: 395 },
+  { k:"root",            x:  30, y: 430 },
+  { k:"column_stump",    x: 352, y: 452 },
+  { k:"head_fallen",     x:  78, y: 482 },
+  { k:"rubble",          x: 332, y: 508 },
+  { k:"water",           x: 152, y: 542 }
 ];
+
+/* Anything above this line stands behind the dais and is drawn before it. Fixed,
+   not measured off the dais, which grows: tying it to the dais made a column flip
+   from behind to in front as the fire came up. */
+const PROP_BEHIND_Y = 235;
 
 /* The wall stands behind everything at a fixed size in world units, wide enough to
    cover the frame at the widest the camera ever pulls back (measured: 458 units).
    Its base is tucked below the dais so it never shows a cut-off bottom edge. */
-const WALL = { w:300, bottom:316 };
+const WALL = { w:400, bottom:330 };
 
 const PROP_ART = { img:{}, dark:{}, wall:null };
 
@@ -2020,10 +2042,14 @@ function loadProps(){
 function drawBackWall(){
   if (!PROP_ART.ready || !PROP_ART.wall) return;
   const c = PROP_ART.wall, R = lightR();
-  const vis = Math.max(0, Math.min(1, (R - 58) / 92));   // the light is what builds it
+  /* Held back until the light genuinely widens. The opening sits at intensity 15,
+     which is a radius of 60, and a wall showing there undercuts the one thing the
+     first screen is doing: a flame alone in the dark. It comes out from radius 74,
+     which is the intensity-40 beat where the dais and the moss arrive. */
+  const vis = Math.max(0, Math.min(1, (R - 74) / 46));
   if (vis <= 0.02) return;
   const w = WALL.w, h = w * (c.height / c.width), x0 = fx - w / 2, y0 = WALL.bottom - h;
-  ctx.globalAlpha = 0.16 + 0.56 * vis;
+  ctx.globalAlpha = 0.94 * vis;                     // fades up from nothing, never pops in
   ctx.drawImage(c, x0, y0, w, h);
   ctx.globalAlpha = 1;
 
@@ -2032,10 +2058,10 @@ function drawBackWall(){
      so the same falloff is laid back over the stone. This runs before the ground,
      while the only thing on the canvas is the wall and the void behind it, so
      painting the dark straight on costs nothing and needs no clip. */
-  const reach = R * 1.9 * (0.55 + 0.45 * flameLife());
+  const reach = R * 2.6 * (0.55 + 0.45 * flameLife());
   const g = ctx.createRadialGradient(fx, fy - 20, R * 0.30, fx, fy - 20, reach);
-  g.addColorStop(0, "rgba(15,21,18,0.42)");
-  g.addColorStop(0.5, "rgba(15,21,18,0.82)");
+  g.addColorStop(0, "rgba(15,21,18,0.06)");
+  g.addColorStop(0.55, "rgba(15,21,18,0.48)");
   g.addColorStop(1, C.void);
   ctx.fillStyle = g;
   ctx.fillRect(x0, y0, w, h);
@@ -2046,22 +2072,24 @@ function drawBackWall(){
    it rather than behind it. */
 function drawProps(time, behind){
   const R = lightR();
-  const vis = Math.max(0, Math.min(1, (R - 72) / 62));
-  if (vis <= 0.02) return;
-  const daisBack = fy + 22 - R * 0.52;
   const near = [];
   for (const p of PROP_RING){
     const img = PROP_ART.img[p.k];
     if (!img) continue;
-    const x = fx + p.rx * R;
-    const y = fy + 30 + p.ry * R;
-    if ((y < daisBack) !== !!behind) continue;
+    const x = p.x, y = p.y;
+    if ((y < PROP_BEHIND_Y) !== !!behind) continue;
     if (Math.abs(x - fx) > worldHalfW() + 120) continue;
-    near.push({ img, dark: PROP_ART.dark[p.k], x, y, h: PROP_H[p.k] });
+    /* Revealed, not moved. Distance uses the same vertical compression firePull
+       does, so the light reaches things the way it lights them, and the ruin comes
+       out of the dark from the fire outwards as the flame grows. */
+    const d = Math.hypot(x - fx, (y - fy) * 0.6);
+    const vis = Math.max(0, Math.min(1, (R * 1.7 - d) / 45));
+    if (vis <= 0.02) continue;
+    near.push({ img, dark: PROP_ART.dark[p.k], x, y, h: PROP_H[p.k], vis });
   }
   near.sort((m, n) => m.y - n.y);                  // nearer stone overlaps what is behind it
   for (const it of near){
-    const h = it.h, w = h * (it.img.naturalWidth / it.img.naturalHeight);
+    const h = it.h, w = h * (it.img.naturalWidth / it.img.naturalHeight), vis = it.vis;
     /* Gamma on the falloff. Linear proximity put the columns at the light's edge at
        roughly half brightness, which is the same value as the dais and the wall, and
        a frame where everything lands in one mid band reads as clutter however well
@@ -3805,6 +3833,7 @@ const HUD = {
   soul: document.getElementById("soulWrap"), rate: document.getElementById("rate"),
   flame: document.getElementById("flameWrap"), book: document.getElementById("bookBtn"),
   pop: document.getElementById("pop"), bottom: document.getElementById("bottom"),
+  menu: document.getElementById("menuBtn"),
   tabs: document.getElementById("tabs"), build: document.querySelector('.tab[data-tab="build"]'),
   hollow: document.getElementById("popHollow")
 };
@@ -3832,7 +3861,7 @@ function refresh(){
   fade(HUD.book,   revealed("book"));
   fade(HUD.pop,    revealed("pop"));
   fade(HUD.hollow, revealed("hollowCount"));
-  fade(HUD.bottom, revealed("tabs"));
+  fade(HUD.menu,   revealed("tabs"));   // the sheet is opened, not always present
   fade(HUD.build,  revealed("build"));
   rows.forEach(u => u());
 }
@@ -3842,6 +3871,13 @@ function showTip(){
   if (S.tipSeen) return; S.tipSeen = true;
   if (!S.offline) S.notice = { txt:"The deeper ones pay more. They also die more.", t:0 };
 }
+
+function openPanel(on){
+  HUD.bottom.hidden = !on;
+  if (on) render();
+}
+HUD.menu.addEventListener("click", () => openPanel(true));
+document.getElementById("bottomX").addEventListener("click", () => openPanel(false));
 
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
