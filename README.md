@@ -122,6 +122,46 @@ same animal. Across 200 simulated rosters of eight, no two members ever shared
 both species and garment. The fire is still the brightest thing on screen; it
 is no longer the only saturated one.
 
+### Warm inside the ring, cold outside it
+
+The earlier rule — everything muted, the fire the only bright thing — produced a
+scene where nothing separated from anything else and the darkness read as fog
+rather than as mood. Grimness comes from content, not from desaturation: this
+game already has permanent death, gear lost for good, and a list of everyone who
+failed. The picture does not have to carry it too.
+
+So the fire is **coloured light**, not a glow. A warm wash lies over the ground
+from the fire outward and the stone shows through it, which is what makes the
+dais read as lit rather than merely visible. As the flame falls the warm wash
+weakens and a cold one comes in over the top, so a dying sanctuary turns **blue**
+rather than merely turning down. **Every dark is cold** — grey reads as washed
+out, blue reads as night.
+
+Every figure and near prop carries a warm side facing the fire and a cool side
+away from it. Sprites take it as two overlays cut from their own alpha; the
+code-drawn figures are flat fills and cannot, so they take the same shift in the
+fill colours instead. A hollow is exempt from the warmth: it staying grey while
+everyone else has colour is doing far more work now than it used to.
+
+The value bands, measured across one frame at full flame:
+
+| | void | far prop | backdrop wall | dais floor | character | fire |
+|---|---|---|---|---|---|---|
+| luminance | 21 | 26 | 29 | 42 | 73 | brightest |
+| warm/cool | cold | cold | cold | warm | warm | warm |
+
+The test is to squint at it: three distinct depths, not one grey band. The
+backdrop sitting at the same value as the dais was the specific failure — it is
+the furthest thing in the room and the dais is the brightest surface after the
+fire, so that pair has to come apart.
+
+The hand-made sprites were drawn in the old muted colours. Rather than redraw
+them, they are **re-tinted at load**: the hue rotation and saturation and value
+scaling that carries a species' `art` colour to its new `body` colour, applied
+per pixel, with the outline left alone because it carries no hue and lifting it
+would soften the one thing holding the style together. Frog lands on `#73843e`
+against a target of `#6f8a3e`, goat on `#a58c6c` against `#a08d6e`.
+
 A hollow keeps its silhouette exactly — same species, same garment shape — and
 loses everything else: the face plate goes dark, the eyes become empty sockets,
 the garment desaturates while keeping its value, the posture drops, and every
